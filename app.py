@@ -4,14 +4,17 @@ Ejecutar desde la raíz del repo:
     streamlit run app.py
 
 Muestra:
-    - Chat con el agente orquestador.
+    - Chat con el agente orquestador (responde también preguntas generales de
+      Corona y muestra imágenes/links de producto).
     - Panel lateral con el estado de las fuentes de conocimiento.
-    - La traza de herramientas de cada respuesta (observabilidad → no es una
-      caja negra; se ve QUÉ consultó y calculó el agente para no alucinar).
+    - La traza de herramientas de cada respuesta (observabilidad).
+    - Botón para descargar la cotización en PDF cuando el agente la genera.
 """
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 
 import streamlit as st
 
@@ -20,9 +23,6 @@ from src import config
 st.set_page_config(page_title="Corona Asesor · Agente", page_icon="🧱", layout="wide")
 
 
-# --------------------------------------------------------------------------- #
-#  Inicialización del agente (una vez por sesión)
-# --------------------------------------------------------------------------- #
 @st.cache_resource(show_spinner="Iniciando agente…")
 def get_agent():
     from src.agent.orchestrator import CoronaAgent
@@ -30,16 +30,13 @@ def get_agent():
 
 
 def data_status() -> dict:
-    """Estado de las fuentes de datos para el panel lateral."""
-    estado = {"duckdb": False, "tablas": {}, "chroma": 0}
+    estado = {"duckdb": False, "n": 0, "chroma": 0}
     try:
         from src.knowledge.duckdb_store import DuckDBStore
         with DuckDBStore(read_only=True) as d:
-            for t in ("revestimientos", "pegantes", "boquillas"):
-                if t in d._tables():
-                    n = d.con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
-                    estado["tablas"][t] = n
-            estado["duckdb"] = bool(estado["tablas"])
+            if "products" in d._tables():
+                estado["n"] = d.con.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+                estado["duckdb"] = True
     except Exception:
         pass
     try:
@@ -50,41 +47,69 @@ def data_status() -> dict:
     return estado
 
 
+def render_trace(trace: list[dict], key: str):
+    """Muestra la traza de herramientas y botones de descarga de PDFs."""
+    if not trace:
+        return
+    with st.expander(f"🔧 Herramientas usadas ({len(trace)})"):
+        for paso in trace:
+            st.markdown(f"**{paso['tool']}**")
+            st.code(json.dumps(paso["input"], ensure_ascii=False, indent=2), language="json")
+            st.code(json.dumps(paso["output"], ensure_ascii=False, indent=2, default=str), language="json")
+    # Botones de descarga para cotizaciones PDF generadas
+    for j, paso in enumerate(trace):
+        out = paso.get("output") or {}
+        if paso.get("tool") == "generar_cotizacion_pdf" and isinstance(out, dict) and out.get("archivo"):
+            ruta = Path(out["archivo"])
+            if ruta.exists():
+                with open(ruta, "rb") as f:
+                    st.download_button(
+                        "📄 Descargar cotización (PDF)",
+                        data=f.read(),
+                        file_name=ruta.name,
+                        mime="application/pdf",
+                        key=f"dl-{key}-{j}",
+                    )
+
+
 # --------------------------------------------------------------------------- #
 #  Barra lateral
 # --------------------------------------------------------------------------- #
 with st.sidebar:
     st.header("🧱 Corona Asesor")
-    st.caption("Agente para planear pisos, paredes, pegantes y boquillas.")
+    st.caption("Agente para pisos, paredes, pegantes y boquillas — y consultas generales de Corona.")
 
     st.subheader("Fuentes de conocimiento")
     estado = data_status()
     if estado["duckdb"]:
-        for t, n in estado["tablas"].items():
-            st.success(f"DuckDB · {t}: {n} productos")
+        st.success(f"DuckDB · {estado['n']} productos")
     else:
-        st.warning("DuckDB vacío. Corre `python run_ingest.py`.")
+        st.warning("DuckDB no disponible. Revisa data/processed/corona.duckdb")
     if estado["chroma"]:
         st.success(f"Chroma · {estado['chroma']} fragmentos de fichas")
     else:
-        st.warning("Chroma vacío. Corre `python run_ingest.py`.")
+        st.warning("Chroma no disponible. Revisa data/processed/chroma/")
 
     if not config.ANTHROPIC_API_KEY:
         st.error("Falta ANTHROPIC_API_KEY en el .env")
+    if not config.VOYAGE_API_KEY:
+        st.info("Sin VOYAGE_API_KEY: la evidencia usa fallback por palabra clave.")
 
     st.divider()
     if st.button("🔄 Reiniciar conversación"):
         if "agent" in st.session_state:
-            st.session_state.agent.reset()
+            del st.session_state["agent"]
+        get_agent.clear()
         st.session_state.mensajes = []
         st.rerun()
 
     with st.expander("Ejemplos de consulta"):
         st.markdown(
-            "- Necesito cambiar el piso de una cocina de 4×3 m, diseño claro, "
-            "fácil de limpiar, presupuesto 2.500.000 COP.\n"
-            "- Quiero enchapar la pared de un baño de 2×2.5 m en zona húmeda.\n"
-            "- Piso para una terraza exterior de 5×4 m con tráfico alto."
+            "- Piso para una cocina de 4×3 m, diseño claro, fácil de limpiar, "
+            "presupuesto 2.500.000 COP.\n"
+            "- ¿Qué garantía tienen los pisos Corona?\n"
+            "- ¿Dónde queda la tienda Corona más cercana?\n"
+            "- ¿Venden sanitarios?"
         )
 
 
@@ -96,18 +121,13 @@ st.title("Corona Asesor")
 if "mensajes" not in st.session_state:
     st.session_state.mensajes = []
 
-# Render del historial visible
-for m in st.session_state.mensajes:
+for idx, m in enumerate(st.session_state.mensajes):
     with st.chat_message(m["role"]):
         st.markdown(m["contenido"])
         if m.get("trace"):
-            with st.expander(f"🔧 Herramientas usadas ({len(m['trace'])})"):
-                for paso in m["trace"]:
-                    st.markdown(f"**{paso['tool']}**")
-                    st.code(json.dumps(paso["input"], ensure_ascii=False, indent=2), language="json")
-                    st.code(json.dumps(paso["output"], ensure_ascii=False, indent=2, default=str), language="json")
+            render_trace(m["trace"], key=f"hist-{idx}")
 
-prompt = st.chat_input("Describe tu proyecto…")
+prompt = st.chat_input("Describe tu proyecto o pregunta lo que quieras de Corona…")
 if prompt:
     st.session_state.mensajes.append({"role": "user", "contenido": prompt})
     with st.chat_message("user"):
@@ -119,12 +139,7 @@ if prompt:
             with st.spinner("El agente está trabajando…"):
                 resultado = agente.ask(prompt)
             st.markdown(resultado["texto"])
-            if resultado["trace"]:
-                with st.expander(f"🔧 Herramientas usadas ({len(resultado['trace'])})"):
-                    for paso in resultado["trace"]:
-                        st.markdown(f"**{paso['tool']}**")
-                        st.code(json.dumps(paso["input"], ensure_ascii=False, indent=2), language="json")
-                        st.code(json.dumps(paso["output"], ensure_ascii=False, indent=2, default=str), language="json")
+            render_trace(resultado["trace"], key=f"live-{len(st.session_state.mensajes)}")
             st.session_state.mensajes.append({
                 "role": "assistant",
                 "contenido": resultado["texto"],

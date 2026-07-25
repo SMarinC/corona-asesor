@@ -8,6 +8,7 @@ data/processed/
 *.duckdb
 *.duckdb.wal
 chroma/
+data/cotizaciones/*.pdf
 
 # --- Python ---
 __pycache__/

@@ -119,10 +119,30 @@ Categorías reales: `Revestimientos` (subcategorías `Pisos` / `Paredes`),
 
 ---
 
+## Capacidades adicionales
+
+- **Consultas generales de Corona.** El contexto institucional
+  (`data/contexto_agente.json`: empresa, contacto, garantías, financiación,
+  tiendas, categorías fuera de catálogo con sus links) se **inyecta en el system
+  prompt** (`prompts.py`), no es RAG. Así el agente responde temas generales al
+  instante y, ante una categoría fuera del catálogo (sanitarios, griferías,
+  pinturas…), **redirige con el link real en vez de decir "no"**.
+- **Imágenes de producto.** El normalizador expone `imagen`/`imagenes` (368/505
+  productos traen foto). El agente las muestra con markdown `![](url)` y Streamlit
+  las renderiza.
+- **Links de producto.** Cada producto trae `url`; el agente **pregunta** si los
+  quieres antes de listarlos.
+- **Cotización en PDF.** La herramienta `generar_cotizacion_pdf`
+  (`src/output/cotizacion.py`, fpdf2) crea un PDF con el desglose, total y
+  validación de presupuesto; la UI muestra un botón de descarga. Los PDF se
+  guardan en `data/cotizaciones/`.
+- **Estilo sin emojis**, profesional, definido en el system prompt.
+
 ## Componentes de agente implementados (Technical Checklist)
 
 1. **LLM / razonamiento** — Claude como orquestador.
-2. **Tool use / function calling** — 11 herramientas reales.
+2. **Tool use / function calling** — 12 herramientas reales (búsqueda, cálculo,
+   reglas, evidencia RAG y generación de cotización PDF).
 3. **Knowledge tools / RAG** — DuckDB (estructurado) + Chroma (semántico).
 4. **Planning / orquestación** — loop multi-paso que encadena las herramientas.
 5. **Guardrails + Observabilidad** — política "no inventar" + traza auditable.

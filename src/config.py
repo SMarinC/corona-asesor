@@ -25,7 +25,7 @@ def _path(env_key: str, default: str) -> Path:
 
 # --- LLM ---
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
 
 # --- Embeddings de Chroma (la colección se construyó con VoyageAI) ---
 # Necesaria para la búsqueda SEMÁNTICA en las fichas. Sin ella, ChromaStore
@@ -37,6 +37,16 @@ DATA_RAW_DIR = _path("DATA_RAW_DIR", "data/raw")
 DATA_FICHAS_DIR = _path("DATA_FICHAS_DIR", "data/fichas")
 DUCKDB_PATH = _path("DUCKDB_PATH", "data/processed/corona.duckdb")
 CHROMA_PATH = _path("CHROMA_PATH", "data/processed/chroma")
+
+# Contexto institucional/navegación (se inyecta en el system prompt, no es RAG)
+CONTEXTO_PATH = _path("CONTEXTO_PATH", "data/contexto_agente.json")
+# Carpeta donde se guardan las cotizaciones PDF generadas
+COTIZACIONES_DIR = _path("COTIZACIONES_DIR", "data/cotizaciones")
+
+# Logo para la cotización PDF. Si existe este archivo se usa; si no, se dibuja
+# un escudo/corona de marcador. Pon aquí el logo oficial (PNG con fondo
+# transparente, idealmente blanco) para la versión final.
+LOGO_PATH = _path("LOGO_PATH", "data/assets/logo_corona.png")
 
 # --- Parámetros de negocio ---
 DESPERDICIO_DEFECTO = float(os.getenv("DESPERDICIO_DEFECTO", "0.10"))

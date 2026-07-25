@@ -9,6 +9,9 @@ voyageai>=0.3.0          # embeddings de la colección (voyage-4-large); búsque
 # --- UI ---
 streamlit>=1.38.0        # interfaz de demostración
 
+# --- Salidas ---
+fpdf2>=2.8.0             # cotizaciones en PDF descargables
+
 # --- Utilidades ---
 python-dotenv>=1.0.0     # carga de variables de entorno (.env)
 pydantic>=2.7.0          # validación de esquemas de datos

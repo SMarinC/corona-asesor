@@ -1,0 +1,196 @@
+{
+  "_nota": "Contexto institucional y de navegación de Corona para el agente. NO es RAG: ~3300 tokens en total, cabe entero en el system prompt y se carga una sola vez al arrancar (no requiere búsqueda/embeddings). Solo el texto de fichas técnicas (document_chunks.jsonl -> Chroma) usa RAG, porque ahí sí hay volumen real (3754 fragmentos) que no entra completo en cada prompt. Fuente: corona.co y empresa.corona.co, consultado 2026-07-25.",
+
+  "info_general": {
+    "empresa": {
+      "nombre": "Organización Corona",
+      "pais_origen": "Colombia",
+      "fundacion": "1881, en Caldas (Antioquia), Colombia — 145 años de trayectoria",
+      "descripcion": "Multinacional colombiana dedicada a la manufactura y comercialización de productos para el hogar, construcción, industria, agricultura y energía. Reconocida como una de las empresas más innovadoras de Colombia según la ANDI.",
+      "compromiso": "Sostenibilidad ambiental, social y financiera de su cadena de valor; ética, valores y gobierno corporativo; innovación tecnológica.",
+      "cifras": {
+        "empleados_directos": "más de 8.600",
+        "plantas_manufactura": {
+          "colombia": 25,
+          "estados_unidos": 1,
+          "centroamerica": 2,
+          "mexico": 2
+        },
+        "puntos_de_venta": {
+          "centro_corona": 43,
+          "tienda_pinturera": 6,
+          "red_azul": 8
+        },
+        "exporta_a": ["Estados Unidos", "Canadá", "México", "Brasil", "Chile", "Venezuela", "Centroamérica", "Caribe", "Italia", "España", "Reino Unido"]
+      }
+    },
+    "marcas_y_unidades_de_negocio": [
+      {"nombre": "Corona", "descripcion": "Cerámica, revestimientos y construcción (línea principal del catálogo de este agente)"},
+      {"nombre": "Vajillas Corona", "descripcion": "Vajillas y menaje"},
+      {"nombre": "Centro Corona", "descripcion": "Cadena de puntos de venta"},
+      {"nombre": "Tienda Pinturera", "descripcion": "Puntos de venta especializados en pinturas"},
+      {"nombre": "Sumicol", "descripcion": "Suministros industriales de minerales y colorantes"},
+      {"nombre": "Agromil Corona", "descripcion": "Insumos agrícolas"},
+      {"nombre": "Gamma", "descripcion": "Ferretería y mejoramiento del hogar"},
+      {"nombre": "Erecos", "descripcion": "Refractarios y soluciones energéticas industriales"},
+      {"nombre": "American Standard", "descripcion": "Sanitarios y grifería (marca internacional, EE.UU.)"},
+      {"nombre": "Mansfield Plumbing", "descripcion": "Plomería (marca internacional, EE.UU.)"},
+      {"nombre": "1200° Corona", "descripcion": "Personalización y diseño de espacios"},
+      {"nombre": "Grival", "descripcion": "Grifería"},
+      {"nombre": "Alion", "descripcion": "Marca del portafolio Corona"}
+    ],
+    "sitios_relacionados": {
+      "corporativo": "https://empresa.corona.co/",
+      "tienda_principal": "https://corona.co/",
+      "club_maestros": "https://clubmaestros.co/",
+      "centro_corona": "https://www.centrocorona.com/",
+      "coleccion_1200_corona": "https://www.1200corona.com/"
+    },
+    "puntos_de_venta": {
+      "descripcion": "Corona tiene presencia física a través de varios formatos de tienda. Para encontrar la más cercana, el cliente debe usar el buscador por ciudad/departamento/código postal en el link de abajo — el agente no tiene un listado exacto de direcciones, así que debe redirigir ahí en vez de inventar una dirección.",
+      "buscador_de_tiendas": "https://corona.co/tiendas-y-horarios",
+      "formatos": [
+        {"tipo": "Distribuidores exclusivos", "descripcion": "Puntos de venta con todo el portafolio de productos de alta calidad"},
+        {"tipo": "Centros Corona", "descripcion": "43 tiendas propias con asesoría experta en el punto de venta"},
+        {"tipo": "Outlets Centro Corona", "descripcion": "Tiendas con ofertas y remates especiales"},
+        {"tipo": "Puntos de Servicio Post Venta", "descripcion": "Para consultas y trámites posteriores a la compra"},
+        {"tipo": "Puntos de Servicio Técnico", "descripcion": "Para mantenimiento y reparaciones"},
+        {"tipo": "Tienda Pinturera", "descripcion": "6 puntos especializados en pinturas"},
+        {"tipo": "Red Azul", "descripcion": "8 puntos de distribución"}
+      ]
+    },
+    "contacto": {
+      "linea_nacional": "018000 512 030",
+      "whatsapp": "+57 310 274 2006",
+      "email_atencion_cliente": "contactenoscorona@corona.com.co",
+      "email_centros_corona": "servicioalclienteac@corona.com.co",
+      "linea_etica_anticorrupcion": "https://lineaeticacorona.integrityline.com/",
+      "portal_empleo": "https://empleo.corona.co",
+      "redes_sociales": {
+        "youtube": "OrganizacionCorona",
+        "facebook": "coronamejoratuvida",
+        "instagram": "corona_inspira",
+        "pinterest": "coronainspira"
+      },
+      "estado_de_pedido": "https://corona.co/guest/order",
+      "nota": "No hay horarios de atención al cliente publicados explícitamente en el sitio — si preguntan, redirigir a la línea nacional o WhatsApp."
+    },
+    "garantias": {
+      "descripcion": "La duración de la garantía varía según la línea de producto — desde 1 año hasta 5 años, o de por vida en casos como el adhesivo Pegacor®. El agente no debe inventar un plazo específico sin verificarlo: para revestimientos consultar el campo 'garantia' en specs_pdf de cada SKU (ya viene en la base); para categorías fuera del catálogo, redirigir al link.",
+      "categorias_cubiertas": ["Pisos y paredes (Porcelatech, porcelánico, cerámica, laminados, vinílicos)", "Sanitarios y grifería", "Muebles y encimeras de cocina", "Adhesivos (Pegacor®, Concolor®)", "Iluminación y accesorios"],
+      "certificaciones": ["ISO 9001:2015", "ISO 14001:2015"],
+      "url": "https://corona.co/garantias",
+      "canal_reclamo": "Línea nacional 018000 512 030, email contactenoscorona@corona.com.co, WhatsApp, o en un Centro Corona físico"
+    },
+    "financiacion": {
+      "descripcion": "Corona ofrece formas de pago a plazos para facilitar la compra/remodelación.",
+      "opciones": [
+        {"nombre": "Addi", "descripcion": "Crédito solicitable directo desde la tienda virtual de Corona"},
+        {"nombre": "Tarjetas de crédito con 0% de interés (bancos aliados)", "bancos": ["Banco de Bogotá", "Banco AV Villas", "Banco de Occidente", "Banco Popular", "Davivienda", "BBVA", "Scotiabank", "Itaú", "RappiCard"]}
+      ],
+      "url": "https://corona.co/financiacion"
+    },
+    "servicios_para_el_cliente": {
+      "instalaciones": "https://corona.co/productos/servicios/instalaciones/c/servicio-instalaciones",
+      "asesorias": "https://corona.co/productos/servicios/asesorias/c/servicio-asesorias",
+      "directorio_de_maestros": "https://corona.co/directorio-maestros",
+      "guias_de_compra": "https://corona.co/guia-de-compras",
+      "simuladores": "https://corona.co/simuladores",
+      "preguntas_frecuentes": "https://corona.co/preguntas-frecuentes"
+    },
+    "sostenibilidad": {
+      "proposito_corporativo": "Mejorar vidas transformando espacios con soluciones y productos para la remodelación y la construcción.",
+      "pilares": ["Gestión Social", "Gestión Ambiental (uso eficiente de recursos naturales)", "Gestión Financiera (viabilidad económica)"],
+      "enfoque": "Triple cuenta de resultados (social, ambiental, financiero)",
+      "informe": "Informe de Sostenibilidad 2025 disponible en el sitio corporativo",
+      "url": "https://empresa.corona.co/sostenibilidad/"
+    },
+    "sello_ambiental_colombiano": {
+      "descripcion": "Corona fue la primera empresa en recibir el Sello Ambiental Colombiano (SAC), en 2021 — un estándar voluntario que reconoce responsabilidad ambiental en todo el proceso de manufactura y distribución.",
+      "beneficios_para_el_cliente": [
+        "Griferías certificadas SAC usan 30% menos agua que la norma técnica colombiana exige",
+        "Productos fabricados sin materiales tóxicos que contaminen el agua",
+        "Producción con equipos de alta eficiencia energética y gas natural (menores emisiones)"
+      ],
+      "operacion_sostenible": {
+        "reciclaje_residuos": "60% de metales, 10% de polímeros reciclados",
+        "reciclaje_agua": "80% del agua de manufactura se recircula",
+        "proveedores": "Solo trabaja con proveedores con certificación ambiental"
+      },
+      "categorias_certificadas": ["Sanitarios de una pieza", "Sanitarios de dos piezas", "Grifería de lavamanos", "Grifería de cocina"],
+      "url": "https://corona.co/sello-ambiental-colombiano"
+    },
+    "premios_y_reconocimientos": {
+      "descripcion": "Corona tiene productos (principalmente de la línea de griferías y sanitarios) reconocidos en varios de los premios de diseño más prestigiosos del mundo.",
+      "criterios_de_diseno": ["innovación", "impacto sostenible", "creatividad", "funcionalidad", "atención al detalle", "durabilidad", "ergonomía", "significado simbólico"],
+      "premios": [
+        {"nombre": "Good Design® Award", "detalle": "Otorgado por el Athenaeum Museum desde 1950. Ganadores: lavamanos Manantial, Cascade y Liquid"},
+        {"nombre": "RedDot Award®", "detalle": "Uno de los premios de diseño más importantes del mundo. Ganadores: familia de griferías Liquid, lavamanos Liquid"},
+        {"nombre": "iF Design Award®", "detalle": "Sello de calidad otorgado en Alemania desde 1955. Ganador: familia de griferías Aluvia"},
+        {"nombre": "A'Design Award & Competition®", "detalle": "Premio italiano desde 2010. Ganadores: familia de griferías Cascade, lavamanos Cascade, familia de griferías Aluvia, sanitario Montecarlo Advance"}
+      ],
+      "url": "https://corona.co/premios-disenos-corona"
+    },
+    "compra_online": {
+      "envios": "El costo de envío varía según la ubicación; el tiempo de entrega se muestra en el checkout. Existe servicio 'Express Domicilio' con términos propios, y también recogida en un Centro Corona como alternativa.",
+      "seguimiento": "Los pedidos se pueden rastrear en tiempo real desde https://corona.co/guest/order",
+      "devoluciones": "Aplica derecho de retracto; el detalle completo de la política está en Términos y Condiciones (https://corona.co/terminos-condiciones)",
+      "compras_internacionales": "El sitio contempla compras desde el extranjero (detalle específico no publicado, redirigir a preguntas frecuentes o contacto)",
+      "url_faq": "https://corona.co/preguntas-frecuentes"
+    }
+  },
+
+  "categorias_fuera_de_catalogo": {
+    "_nota": "Categorías de producto de corona.co que NO están en nuestras bases (DuckDB + Chroma). Usar para redirigir con el link real en vez de inventar specs.",
+    "cubierto_en_catalogo": ["Pisos", "Paredes cerámicas", "Pegantes", "Boquillas"],
+    "productos": [
+      {"nombre": "Nueva colección Habitart", "url": "https://corona.co/productos/nueva-coleccion/c/nueva-coleccion"},
+      {"nombre": "Decorados (revestimientos)", "url": "https://corona.co/productos/revestimientos/decorados/c/decorados"},
+      {"nombre": "Sanitarios", "url": "https://corona.co/productos/sanitarios/c/sanitarios"},
+      {"nombre": "Asientos sanitarios", "url": "https://corona.co/productos/sanitarios/asientos-sanitarios/c/asientos-sanitarios"},
+      {"nombre": "Griferías", "url": "https://corona.co/griferias"},
+      {"nombre": "Lavamanos", "url": "https://corona.co/productos/lavamanos/c/lavamanos"},
+      {"nombre": "Muebles para baños", "url": "https://corona.co/productos/muebles-para-banos/c/muebles-para-banos"},
+      {"nombre": "Duchas", "url": "https://corona.co/productos/duchas/c/duchas"},
+      {"nombre": "Accesorios para baño", "url": "https://corona.co/accesorios-para-banos"},
+      {"nombre": "Tinas e hidromasajes", "url": "https://corona.co/productos/tinas-e-hidromasajes/c/tinas-e-hidromasajes"},
+      {"nombre": "Plomería", "url": "https://corona.co/productos/plomeria/c/plomeria"},
+      {"nombre": "Repuestos", "url": "https://corona.co/productos/repuestos/c/repuestos"},
+      {"nombre": "Muebles para cocina", "url": "https://corona.co/productos/muebles-para-cocinas/c/muebles-para-cocinas"},
+      {"nombre": "Lavaplatos", "url": "https://corona.co/productos/lavaplatos/c/lavaplatos"},
+      {"nombre": "Pinturas", "url": "https://corona.co/productos/pinturas/c/pinturas"},
+      {"nombre": "Herramientas", "url": "https://corona.co/productos/herramientas/c/herramientas"},
+      {"nombre": "Materiales de construcción", "url": "https://corona.co/materiales-de-construccion"},
+      {"nombre": "Iluminación", "url": "https://corona.co/productos/iluminacion/c/iluminacion"}
+    ],
+    "ambientes_inspiracion": [
+      {"nombre": "Ambientes", "url": "https://corona.co/ambientes"},
+      {"nombre": "Ambientes - Baños", "url": "https://corona.co/ambientes-banos"},
+      {"nombre": "Ambientes - Interiores", "url": "https://corona.co/ambientes-interiores"},
+      {"nombre": "Ambientes - Exteriores", "url": "https://corona.co/ambientes-exteriores"},
+      {"nombre": "Ambientes - Cocinas", "url": "https://corona.co/ambientes-cocinas"},
+      {"nombre": "Ambientes - Institucionales", "url": "https://corona.co/ambientes-institucionales"},
+      {"nombre": "Inspírame", "url": "https://corona.co/inspirame"},
+      {"nombre": "Guías de compra", "url": "https://corona.co/guia-de-compras"},
+      {"nombre": "Catálogo", "url": "https://corona.co/catalogo"},
+      {"nombre": "Simuladores", "url": "https://corona.co/simuladores"},
+      {"nombre": "Directorio de maestros", "url": "https://corona.co/directorio-maestros"}
+    ],
+    "servicios": [
+      {"nombre": "Servicios", "url": "https://corona.co/productos/servicios/c/servicios"},
+      {"nombre": "Instalaciones", "url": "https://corona.co/productos/servicios/instalaciones/c/servicio-instalaciones"},
+      {"nombre": "Asesorías", "url": "https://corona.co/productos/servicios/asesorias/c/servicio-asesorias"},
+      {"nombre": "Financiación", "url": "https://corona.co/financiacion"},
+      {"nombre": "Ofertas / Promociones", "url": "https://corona.co/productos/promociones/c/promociones"},
+      {"nombre": "Dónde comprar", "url": "https://corona.co/tiendas-y-horarios"},
+      {"nombre": "Estado del pedido", "url": "https://corona.co/guest/order"}
+    ],
+    "informacion_y_soporte": [
+      {"nombre": "Garantías", "url": "https://corona.co/garantias"},
+      {"nombre": "Preguntas frecuentes", "url": "https://corona.co/preguntas-frecuentes"},
+      {"nombre": "Contacto", "url": "https://corona.co/contacto"},
+      {"nombre": "Términos y condiciones", "url": "https://corona.co/terminos-condiciones"},
+      {"nombre": "Política de datos", "url": "https://corona.co/tratamiento-datos"}
+    ]
+  }
+}

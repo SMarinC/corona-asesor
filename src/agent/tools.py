@@ -164,6 +164,35 @@ ANTHROPIC_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "generar_cotizacion_pdf",
+        "description": "Genera una cotización en PDF descargable con el desglose de la propuesta (productos, cantidades, precios, total y validación de presupuesto). Ofrécela cuando ya tengas cantidades y costos. Si el usuario quiere los links, pásalos en cada línea (campo 'url') y pon incluir_links=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "concepto": {"type": "string"},
+                            "cantidad": {"type": "number"},
+                            "precio_unitario": {"type": "number"},
+                            "url": {"type": "string", "description": "Link del producto (opcional)."},
+                        },
+                        "required": ["concepto", "cantidad", "precio_unitario"],
+                    },
+                },
+                "total": {"type": "number"},
+                "presupuesto": {"type": "number"},
+                "dentro_presupuesto": {"type": "boolean"},
+                "cliente": {"type": "string"},
+                "proyecto": {"type": "string", "description": "Resumen del proyecto (área, ambiente, etc.)."},
+                "incluir_links": {"type": "boolean"},
+            },
+            "required": ["items"],
+        },
+    },
+    {
         "name": "buscar_evidencia",
         "description": "Búsqueda semántica en las fichas técnicas (Chroma). Devuelve fragmentos que respaldan una recomendación o restricción. Úsala para justificar con evidencia y no inventar.",
         "input_schema": {
@@ -335,6 +364,24 @@ class ToolDispatcher:
             ancho_junta_mm=_num(i.get("ancho_junta_mm")) if i.get("ancho_junta_mm") is not None else None,
         )
         return evaluar_combinacion(rev, proy, peg, boq).dict()
+
+    # -- cotización PDF ----------------------------------------------------- #
+    def _t_generar_cotizacion_pdf(self, i):
+        from src.output.cotizacion import generar_cotizacion_pdf
+        ruta = generar_cotizacion_pdf(
+            items=i.get("items", []),
+            total=_num(i.get("total")) if i.get("total") is not None else None,
+            presupuesto=_num(i.get("presupuesto")) if i.get("presupuesto") is not None else None,
+            dentro_presupuesto=i.get("dentro_presupuesto"),
+            cliente=i.get("cliente"),
+            proyecto=i.get("proyecto"),
+            incluir_links=bool(i.get("incluir_links", False)),
+        )
+        return {
+            "archivo": ruta,
+            "descargable": True,
+            "mensaje": "Cotización PDF generada. El usuario puede descargarla desde el botón en la interfaz.",
+        }
 
     # -- evidencia (Chroma) ------------------------------------------------- #
     def _t_buscar_evidencia(self, i):

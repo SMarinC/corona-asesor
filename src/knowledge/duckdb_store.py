@@ -67,6 +67,19 @@ class DuckDBStore:
             return {}
 
     @staticmethod
+    def _imagenes(raw) -> list[str]:
+        """Extrae la lista de URLs de imagen del campo JSON `images`."""
+        if not raw:
+            return []
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception:  # noqa: BLE001
+            return []
+        if isinstance(data, list):
+            return [str(x) for x in data if x]
+        return []
+
+    @staticmethod
     def _first(specs: dict, *keys) -> str | None:
         for k in keys:
             v = specs.get(k)
@@ -103,6 +116,7 @@ class DuckDBStore:
         else:
             tipo = (cat or "").lower()
 
+        imagenes = self._imagenes(row.get("images"))
         base = {
             "sku": row.get("sku"),
             "nombre": name,
@@ -112,6 +126,8 @@ class DuckDBStore:
             "moneda": row.get("currency"),
             "disponibilidad": bool(row.get("is_in_stock")),
             "url": row.get("url"),
+            "imagen": imagenes[0] if imagenes else None,
+            "imagenes": imagenes,
             "ficha_tecnica_url": row.get("ficha_tecnica_url"),
             "uso": self._list(specs, "Uso"),
         }
