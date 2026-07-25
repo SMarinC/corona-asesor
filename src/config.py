@@ -5,6 +5,7 @@ No contiene secretos hardcodeados: todo sale del entorno.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from pathlib import Path
@@ -67,3 +68,16 @@ def assert_llm_ready() -> None:
         raise RuntimeError(
             "Falta ANTHROPIC_API_KEY. Copia .env.example a .env y añade tu clave."
         )
+
+
+def cargar_contexto_institucional() -> dict:
+    """Carga data/contexto_agente.json ya parseado (dict vacío si no existe o
+    está corrupto). Fuente única de datos institucionales (contacto, marcas,
+    tiendas…): úsala en vez de repetir estos datos a mano en otros módulos
+    (p. ej. el pie de página de la cotización PDF)."""
+    if not CONTEXTO_PATH.exists():
+        return {}
+    try:
+        return json.loads(CONTEXTO_PATH.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}

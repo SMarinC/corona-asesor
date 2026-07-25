@@ -9,7 +9,6 @@ preguntas generales y REDIRIGIR con el link real en vez de decir "no sé".
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from src import config
 
@@ -83,15 +82,11 @@ fuente para preguntas generales:
 
 
 def _cargar_contexto() -> str:
-    """Carga data/contexto_agente.json y lo devuelve como texto compacto,
-    quitando las notas internas (_nota)."""
-    ruta = Path(config.CONTEXTO_PATH)
-    if not ruta.exists():
+    """Devuelve el contexto institucional (config.cargar_contexto_institucional)
+    como texto compacto, quitando las notas internas (_nota)."""
+    data = config.cargar_contexto_institucional()
+    if not data:
         return "(Contexto institucional no disponible.)"
-    try:
-        data = json.loads(ruta.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
-        return "(No se pudo leer el contexto institucional.)"
 
     def limpiar(obj):
         if isinstance(obj, dict):

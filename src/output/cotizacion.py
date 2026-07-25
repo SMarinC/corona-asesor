@@ -31,6 +31,28 @@ _REEMPLAZOS = {
     "“": '"', "”": '"', "‘": "'", "’": "'", "✓": "-", "…": "...",
 }
 
+_CONTACTO_FALLBACK = ("Corona Colombia  |  Linea nacional 018000 512 030  |  "
+                      "WhatsApp +57 310 274 2006  |  corona.co")
+
+
+def _contacto_footer() -> str:
+    """Línea de contacto del pie de página, tomada de contexto_agente.json —
+    la misma fuente que usa el agente — para no mantener estos datos
+    duplicados (y potencialmente desactualizados) en dos archivos."""
+    try:
+        contacto = config.cargar_contexto_institucional().get("info_general", {}).get("contacto", {})
+        linea = contacto.get("linea_nacional")
+        whatsapp = contacto.get("whatsapp")
+        if linea and whatsapp:
+            return f"Corona Colombia  |  Linea nacional {linea}  |  WhatsApp {whatsapp}  |  corona.co"
+    except Exception:  # noqa: BLE001 — el PDF nunca debe fallar por esto
+        pass
+    return _CONTACTO_FALLBACK
+
+
+# Se resuelve una sola vez al cargar el módulo (mismo criterio que SYSTEM_PROMPT).
+_CONTACTO_FOOTER = _contacto_footer()
+
 
 def _s(text: Any) -> str:
     """Convierte a str seguro para las fuentes core de fpdf2 (latin-1),
@@ -89,9 +111,7 @@ class _PDF(FPDF):
         self.set_y(-16)
         self.set_font("Helvetica", "", 7.5)
         self.set_text_color(*_GRIS)
-        contacto = ("Corona Colombia  |  Linea nacional 018000 512 030  |  "
-                    "WhatsApp +57 310 274 2006  |  corona.co")
-        self.cell(0, 5, _s(contacto), align="C")
+        self.cell(0, 5, _s(_CONTACTO_FOOTER), align="C")
         self.ln(4)
         self.cell(0, 5, _s(f"Pagina {self.page_no()}"), align="C")
 
