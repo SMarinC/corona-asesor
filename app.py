@@ -6,7 +6,8 @@ Ejecutar desde la raíz del repo:
 Muestra:
     - Chat con el agente orquestador (responde también preguntas generales de
       Corona y muestra imágenes/links de producto).
-    - Panel lateral con el estado de las fuentes de conocimiento.
+    - Panel lateral con las baldosas (pisos/paredes) que más concuerdan,
+      tomadas de las búsquedas reales que hace el agente en el catálogo.
     - La traza de herramientas de cada respuesta (observabilidad).
     - Botón para descargar la cotización en PDF cuando el agente la genera.
 """
@@ -18,9 +19,34 @@ from pathlib import Path
 
 import streamlit as st
 
-from src import config
-
 st.set_page_config(page_title="Corona Asesor · Agente", page_icon="🧱", layout="wide")
+
+# --------------------------------------------------------------------------- #
+#  Hero: marca
+# --------------------------------------------------------------------------- #
+logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+
+col_izq, col_centro, col_der = st.columns([3, 1, 3])
+with col_centro:
+    if os.path.exists(logo_path):
+        st.image(logo_path, use_container_width=True)
+
+st.markdown(
+    """
+    <p style="text-align:center; font-size:1.05rem; line-height:1.55; margin-top:0.5rem;">
+    Corona es una marca colombiana con más de un siglo de trayectoria en el sector de la
+    construcción y el hogar, reconocida por sus pisos, revestimientos, sanitarios, grifería,
+    pinturas y demás materiales para construir y remodelar espacios.
+    </p>
+    <p style="text-align:center; font-size:0.95rem; color:#555; margin-top:-0.3rem;">
+    Este asistente virtual se especializa en <strong>cotizaciones para renovaciones de
+    pisos</strong>: te ayuda a estimar productos, cantidades y presupuesto en minutos.
+    </p>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.divider()
 
 
 @st.cache_resource(show_spinner="Iniciando agente…")
@@ -29,22 +55,43 @@ def get_agent():
     return CoronaAgent()
 
 
-def data_status() -> dict:
-    estado = {"duckdb": False, "n": 0, "chroma": 0}
-    try:
-        from src.knowledge.duckdb_store import DuckDBStore
-        with DuckDBStore(read_only=True) as d:
-            if "products" in d._tables():
-                estado["n"] = d.con.execute("SELECT COUNT(*) FROM products").fetchone()[0]
-                estado["duckdb"] = True
-    except Exception:
-        pass
-    try:
-        from src.knowledge.chroma_store import ChromaStore
-        estado["chroma"] = ChromaStore().count()
-    except Exception:
-        pass
-    return estado
+def extraer_candidatos(trace: list[dict]) -> list[dict]:
+    """Junta los productos (pisos/paredes) devueltos por buscar_revestimientos
+    en esta traza, sin duplicar por SKU."""
+    candidatos: dict[str, dict] = {}
+    for paso in trace:
+        if paso.get("tool") != "buscar_revestimientos":
+            continue
+        salida = paso.get("output") or {}
+        for prod in salida.get("resultados", []) or []:
+            sku = prod.get("sku")
+            if sku and sku not in candidatos:
+                candidatos[sku] = prod
+    return list(candidatos.values())
+
+
+def render_candidatos(candidatos: list[dict]):
+    """Panel lateral con las baldosas que más concuerdan con la búsqueda."""
+    st.markdown("#### 🧱 Baldosas que más concuerdan")
+    if not candidatos:
+        st.caption(
+            "Aquí verás las opciones sugeridas apenas el agente busque "
+            "pisos o paredes para tu cotización."
+        )
+        return
+    for prod in candidatos[:6]:
+        with st.container(border=True):
+            col_img, col_txt = st.columns([1, 2], gap="small")
+            with col_img:
+                if prod.get("imagen"):
+                    st.image(prod["imagen"], width=80)
+            with col_txt:
+                st.markdown(f"**{prod.get('nombre') or 'Producto'}**")
+                precio = prod.get("precio")
+                if precio:
+                    st.caption(f"${precio:,.0f} COP")
+                if prod.get("url"):
+                    st.markdown(f"[Ver producto]({prod['url']})")
 
 
 def render_trace(trace: list[dict], key: str):
@@ -73,77 +120,54 @@ def render_trace(trace: list[dict], key: str):
 
 
 # --------------------------------------------------------------------------- #
-#  Barra lateral
+#  Chat (columna centrada) + panel de baldosas candidatas (columna lateral)
 # --------------------------------------------------------------------------- #
-with st.sidebar:
-    st.header("🧱 Corona Asesor")
-    st.caption("Agente para pisos, paredes, pegantes y boquillas — y consultas generales de Corona.")
-
-    st.subheader("Fuentes de conocimiento")
-    estado = data_status()
-    if estado["duckdb"]:
-        st.success(f"DuckDB · {estado['n']} productos")
-    else:
-        st.warning("DuckDB no disponible. Revisa data/processed/corona.duckdb")
-    if estado["chroma"]:
-        st.success(f"Chroma · {estado['chroma']} fragmentos de fichas")
-    else:
-        st.warning("Chroma no disponible. Revisa data/processed/chroma/")
-
-    if not config.ANTHROPIC_API_KEY:
-        st.error("Falta ANTHROPIC_API_KEY en el .env")
-    if not config.VOYAGE_API_KEY:
-        st.info("Sin VOYAGE_API_KEY: la evidencia usa fallback por palabra clave.")
-
-    st.divider()
-    if st.button("🔄 Reiniciar conversación"):
-        if "agent" in st.session_state:
-            del st.session_state["agent"]
-        get_agent.clear()
-        st.session_state.mensajes = []
-        st.rerun()
-
-    with st.expander("Ejemplos de consulta"):
-        st.markdown(
-            "- Piso para una cocina de 4×3 m, diseño claro, fácil de limpiar, "
-            "presupuesto 2.500.000 COP.\n"
-            "- ¿Qué garantía tienen los pisos Corona?\n"
-            "- ¿Dónde queda la tienda Corona más cercana?\n"
-            "- ¿Venden sanitarios?"
-        )
-
-
-# --------------------------------------------------------------------------- #
-#  Chat
-# --------------------------------------------------------------------------- #
-st.title("Corona Asesor")
-
 if "mensajes" not in st.session_state:
     st.session_state.mensajes = []
 
-for idx, m in enumerate(st.session_state.mensajes):
-    with st.chat_message(m["role"]):
-        st.markdown(m["contenido"])
-        if m.get("trace"):
-            render_trace(m["trace"], key=f"hist-{idx}")
+col_chat, col_candidatos = st.columns([2, 1], gap="large")
 
-prompt = st.chat_input("Describe tu proyecto o pregunta lo que quieras de Corona…")
-if prompt:
-    st.session_state.mensajes.append({"role": "user", "contenido": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+with col_chat:
+    st.title("Corona Asesor")
 
-    with st.chat_message("assistant"):
-        try:
-            agente = get_agent()
-            with st.spinner("El agente está trabajando…"):
-                resultado = agente.ask(prompt)
-            st.markdown(resultado["texto"])
-            render_trace(resultado["trace"], key=f"live-{len(st.session_state.mensajes)}")
-            st.session_state.mensajes.append({
-                "role": "assistant",
-                "contenido": resultado["texto"],
-                "trace": resultado["trace"],
-            })
-        except Exception as e:
-            st.error(f"Error: {e}")
+    if not st.session_state.mensajes:
+        with st.chat_message("assistant"):
+            st.write("Cuéntame cómo puedo ayudarte hoy")
+
+    for idx, m in enumerate(st.session_state.mensajes):
+        with st.chat_message(m["role"]):
+            st.markdown(m["contenido"])
+            if m.get("trace"):
+                render_trace(m["trace"], key=f"hist-{idx}")
+
+    prompt = st.chat_input("Describe tu proyecto o pregunta lo que quieras de Corona…")
+    if prompt:
+        st.session_state.mensajes.append({"role": "user", "contenido": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            try:
+                agente = get_agent()
+                with st.spinner("El agente está trabajando…"):
+                    resultado = agente.ask(prompt)
+                st.markdown(resultado["texto"])
+                render_trace(resultado["trace"], key=f"live-{len(st.session_state.mensajes)}")
+                st.session_state.mensajes.append({
+                    "role": "assistant",
+                    "contenido": resultado["texto"],
+                    "trace": resultado["trace"],
+                })
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+# El panel lateral se llena DESPUÉS de procesar el prompt para que incluya,
+# en el mismo turno, los candidatos que el agente acaba de buscar.
+with col_candidatos:
+    candidatos_actuales: list[dict] = []
+    for m in reversed(st.session_state.mensajes):
+        if m["role"] == "assistant" and m.get("trace"):
+            candidatos_actuales = extraer_candidatos(m["trace"])
+            if candidatos_actuales:
+                break
+    render_candidatos(candidatos_actuales)
