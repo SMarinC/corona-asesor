@@ -40,7 +40,7 @@ if _TOOLS_CACHED:
 class CoronaAgent:
     def __init__(
         self,
-        max_tokens: int = 2048,
+        max_tokens: int = config.ANTHROPIC_MAX_TOKENS,
         max_turns: int = 12,
         duck: DuckDBStore | None = None,
         chroma: ChromaStore | None = None,
