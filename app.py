@@ -49,10 +49,30 @@ st.markdown(
 st.divider()
 
 
-@st.cache_resource(show_spinner="Iniciando agente…")
-def get_agent():
+@st.cache_resource(show_spinner="Cargando catálogo…")
+def get_recursos():
+    """Conexiones de solo lectura a DuckDB/Chroma, compartidas entre sesiones.
+
+    Son caras de abrir (Chroma carga el cliente de embeddings) pero de solo
+    lectura, así que sí pueden compartirse entre usuarios sin problema.
+    """
     from src.agent.orchestrator import CoronaAgent
-    return CoronaAgent()
+    duck = CoronaAgent._try_duck()
+    chroma = CoronaAgent._try_chroma()
+    return duck, chroma
+
+
+def get_agent():
+    """Un CoronaAgent (con su propio historial) por sesión de Streamlit.
+
+    IMPORTANTE: no usar st.cache_resource aquí — eso compartiría el mismo
+    historial de conversación entre TODOS los usuarios de la demo.
+    """
+    if "agente" not in st.session_state:
+        from src.agent.orchestrator import CoronaAgent
+        duck, chroma = get_recursos()
+        st.session_state.agente = CoronaAgent(duck=duck, chroma=chroma)
+    return st.session_state.agente
 
 
 def extraer_candidatos(trace: list[dict]) -> list[dict]:

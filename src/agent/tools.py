@@ -227,6 +227,7 @@ class ToolDispatcher:
         self.duck = duck
         self.chroma = chroma
         self.desperdicio_defecto = desperdicio_defecto
+        self._cache_productos: dict[str, dict | None] = {}
 
     def run(self, name: str, tool_input: dict[str, Any]) -> dict[str, Any]:
         """Enruta la llamada a la implementación real y devuelve un dict."""
@@ -317,7 +318,12 @@ class ToolDispatcher:
     def _producto(self, sku):
         if not self.duck:
             return None
-        return self.duck.get_producto(sku)
+        # El catálogo es de solo lectura durante la conversación: cachear
+        # evita repetir la misma consulta cuando varias tools (cajas, boquilla,
+        # compatibilidad...) piden el mismo SKU en un mismo turno.
+        if sku not in self._cache_productos:
+            self._cache_productos[sku] = self.duck.get_producto(sku)
+        return self._cache_productos[sku]
 
     def _t_get_producto(self, i):
         p = self._producto(i["sku"])

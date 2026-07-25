@@ -5,12 +5,18 @@ No contiene secretos hardcodeados: todo sale del entorno.
 """
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 # Raíz del repositorio (…/corona-agent)
 ROOT = Path(__file__).resolve().parent.parent

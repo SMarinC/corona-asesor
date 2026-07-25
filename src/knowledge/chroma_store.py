@@ -10,6 +10,7 @@ Metadatos por fragmento: sku, category, subcategory, pdf_id, section, doc_type.
 """
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ from typing import Any
 import chromadb
 
 from src import config
+
+logger = logging.getLogger(__name__)
 
 _STOP = {
     "para", "como", "cual", "cuales", "este", "esta", "estos", "una", "unos",
@@ -59,7 +62,7 @@ class ChromaStore:
                 )
                 return self._fmt_query(res, modo="semantico")
             except Exception as e:  # noqa: BLE001
-                print(f"[aviso] Búsqueda semántica falló ({e}); usando fallback por texto.")
+                logger.warning("Búsqueda semántica falló (%s); usando fallback por texto.", e)
 
         # 2) Fallback por palabra clave (no requiere embeddings).
         return self._keyword_fallback(consulta, n_results, filtro)
