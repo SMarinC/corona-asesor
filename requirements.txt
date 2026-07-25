@@ -1,0 +1,18 @@
+# --- Núcleo del agente ---
+anthropic>=0.39.0          # LLM orquestador (tool use)
+
+# --- Capa de conocimiento ---
+duckdb>=1.1.0             # datos estructurados: tabla `products`, filtros, reglas
+chromadb>=1.5.0          # índice de fichas técnicas (colección `corona_fichas`)
+voyageai>=0.3.0          # embeddings de la colección (voyage-4-large); búsqueda semántica
+
+# --- UI ---
+streamlit>=1.38.0        # interfaz de demostración
+
+# --- Utilidades ---
+python-dotenv>=1.0.0     # carga de variables de entorno (.env)
+pydantic>=2.7.0          # validación de esquemas de datos
+pandas>=2.2.0            # manejo de tablas / carga a DuckDB
+
+# --- Tests ---
+pytest>=8.0.0

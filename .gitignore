@@ -1,0 +1,25 @@
+# --- Secretos ---
+.env
+*.key
+credentials.json
+
+# --- Artefactos de datos generados ---
+data/processed/
+*.duckdb
+*.duckdb.wal
+chroma/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Sistema / editores ---
+.DS_Store
+.vscode/
+.idea/
