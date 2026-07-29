@@ -14,26 +14,40 @@ recomendación **con evidencia técnica**.
 
 ## Arquitectura
 
-Un **único agente orquestador** (Google / Gemini) que coordina herramientas:
+Un **único agente orquestador** (Google / Gemini, function calling) que
+coordina herramientas. El agente vive **una sola vez en Python**
+(`src/agent/orchestrator.py`) y tiene **dos interfaces** que lo consumen:
 
 | Capa | Tecnología | Responsabilidad |
 |------|-----------|-----------------|
-| Razonamiento | Gemini (function calling) | Entiende al usuario, planea, explica |
+| Razonamiento | **Gemini** (`google-genai`, function calling) | Entiende al usuario, planea, explica |
 | Datos exactos | **DuckDB** | Qué productos cumplen filtros, precios, disponibilidad, m²/caja |
-| Evidencia | **ChromaDB** | Búsqueda semántica sobre fragmentos de fichas técnicas (RAG) |
+| Evidencia | **ChromaDB** | Búsqueda semántica (VoyageAI) sobre fragmentos de fichas técnicas (RAG) |
 | Compatibilidad | Motor de reglas | Compatible / Incompatible / Requiere revisión |
 | Cantidades | Funciones deterministas | Área, desperdicio, cajas, pegante, boquilla, presupuesto |
-| UI | Streamlit | Chat + traza de herramientas (observabilidad) |
+| UI (demo original) | **Streamlit** (`app.py`) | Chat + traza de herramientas embebida en el mismo proceso Python |
+| UI (demo visual) | **Next.js/React** (`web/`) + **FastAPI** (`api_server.py`) | Chat con diseño de marca, panel de candidatos, trace visual y descarga de PDF, consumiendo el mismo `CoronaAgent` Python por HTTP |
 
 Separación de responsabilidades: **DuckDB** filtra, **Chroma** justifica, el
 **motor de reglas** valida, los **cálculos** cuantifican y el **LLM** entiende y
 explica. Cada componente es verificable en ejecución (no solo mencionado).
 
+Las dos UI son alternativas, no capas apiladas: **Streamlit** llama al
+`CoronaAgent` directamente en el mismo proceso (más simple, ideal para probar
+el agente en aislamiento); **Next.js** llama a `api_server.py` por HTTP, que
+envuelve ese mismo `CoronaAgent` (interfaz con más cuidado visual). La lógica
+de negocio (tools, cálculos, reglas, RAG) no está duplicada: vive una sola vez
+en `src/`.
+
 ```
 corona-agent/
-├── app.py                     # UI Streamlit (demo)
+├── app.py                     # UI Streamlit (demo original, llama al agente en el mismo proceso)
+├── api_server.py              # FastAPI: expone CoronaAgent por HTTP para el frontend web/
 ├── run_ingest.py              # Carga JSON→DuckDB y fichas→Chroma
-├── .env.example               # Plantilla de variables (sin secretos)
+├── start-demo.ps1             # Levanta backend (8000) + frontend web (3000) para la demo
+├── check-demo.ps1             # Chequea si ambos servidores de la demo siguen vivos
+├── .env.example                # Plantilla de variables (sin secretos)
+├── .streamlit/config.toml     # Tema visual de la UI Streamlit
 ├── data/
 │   ├── raw/                   # JSON estructurado (revestimientos, pegantes, boquillas)
 │   ├── fichas/                # Fragmentos de fichas técnicas (fichas.json / *.txt)
@@ -43,14 +57,18 @@ corona-agent/
 │   ├── agent/                 # Orquestador, tools, prompt, estado
 │   ├── knowledge/             # DuckDB, Chroma, ingesta
 │   ├── rules/                 # Motor de reglas de compatibilidad
-│   └── calc/                  # Cálculos deterministas
-├── docs/demo_script.md        # Guion de la demo
-└── tests/                     # Tests de cálculos y reglas
+│   ├── calc/                  # Cálculos deterministas
+│   └── output/                # Generación de cotización en PDF
+├── web/                        # Frontend alternativo Next.js/React (ver web/README.md)
+├── docs/                       # Guiones de demo y de cobertura de tools
+└── tests/                      # Tests de cálculos y reglas
 ```
 
 ---
 
 ## Puesta en marcha
+
+### Opción A — Solo Streamlit (más simple)
 
 ```bash
 # 1) Dependencias
@@ -66,6 +84,38 @@ python run_ingest.py          # -> DuckDB: OK products=505 · Chroma: OK fragmen
 # 4) Correr la demo
 streamlit run app.py
 ```
+
+### Opción B — Frontend Next.js (demo visual)
+
+Requiere el backend FastAPI corriendo en `:8000` y el frontend Node en
+`:3000`. El script `start-demo.ps1` levanta ambos y espera a que respondan:
+
+```powershell
+# Desde la raíz del repo (Windows/PowerShell)
+powershell -ExecutionPolicy Bypass -File start-demo.ps1
+```
+
+Abre `http://localhost:3000`. Para verificar que ambos servidores siguen
+vivos en cualquier momento:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File check-demo.ps1
+```
+
+O manualmente, en dos terminales separadas:
+
+```bash
+# Terminal 1 — backend (raíz del repo)
+uvicorn api_server:app --reload --port 8000
+
+# Terminal 2 — frontend (web/)
+cd web
+npm install
+npm run dev
+```
+
+Detalles de arquitectura, decisiones y limitaciones del frontend web están en
+[`web/README.md`](web/README.md).
 
 Correr los tests (no requieren API key):
 
@@ -140,9 +190,13 @@ Categorías reales: `Revestimientos` (subcategorías `Pisos` / `Paredes`),
 
 ## Componentes de agente implementados (Technical Checklist)
 
-1. **LLM / razonamiento** — Claude como orquestador.
-2. **Tool use / function calling** — 12 herramientas reales (búsqueda, cálculo,
-   reglas, evidencia RAG y generación de cotización PDF).
+1. **LLM / razonamiento** — Gemini (`google-genai`) como orquestador.
+2. **Tool use / function calling** — 13 herramientas reales: `calcular_area`,
+   `buscar_revestimientos`, `buscar_pegantes`, `buscar_boquillas`,
+   `get_producto`, `calcular_cajas`, `calcular_pegante`, `calcular_boquilla`,
+   `validar_compatibilidad`, `calcular_presupuesto`,
+   `generar_cotizacion_pdf`, `buscar_evidencia` y
+   `consultar_contexto_institucional`.
 3. **Knowledge tools / RAG** — DuckDB (estructurado) + Chroma (semántico).
 4. **Planning / orquestación** — loop multi-paso que encadena las herramientas.
 5. **Guardrails + Observabilidad** — política "no inventar" + traza auditable.
@@ -151,5 +205,9 @@ Categorías reales: `Revestimientos` (subcategorías `Pisos` / `Paredes`),
 
 ## Seguridad
 
-- Secretos solo en `.env` (ignorado por git). Nunca hardcodeados.
+- Secretos solo en `.env` / `web/.env.local` (ambos ignorados por git). Nunca
+  hardcodeados.
 - `.env.example` documenta las variables sin valores reales.
+- `api_server.py` restringe CORS a `localhost:3000`/`127.0.0.1:3000` y valida
+  que las descargas de cotización (`GET /cotizacion/{filename}`) no salgan de
+  `data/cotizaciones/` (protección contra path traversal).
