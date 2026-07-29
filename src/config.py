@@ -31,12 +31,12 @@ def _path(env_key: str, default: str) -> Path:
 
 
 # --- LLM ---
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 # Tope de tokens de salida por respuesta. Una cotización completa (desglose +
-# alternativas + evidencia) puede necesitar más que el default de Anthropic;
+# alternativas + evidencia) puede necesitar más que el default de Gemini;
 # se sube pero se deja acotado (no ilimitado) para no disparar costo/latencia.
-ANTHROPIC_MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS", "8192"))
+GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
 
 # --- Embeddings de Chroma (la colección se construyó con VoyageAI) ---
 # Necesaria para la búsqueda SEMÁNTICA en las fichas. Sin ella, ChromaStore
@@ -68,9 +68,9 @@ CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "corona_fichas")
 
 def assert_llm_ready() -> None:
     """Falla temprano y con mensaje claro si falta la API key."""
-    if not ANTHROPIC_API_KEY:
+    if not GOOGLE_API_KEY:
         raise RuntimeError(
-            "Falta ANTHROPIC_API_KEY. Copia .env.example a .env y añade tu clave."
+            "Falta GOOGLE_API_KEY. Copia .env.example a .env y añade tu clave."
         )
 
 

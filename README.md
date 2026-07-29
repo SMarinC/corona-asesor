@@ -14,11 +14,11 @@ recomendación **con evidencia técnica**.
 
 ## Arquitectura
 
-Un **único agente orquestador** (Anthropic / Claude) que coordina herramientas:
+Un **único agente orquestador** (Google / Gemini) que coordina herramientas:
 
 | Capa | Tecnología | Responsabilidad |
 |------|-----------|-----------------|
-| Razonamiento | Claude (tool use) | Entiende al usuario, planea, explica |
+| Razonamiento | Gemini (function calling) | Entiende al usuario, planea, explica |
 | Datos exactos | **DuckDB** | Qué productos cumplen filtros, precios, disponibilidad, m²/caja |
 | Evidencia | **ChromaDB** | Búsqueda semántica sobre fragmentos de fichas técnicas (RAG) |
 | Compatibilidad | Motor de reglas | Compatible / Incompatible / Requiere revisión |
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 
 # 2) Variables de entorno
 cp .env.example .env
-#   edita .env: ANTHROPIC_API_KEY (obligatoria) y VOYAGE_API_KEY (para RAG semántico)
+#   edita .env: GOOGLE_API_KEY (obligatoria) y VOYAGE_API_KEY (para RAG semántico)
 
 # 3) La base ya viene construida en data/processed/. Verifícala:
 python run_ingest.py          # -> DuckDB: OK products=505 · Chroma: OK fragmentos=3754

@@ -1,11 +1,11 @@
 """Agente orquestador: un único agente que coordina las herramientas.
 
-Implementa el loop de razonamiento con *tool use* de Anthropic:
-    usuario -> LLM -> (tool_use)* -> tool_result -> LLM -> respuesta final
+Implementa el loop de razonamiento con *function calling* de Gemini:
+    usuario -> LLM -> (function_call)* -> function_response -> LLM -> respuesta final
 
 Componentes de arquitectura que este archivo activa (Technical Checklist):
-    - LLM / motor de razonamiento  (Anthropic)
-    - Tool use / function calling   (ANTHROPIC_TOOLS + ToolDispatcher)
+    - LLM / motor de razonamiento  (Google Gemini)
+    - Tool use / function calling   (AGENT_TOOLS + ToolDispatcher)
     - Knowledge tools / RAG         (DuckDB + Chroma vía las tools)
     - Planning / orquestación       (loop multi-paso)
     - Observabilidad / logging      (self.trace de cada llamada)
@@ -17,37 +17,42 @@ import json
 import logging
 from typing import Any
 
-import anthropic
+from google import genai
+from google.genai import types
 
 from src import config
 from src.agent.prompts import SYSTEM_PROMPT
-from src.agent.tools import ANTHROPIC_TOOLS, ToolDispatcher
+from src.agent.tools import AGENT_TOOLS, ToolDispatcher
 from src.knowledge.duckdb_store import DuckDBStore
 from src.knowledge.chroma_store import ChromaStore
 
 logger = logging.getLogger(__name__)
 
-# El system prompt es el mismo en cada llamada (incluye todo el contexto
-# institucional) y las tools nunca cambian: se marcan como cacheables para que
-# Anthropic no vuelva a procesarlos en cada paso del loop ni en cada turno de
-# la conversación (ahorra costo y latencia, sobre todo con max_turns>1).
-_SYSTEM_BLOCKS = [{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}]
-_TOOLS_CACHED = [dict(t) for t in ANTHROPIC_TOOLS]
-if _TOOLS_CACHED:
-    _TOOLS_CACHED[-1] = {**_TOOLS_CACHED[-1], "cache_control": {"type": "ephemeral"}}
+# Gemini no acepta claves JSON Schema fuera de un subconjunto reducido; nuestros
+# esquemas ya están dentro de ese subconjunto (type/properties/items/required/
+# enum/description), así que se pasan tal cual como `parameters`.
+_FUNCTION_DECLARATIONS = [
+    types.FunctionDeclaration(
+        name=t["name"],
+        description=t["description"],
+        parameters=t["input_schema"],
+    )
+    for t in AGENT_TOOLS
+]
+_TOOLS = [types.Tool(function_declarations=_FUNCTION_DECLARATIONS)]
 
 
 class CoronaAgent:
     def __init__(
         self,
-        max_tokens: int = config.ANTHROPIC_MAX_TOKENS,
+        max_tokens: int = config.GEMINI_MAX_TOKENS,
         max_turns: int = 12,
         duck: DuckDBStore | None = None,
         chroma: ChromaStore | None = None,
     ):
         config.assert_llm_ready()
-        self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        self.model = config.ANTHROPIC_MODEL
+        self.client = genai.Client(api_key=config.GOOGLE_API_KEY)
+        self.model = config.GEMINI_MODEL
         self.max_tokens = max_tokens
         self.max_turns = max_turns
 
@@ -61,10 +66,11 @@ class CoronaAgent:
             self.duck, self.chroma, desperdicio_defecto=config.DESPERDICIO_DEFECTO
         )
 
-        # Historial (formato de mensajes de Anthropic) y traza de herramientas.
+        # Historial (formato de mensajes de Gemini: role "user"/"model") y
+        # traza de herramientas.
         # IMPORTANTE: cada CoronaAgent es de UNA sola conversación/sesión — no
         # debe compartirse entre usuarios (ver get_agent en app.py).
-        self.history: list[dict[str, Any]] = []
+        self.history: list[types.Content] = []
         self.trace: list[dict[str, Any]] = []
 
     @staticmethod
@@ -94,23 +100,32 @@ class CoronaAgent:
         # para no dejar un mensaje "user" sin su respuesta emparejada (lo que
         # rompería el próximo ask() con dos turnos "user" seguidos).
         checkpoint = len(self.history)
-        self.history.append({"role": "user", "content": user_message})
+        self.history.append(types.Content(role="user", parts=[types.Part(text=user_message)]))
         turn_trace: list[dict[str, Any]] = []
+
+        gen_config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            tools=_TOOLS,
+            max_output_tokens=self.max_tokens,
+        )
 
         try:
             for _ in range(self.max_turns):
-                resp = self.client.messages.create(
+                resp = self.client.models.generate_content(
                     model=self.model,
-                    max_tokens=self.max_tokens,
-                    system=_SYSTEM_BLOCKS,
-                    tools=_TOOLS_CACHED,
-                    messages=self.history,
+                    contents=self.history,
+                    config=gen_config,
                 )
-                # Guardamos la respuesta del asistente (puede traer tool_use).
-                self.history.append({"role": "assistant", "content": resp.content})
 
-                if resp.stop_reason == "max_tokens":
-                    texto = self._solo_texto(resp.content)
+                candidate = resp.candidates[0] if resp.candidates else None
+                if candidate is None:
+                    raise RuntimeError("Gemini no devolvió ninguna respuesta.")
+
+                content = candidate.content
+                self.history.append(content)
+
+                if candidate.finish_reason == types.FinishReason.MAX_TOKENS:
+                    texto = self._solo_texto(content)
                     logger.warning("Respuesta truncada por max_tokens (turno con %d pasos de tool use)", len(turn_trace))
                     return {
                         "texto": texto + "\n\n_(La respuesta se cortó por límite de longitud; "
@@ -119,26 +134,27 @@ class CoronaAgent:
                         "truncado": True,
                     }
 
-                if resp.stop_reason != "tool_use":
-                    texto = self._solo_texto(resp.content)
+                function_calls = [p.function_call for p in (content.parts or []) if p.function_call]
+                if not function_calls:
+                    texto = self._solo_texto(content)
                     return {"texto": texto, "trace": turn_trace}
 
-                # Ejecutamos todas las tools solicitadas y devolvemos los resultados.
-                tool_results = []
-                for bloque in resp.content:
-                    if getattr(bloque, "type", None) != "tool_use":
-                        continue
-                    salida = self.dispatcher.run(bloque.name, bloque.input or {})
-                    registro = {"tool": bloque.name, "input": bloque.input, "output": salida}
+                # Ejecutamos todas las funciones solicitadas y devolvemos los resultados.
+                response_parts = []
+                for fc in function_calls:
+                    tool_input = dict(fc.args or {})
+                    salida = self.dispatcher.run(fc.name, tool_input)
+                    registro = {"tool": fc.name, "input": tool_input, "output": salida}
                     turn_trace.append(registro)
                     self.trace.append(registro)
-                    logger.info("tool=%s input=%s", bloque.name, bloque.input)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": bloque.id,
-                        "content": json.dumps(salida, ensure_ascii=False, default=str),
-                    })
-                self.history.append({"role": "user", "content": tool_results})
+                    logger.info("tool=%s input=%s", fc.name, tool_input)
+                    response_parts.append(
+                        types.Part.from_function_response(
+                            name=fc.name,
+                            response={"result": json.loads(json.dumps(salida, ensure_ascii=False, default=str))},
+                        )
+                    )
+                self.history.append(types.Content(role="user", parts=response_parts))
         except Exception as e:
             logger.exception("Fallo llamando al modelo; se revierte el historial de este turno")
             del self.history[checkpoint:]
@@ -149,16 +165,16 @@ class CoronaAgent:
             }
 
         # Se agotó max_turns: cerramos el turno con un mensaje del asistente
-        # para no dejar como último mensaje uno de rol "user" (tool_results),
+        # para no dejar como último mensaje uno de rol "user" (function_responses),
         # que dejaría el historial en un estado inválido para el próximo ask().
         mensaje_cierre = ("Se alcanzó el máximo de pasos sin cerrar la propuesta. "
                           "Revisa la traza de herramientas para ver el avance.")
-        self.history.append({"role": "assistant", "content": mensaje_cierre})
+        self.history.append(types.Content(role="model", parts=[types.Part(text=mensaje_cierre)]))
         return {"texto": mensaje_cierre, "trace": turn_trace}
 
     @staticmethod
-    def _solo_texto(content) -> str:
-        partes = [b.text for b in content if getattr(b, "type", None) == "text"]
+    def _solo_texto(content: types.Content) -> str:
+        partes = [p.text for p in (content.parts or []) if p.text]
         return "\n".join(partes).strip()
 
     def reset(self) -> None:

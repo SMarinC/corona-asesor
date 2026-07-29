@@ -1,5 +1,5 @@
 # --- Núcleo del agente ---
-anthropic>=0.39.0          # LLM orquestador (tool use)
+google-genai>=1.0.0        # LLM orquestador (tool use) — Gemini
 
 # --- Capa de conocimiento ---
 duckdb>=1.1.0             # datos estructurados: tabla `products`, filtros, reglas

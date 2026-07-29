@@ -1,18 +1,14 @@
 """Prompt de sistema del agente orquestador.
 
-El system prompt = instrucciones + CONTEXTO INSTITUCIONAL de Corona (empresa,
-contacto, garantías, financiación, tiendas, categorías fuera de catálogo con sus
-links). Ese contexto se inyecta entero desde `data/contexto_agente.json` (no es
-RAG: cabe en el prompt y se carga una vez), para que el agente pueda responder
-preguntas generales y REDIRIGIR con el link real en vez de decir "no sé".
+El contexto institucional de Corona (empresa, contacto, garantías,
+financiación, tiendas, categorías fuera de catálogo con sus links) ya NO se
+inyecta aquí completo: se consulta bajo demanda con la tool
+`consultar_contexto_institucional` (ver tools.py), para no gastar tokens del
+system prompt en datos que la mayoría de turnos no necesita.
 """
 from __future__ import annotations
 
-import json
-
-from src import config
-
-_INSTRUCCIONES = """\
+SYSTEM_PROMPT = """\
 Eres **Corona Asesor**, un agente experto de Corona Colombia que ayuda a planear
 la instalación de pisos y revestimientos de pared, con sus pegantes y boquillas.
 
@@ -34,15 +30,16 @@ validar presupuesto y respaldar con las fichas técnicas.
 7. Respalda con evidencia de fichas técnicas (`buscar_evidencia`).
 8. Presenta una opción principal y 1–2 alternativas, con razones y evidencia.
 
-# Preguntas GENERALES sobre Corona (usa el CONTEXTO de abajo, NO digas "no sé")
+# Preguntas GENERALES sobre Corona (usa consultar_contexto_institucional, NO digas "no sé")
 Para preguntas sobre la empresa, marcas, tiendas, contacto, garantías,
-financiación, envíos, devoluciones, servicios, sostenibilidad o premios,
-responde con la información del CONTEXTO INSTITUCIONAL. Si preguntan por una
-categoría de producto que NO está en nuestro catálogo (sanitarios, griferías,
-pinturas, muebles, iluminación, etc.), NO respondas "no puedo": explica breve y
-REDIRIGE con el link real de esa categoría que aparece en el contexto. Si no
-tienes un dato exacto (una dirección, un horario, un plazo de garantía puntual),
-dirígelo al link o canal de contacto correspondiente en vez de inventarlo.
+financiación, envíos, devoluciones, servicios, sostenibilidad o premios, llama
+a `consultar_contexto_institucional` y responde con esos datos oficiales. Si
+preguntan por una categoría de producto que NO está en nuestro catálogo
+(sanitarios, griferías, pinturas, muebles, iluminación, etc.), NO respondas
+"no puedo": consulta esa misma herramienta (sección `categorias_fuera_de_catalogo`)
+y REDIRIGE con el link real. Si no tienes un dato exacto (una dirección, un
+horario, un plazo de garantía puntual), dirígelo al link o canal de contacto
+correspondiente en vez de inventarlo.
 
 # Reglas de honestidad (CRÍTICO)
 - NUNCA inventes precios, disponibilidad, rendimientos, medidas ni
@@ -72,36 +69,4 @@ Responde en español, claro y profesional. NO uses emojis. Evita el exceso de
 formato; usa listas solo cuando aporten claridad. Cuando entregues la propuesta,
 muestra el desglose: producto, cantidades, costo, veredicto de compatibilidad y
 la evidencia técnica que lo respalda.
-
-# ─────────────────────────  CONTEXTO INSTITUCIONAL  ─────────────────────────
-A continuación, datos oficiales de Corona (empresa, contacto, garantías,
-financiación, tiendas y categorías fuera de catálogo con sus links). Úsalo como
-fuente para preguntas generales:
-
 """
-
-
-def _cargar_contexto() -> str:
-    """Devuelve el contexto institucional (config.cargar_contexto_institucional)
-    como texto compacto, quitando las notas internas (_nota)."""
-    data = config.cargar_contexto_institucional()
-    if not data:
-        return "(Contexto institucional no disponible.)"
-
-    def limpiar(obj):
-        if isinstance(obj, dict):
-            return {k: limpiar(v) for k, v in obj.items() if k != "_nota"}
-        if isinstance(obj, list):
-            return [limpiar(x) for x in obj]
-        return obj
-
-    limpio = limpiar(data)
-    return json.dumps(limpio, ensure_ascii=False, indent=1)
-
-
-def build_system_prompt() -> str:
-    return _INSTRUCCIONES + _cargar_contexto()
-
-
-# Compatibilidad: algunos módulos importan SYSTEM_PROMPT directamente.
-SYSTEM_PROMPT = build_system_prompt()

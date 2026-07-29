@@ -3,6 +3,10 @@
 *.key
 credentials.json
 
+# --- Documentos ---
+*.pdf
+
+
 # --- Artefactos de datos generados ---
 data/processed/
 *.duckdb
@@ -24,3 +28,4 @@ env/
 .DS_Store
 .vscode/
 .idea/
+~$*

@@ -1,7 +1,8 @@
 """Definición de herramientas (tool use) y su ejecución real.
 
-- `ANTHROPIC_TOOLS`: esquema JSON de cada herramienta, tal como lo espera la API
-  de Anthropic (name, description, input_schema).
+- `AGENT_TOOLS`: esquema JSON de cada herramienta (name, description,
+  input_schema), agnóstico al proveedor de LLM. `orchestrator.py` lo adapta al
+  formato que espera la API de Gemini (function_declarations).
 - `ToolDispatcher`: ejecuta la herramienta REAL (DuckDB, Chroma, cálculos,
   reglas). No hay mocks: cada llamada consulta datos o computa deterministamente.
 """
@@ -9,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any, TYPE_CHECKING
 
+from src import config
 from src.calc import calculations as calc
 from src.rules.compatibility import ProyectoSpec, evaluar_combinacion
 
@@ -20,7 +22,7 @@ if TYPE_CHECKING:  # solo para type hints; evita exigir duckdb/chromadb en runti
 # --------------------------------------------------------------------------- #
 #  Esquema de herramientas para el LLM
 # --------------------------------------------------------------------------- #
-ANTHROPIC_TOOLS: list[dict[str, Any]] = [
+AGENT_TOOLS: list[dict[str, Any]] = [
     {
         "name": "calcular_area",
         "description": "Calcula el área de un espacio rectangular y le suma un porcentaje de desperdicio. Úsala apenas conozcas largo y ancho.",
@@ -205,6 +207,33 @@ ANTHROPIC_TOOLS: list[dict[str, Any]] = [
             "required": ["consulta"],
         },
     },
+    {
+        "name": "consultar_contexto_institucional",
+        "description": (
+            "Consulta datos oficiales de Corona: empresa (historia, cifras, marcas), "
+            "contacto, garantías, financiación, tiendas, servicios, sostenibilidad, y "
+            "categorías fuera de catálogo con sus links (sanitarios, grifería, pinturas, "
+            "muebles, iluminación, etc.). Úsala para responder preguntas GENERALES sobre "
+            "la empresa o para redirigir con el link real cuando pregunten por algo que "
+            "no está en el catálogo de pisos/revestimientos. No la uses para cotizar "
+            "productos: eso es buscar_revestimientos, buscar_pegantes, buscar_boquillas."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "seccion": {
+                    "type": "string",
+                    "enum": ["info_general", "categorias_fuera_de_catalogo"],
+                    "description": (
+                        "Opcional: limita la respuesta a una sección del contexto. "
+                        "'info_general' trae empresa/marcas/contacto/garantías/financiación/"
+                        "tiendas; 'categorias_fuera_de_catalogo' trae las categorías que Corona "
+                        "vende pero este agente no cotiza, con su link. Si se omite, devuelve todo."
+                    ),
+                },
+            },
+        },
+    },
 ]
 
 
@@ -216,6 +245,15 @@ def _num(v: Any) -> float | None:
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _quitar_notas(obj: Any) -> Any:
+    """Quita las claves `_nota` (comentarios internos, no para el modelo)."""
+    if isinstance(obj, dict):
+        return {k: _quitar_notas(v) for k, v in obj.items() if k != "_nota"}
+    if isinstance(obj, list):
+        return [_quitar_notas(x) for x in obj]
+    return obj
 
 
 # --------------------------------------------------------------------------- #
@@ -396,3 +434,16 @@ class ToolDispatcher:
         filtro = {"sku": i["sku"]} if i.get("sku") else None
         frags = self.chroma.buscar(i["consulta"], n_results=int(i.get("n", 4)), filtro=filtro)
         return {"fragmentos": frags, "n": len(frags)}
+
+    # -- contexto institucional --------------------------------------------- #
+    def _t_consultar_contexto_institucional(self, i):
+        data = config.cargar_contexto_institucional()
+        if not data:
+            return {"error": "Contexto institucional no disponible."}
+        limpio = _quitar_notas(data)
+        seccion = i.get("seccion")
+        if seccion:
+            if seccion not in limpio:
+                return {"error": f"Sección '{seccion}' no existe.", "secciones_disponibles": list(limpio.keys())}
+            return {seccion: limpio[seccion]}
+        return limpio
