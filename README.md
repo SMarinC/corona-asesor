@@ -178,8 +178,8 @@ Categorías reales: `Revestimientos` (subcategorías `Pisos` / `Paredes`),
   instante y, ante una categoría fuera del catálogo (sanitarios, griferías,
   pinturas…), **redirige con el link real en vez de decir "no"**.
 - **Imágenes de producto.** El normalizador expone `imagen`/`imagenes` (368/505
-  productos traen foto). El agente las muestra con markdown `![](url)` y Streamlit
-  las renderiza.
+  productos traen foto). El agente las muestra con markdown `![](url)`; tanto
+  Streamlit como la UI Next.js las renderizan.
 - **Links de producto.** Cada producto trae `url`; el agente **pregunta** si los
   quieres antes de listarlos.
 - **Cotización en PDF.** La herramienta `generar_cotizacion_pdf`
