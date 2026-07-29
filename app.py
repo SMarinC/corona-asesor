@@ -22,6 +22,78 @@ import streamlit as st
 st.set_page_config(page_title="Corona Asesor · Agente", page_icon="🧱", layout="wide")
 
 # --------------------------------------------------------------------------- #
+#  Tema visual: paleta de marca Corona (azul #005EB8 del logo) sobre un fondo
+#  cálido tipo cerámica/porcelanato, no el gris/blanco genérico de Streamlit.
+#  El azul se reserva para lo interactivo; el resto vive en neutros cálidos.
+# --------------------------------------------------------------------------- #
+st.markdown(
+    """
+    <style>
+    #MainMenu, footer, [data-testid="stStatusWidget"] { visibility: hidden; }
+
+    :root {
+        --corona-azul: #005EB8;
+        --corona-azul-oscuro: #003D7A;
+        --corona-tinta: #16232E;
+        --corona-arena: #FAF8F4;
+        --corona-arena-osc: #F0ECE3;
+        --corona-borde: #E2DACB;
+        --corona-gris-calido: #6B6459;
+        --corona-verde: #1B7A4D;
+    }
+
+    /* Tipografía: jerarquía marcada, no el default plano de Streamlit */
+    h1, h2, h3 { letter-spacing: -0.01em; }
+    [data-testid="stAppViewContainer"] { color: var(--corona-tinta); }
+
+    /* Cabecera de marca */
+    .corona-hero { text-align: center; padding: 0.25rem 0 1.25rem 0; }
+    .corona-hero .kicker {
+        font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--corona-azul); margin-bottom: 0.4rem;
+    }
+    .corona-hero h1 {
+        font-size: 2.1rem; font-weight: 700; margin: 0 0 0.5rem 0;
+        color: var(--corona-tinta);
+    }
+    .corona-hero p {
+        font-size: 1.0rem; line-height: 1.6; color: var(--corona-gris-calido);
+        max-width: 640px; margin: 0 auto;
+    }
+
+    /* Burbujas de chat: tarjetas suaves, no las cajas grises default */
+    div[data-testid="stChatMessage"] {
+        border-radius: 16px;
+        border: 1px solid var(--corona-borde);
+        background: #FFFFFF;
+    }
+
+    /* Tarjetas de producto: borde tipo "muestra de material" */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 12px !important;
+        border-color: var(--corona-borde) !important;
+        background: #FFFFFF;
+        transition: border-color 0.15s ease;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: var(--corona-azul) !important;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --corona-tinta: #EDE8DD; --corona-arena: #14181D;
+            --corona-arena-osc: #1B2129; --corona-borde: #2B333C;
+            --corona-gris-calido: #9A9284;
+        }
+        div[data-testid="stChatMessage"] { background: #1B2129; }
+        div[data-testid="stVerticalBlockBorderWrapper"] { background: #1B2129; }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# --------------------------------------------------------------------------- #
 #  Hero: marca
 # --------------------------------------------------------------------------- #
 logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
@@ -33,15 +105,14 @@ with col_centro:
 
 st.markdown(
     """
-    <p style="text-align:center; font-size:1.05rem; line-height:1.55; margin-top:0.5rem;">
-    Corona es una marca colombiana con más de un siglo de trayectoria en el sector de la
-    construcción y el hogar, reconocida por sus pisos, revestimientos, sanitarios, grifería,
-    pinturas y demás materiales para construir y remodelar espacios.
-    </p>
-    <p style="text-align:center; font-size:0.95rem; color:#555; margin-top:-0.3rem;">
-    Este asistente virtual se especializa en <strong>cotizaciones para renovaciones de
-    pisos</strong>: te ayuda a estimar productos, cantidades y presupuesto en minutos.
-    </p>
+    <div class="corona-hero">
+        <div class="kicker">Asesor de pisos y revestimientos</div>
+        <p>
+        Corona es una marca colombiana con más de un siglo de trayectoria en el sector de la
+        construcción y el hogar. Este agente cotiza <strong>pisos, pegantes y boquillas</strong>
+        con datos reales del catálogo — productos, precios y compatibilidad, no suposiciones.
+        </p>
+    </div>
     """,
     unsafe_allow_html=True,
 )
@@ -92,7 +163,11 @@ def extraer_candidatos(trace: list[dict]) -> list[dict]:
 
 def render_candidatos(candidatos: list[dict]):
     """Panel lateral con las baldosas que más concuerdan con la búsqueda."""
-    st.markdown("#### 🧱 Baldosas que más concuerdan")
+    st.markdown(
+        '<div class="kicker" style="text-align:left; margin-bottom:0.6rem;">'
+        'Del catálogo</div><h3 style="margin-top:-0.4rem;">Opciones que concuerdan</h3>',
+        unsafe_allow_html=True,
+    )
     if not candidatos:
         st.caption(
             "Aquí verás las opciones sugeridas apenas el agente busque "
@@ -148,7 +223,11 @@ if "mensajes" not in st.session_state:
 col_chat, col_candidatos = st.columns([2, 1], gap="large")
 
 with col_chat:
-    st.title("Corona Asesor")
+    st.markdown(
+        '<div class="kicker" style="text-align:left;">Conversación</div>'
+        '<h2 style="margin-top:-0.4rem;">Corona Asesor</h2>',
+        unsafe_allow_html=True,
+    )
 
     if not st.session_state.mensajes:
         with st.chat_message("assistant"):
