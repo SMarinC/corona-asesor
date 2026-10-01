@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { errorMessage, log } from "@/lib/log";
 import { round } from "@/lib/domain/calculations";
 import { normalizeText } from "@/lib/domain/parse";
 import type { SheetChunk } from "@/lib/domain/types";
@@ -61,7 +62,7 @@ export function createSheetSearch(deps: { chunks: SheetChunk[]; index: Quantized
         }));
         return { mode: "semantic", hits };
       } catch (error) {
-        console.warn("sheet search: semantic search failed, using keyword fallback:", (error as Error).message);
+        log("warn", "sheet_search_fallback", { mode: "keyword", message: errorMessage(error) });
         return { mode: "keyword", hits: keywordSearch(deps.chunks, query, k, allow) };
       }
     },
