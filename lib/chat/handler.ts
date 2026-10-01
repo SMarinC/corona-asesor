@@ -27,7 +27,14 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
     return errorResponse(code, { retryAfter });
   };
 
-  if (await deps.isBot()) return reject("bot_detected", "botid");
+  // Fail open if BotID itself errors (e.g. no OIDC token); the caps below still protect.
+  let isBot = false;
+  try {
+    isBot = await deps.isBot();
+  } catch (error) {
+    log("error", "botid_unavailable", { requestId, message: errorMessage(error) });
+  }
+  if (isBot) return reject("bot_detected", "botid");
 
   // Fail open if the limiter backend is down: BotID and Gemini's own quota still apply.
   let limit: LimitCheck;
@@ -42,8 +49,15 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
   const parsed = await parseChatRequest(req);
   if (!parsed.ok) return reject("invalid_input", parsed.reason);
 
-  const tools = deps.getTools();
-  const validated = await safeValidateUIMessages<CoronaUIMessage>({ messages: parsed.messages, tools });
+  let tools: CoronaTools;
+  let validated: Awaited<ReturnType<typeof safeValidateUIMessages<CoronaUIMessage>>>;
+  try {
+    tools = deps.getTools();
+    validated = await safeValidateUIMessages<CoronaUIMessage>({ messages: parsed.messages, tools });
+  } catch (error) {
+    log("error", "chat_unhandled", { requestId, message: errorMessage(error) });
+    return errorResponse("model_error");
+  }
   if (!validated.success) return reject("invalid_input", "ui_message_validation");
 
   const turn = createTurnLogger({ requestId, ipHash });

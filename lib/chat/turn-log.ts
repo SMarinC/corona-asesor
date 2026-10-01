@@ -6,6 +6,8 @@ export function createTurnLogger(base: { requestId: string; ipHash: string }, no
   const startedAt = now();
   const tools: ToolCallLog[] = [];
   const steps: StepLog[] = [];
+  // After a stream error the SDK still fires onEnd; the failure line is the turn's only chat_turn line.
+  let failed = false;
 
   const hooks = {
     onTool: (entry: ToolCallLog) => {
@@ -15,6 +17,7 @@ export function createTurnLogger(base: { requestId: string; ipHash: string }, no
       steps.push(entry);
     },
     onFinish: (summary: TurnSummary) => {
+      if (failed) return;
       log("info", "chat_turn", {
         ...base,
         outcome: summary.hitStepCap ? "step_cap" : "ok",
@@ -29,6 +32,7 @@ export function createTurnLogger(base: { requestId: string; ipHash: string }, no
   return {
     hooks,
     failed: (code: string, error: unknown) => {
+      failed = true;
       log("error", "chat_turn", { ...base, outcome: code, message: errorMessage(error), durationMs: now() - startedAt, steps: steps.length, tools });
     },
   };

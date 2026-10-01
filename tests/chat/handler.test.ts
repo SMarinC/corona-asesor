@@ -31,7 +31,6 @@ function makeDeps(overrides: Partial<ChatDeps> = {}, config: Partial<GuardConfig
   return { deps, model: (deps.model ?? model) as MockLanguageModelV4 };
 }
 
-// The SDK also console.error()s raw stream errors, so skip lines that are not our JSON logs.
 const jsonLines = (spy: { mock: { calls: unknown[][] } }) =>
   spy.mock.calls.flatMap((call) => {
     try {
@@ -91,7 +90,34 @@ describe("handleChat", () => {
     await (await handleChat(chatRequest([user("Hola")], "203.0.113.7"), deps)).text();
     const res = await handleChat(chatRequest([user("Hola")], "198.51.100.9"), deps);
     expect(res.status).toBe(429);
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
     expect((await res.json()).error.code).toBe("rate_limited");
+  });
+
+  it("fails open and logs when BotID throws", async () => {
+    const { deps } = makeDeps({
+      isBot: async () => {
+        throw new Error("no oidc token");
+      },
+    });
+    const res = await handleChat(chatRequest([user("Hola")]), deps);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("Hola, ¿qué espacio quieres renovar?");
+    const entry = jsonLines(errorSpy).find((l) => l.event === "botid_unavailable");
+    expect(entry).toMatchObject({ requestId: "req-1", message: "no oidc token" });
+    expect(JSON.stringify(entry)).not.toContain("203.0.113.7");
+  });
+
+  it("returns model_error and logs chat_unhandled when the tools cannot load", async () => {
+    const { deps } = makeDeps({
+      getTools: () => {
+        throw new Error("sha mismatch");
+      },
+    });
+    const res = await handleChat(chatRequest([user("Hola")]), deps);
+    expect(res.status).toBe(500);
+    expect((await res.json()).error.code).toBe("model_error");
+    expect(jsonLines(errorSpy)).toContainEqual(expect.objectContaining({ event: "chat_unhandled", requestId: "req-1", message: "sha mismatch" }));
   });
 
   it("fails open and logs when the rate limiter backend throws", async () => {
@@ -142,6 +168,29 @@ describe("handleChat", () => {
     expect(body).toContain('"errorText":"quota_exhausted"');
     expect(body).not.toContain("Resource exhausted");
     expect(jsonLines(errorSpy)).toContainEqual(expect.objectContaining({ event: "chat_turn", outcome: "quota_exhausted" }));
+    // Every console.error must be one of our JSON lines: no raw SDK dump of the request body.
+    for (const call of errorSpy.mock.calls) {
+      expect(call).toHaveLength(1);
+      expect(() => JSON.parse(String(call[0]))).not.toThrow();
+    }
+  });
+
+  it("logs a single chat_turn line when the turn fails after its first step", async () => {
+    let calls = 0;
+    const ok = scriptedModel([toolTurn([{ toolName: "searchTiles", input: { surface: "floor" } }])]);
+    const model = new MockLanguageModelV4({
+      doStream: async (options) => {
+        if (calls++ === 0) return ok.doStream(options);
+        throw new APICallError({ message: "Resource exhausted", url: "https://x", requestBodyValues: {}, statusCode: 429, isRetryable: false });
+      },
+    });
+    const { deps } = makeDeps({ model });
+    const body = await (await handleChat(chatRequest([user("Piso para baño")]), deps)).text();
+    expect(body).toContain('"errorText":"quota_exhausted"');
+    await new Promise((r) => setTimeout(r, 50));
+    const lines = [...jsonLines(logSpy), ...jsonLines(errorSpy)].filter((l) => l.event === "chat_turn");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ outcome: "quota_exhausted" });
   });
 
   it("logs one structured line per turn without the raw IP and charges extra steps to both global caps", async () => {

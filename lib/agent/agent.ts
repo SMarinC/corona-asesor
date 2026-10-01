@@ -56,7 +56,13 @@ export function createCoronaAgent({
   let stepStartedAt = Date.now();
   // Calls already reported through onToolExecutionEnd; onStepEnd reports only the rest.
   const reportedCalls = new Set<string>();
+  // streamText's default onError console.errors the raw error; for an APICallError that dumps requestBodyValues
+  // (system prompt, tools and the user's conversation) into the server logs. Errors are handled instead by
+  // createAgentUIStreamResponse's onError, which logs a sanitized code through the turn logger.
+  // `onError` is forwarded to streamText but is missing from ToolLoopAgentSettings, hence the cast.
+  const silenceSdkErrorDump = { onError: () => {} } as unknown as Record<string, never>;
   return new ToolLoopAgent({
+    ...silenceSdkErrorDump,
     model,
     instructions: SYSTEM_PROMPT,
     tools,
