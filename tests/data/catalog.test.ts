@@ -15,6 +15,14 @@ describe("createCatalog", () => {
 describe("getCatalog (data/catalog.json)", () => {
   const catalog = getCatalog();
 
+  it("marks a tile outdoor only when it lists an outdoor usage area", () => {
+    const outdoorAreas = ["areas exteriores", "areas exteriores techadas", "terrazas"];
+    const wrong = catalog.tiles.filter(
+      (t) => t.outdoor === true && !t.usageAreas.some((a) => outdoorAreas.includes(normalizeText(a))),
+    );
+    expect(wrong.map((t) => t.sku)).toEqual([]);
+  });
+
   it("contains only the 341 purchasable products", () => {
     expect(catalog.all).toHaveLength(341);
     expect(catalog.tiles).toHaveLength(298);

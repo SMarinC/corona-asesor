@@ -20,14 +20,11 @@ import type {
 
 type Specs = Record<string, unknown>;
 
-const OUTDOOR_AREAS = new Set([
-  "areas exteriores",
-  "areas exteriores techadas",
-  "terrazas",
-  "interior de piscinas",
-  "piscina",
-]);
-const WET_AREAS = new Set([...OUTDOOR_AREAS, "bano", "cocina"]);
+// Areas outside the building. Covered exteriors are still exteriors.
+const OUTDOOR_AREAS = new Set(["areas exteriores", "areas exteriores techadas", "terrazas"]);
+// Areas exposed to water. Covered exteriors are sheltered from rain, so they are not wet by themselves;
+// pool interiors are submerged (wet) but say nothing about the tile being outdoors.
+const WET_AREAS = new Set(["areas exteriores", "terrazas", "interior de piscinas", "piscina", "bano", "cocina"]);
 
 export function parseJsonField<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined) return fallback;

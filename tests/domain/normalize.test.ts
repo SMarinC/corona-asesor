@@ -27,6 +27,12 @@ function raw(overrides: Partial<RawProduct>): RawProduct {
 }
 
 describe("deriveEnvironment", () => {
+  it("treats covered exteriors as outdoor but not wet", () => {
+    expect(deriveEnvironment(["Áreas exteriores techadas"])).toEqual({ indoor: false, outdoor: true, wetArea: false });
+  });
+  it("treats pool interiors as wet without making the tile outdoor", () => {
+    expect(deriveEnvironment(["Interior de piscinas", "Baño"])).toEqual({ indoor: true, outdoor: false, wetArea: true });
+  });
   it("returns unknown (null) when the product lists no usage areas", () => {
     expect(deriveEnvironment([])).toEqual({ indoor: null, outdoor: null, wetArea: null });
   });
