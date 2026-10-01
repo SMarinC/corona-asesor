@@ -66,6 +66,21 @@ describe("computeMaterials tool", () => {
     expect(result).toMatchObject({ status: "ok", data: { adhesive: { coverageKgM2: 6, bagKg: 25, kg: 36, bags: 2, citationIds: ["c0004"] } } });
   });
 
+  it("rejects the lower bound of a cited coverage range instead of underestimating", () => {
+    const result = executeComputeMaterials(deps, {
+      ...room,
+      tileSku: "T1",
+      adhesiveSku: "A2",
+      overrides: { adhesiveCoverageKgM2: { value: 5, citationId: "c0004" }, bagKg: { value: 25, citationId: "c0004" } },
+    });
+    expect(result).toMatchObject({
+      status: "needs_review",
+      missing: [{ field: "adhesiveCoverageKgM2" }],
+      data: { rejectedOverrides: [{ field: "adhesiveCoverageKgM2", citationId: "c0004", reason: "value_not_in_citation" }] },
+    });
+    if (result.status === "needs_review") expect(result.data.adhesive).toBeUndefined();
+  });
+
   it("keeps the catalog value when an override disagrees with it", () => {
     const result = executeComputeMaterials(deps, { ...room, tileSku: "T1", overrides: { m2PerBox: { value: 2, citationId: "c0003" } } });
     expect(result).toMatchObject({

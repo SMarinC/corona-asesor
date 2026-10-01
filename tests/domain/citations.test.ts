@@ -43,10 +43,11 @@ describe("verifyCitedValue", () => {
     const text = "Colección: ORIGENES 2017 ... (±) 2.00% ... m2";
     expect(check(text, 2, "m2PerBox")).toEqual({ ok: false, reason: "value_not_in_citation" });
   });
-  it("accepts coverage bounds 5 and 7 but not 2 from a kg/m2 range", () => {
+  it("accepts only the upper bound 7 of a kg/m2 range, not the lower bound 5 nor 2", () => {
     const text = "5.0-7.0 kg/m2 según formato";
-    expect(check(text, 5, "coverageKgM2")).toEqual({ ok: true });
+    expect(check(text, 5, "coverageKgM2")).toEqual({ ok: false, reason: "value_not_in_citation" });
     expect(check(text, 7, "coverageKgM2")).toEqual({ ok: true });
+    expect(check("Rendimiento 4 kg/m2", 4, "coverageKgM2")).toEqual({ ok: true });
     expect(check(text, 2, "coverageKgM2")).toEqual({ ok: false, reason: "value_not_in_citation" });
   });
   it("accepts a bag size in kg but not a coverage figure", () => {

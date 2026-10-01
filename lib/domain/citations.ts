@@ -37,8 +37,8 @@ function numbersAfterBoxLabel(text: string): number[] {
 function coverageBounds(text: string): number[] {
   const out: number[] = [];
   for (const m of text.matchAll(COVERAGE)) {
-    out.push(toNumber(m[1]));
-    if (m[2] !== undefined) out.push(toNumber(m[2]));
+    // Only the upper end of a range (or a standalone figure): coverage is used conservatively.
+    out.push(toNumber(m[2] ?? m[1]));
   }
   return out;
 }
