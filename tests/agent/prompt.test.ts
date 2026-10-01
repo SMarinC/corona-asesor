@@ -16,4 +16,21 @@ describe("system prompt", () => {
       expect(SYSTEM_PROMPT, rule).toContain(rule);
     }
   });
+
+  it("collects the joint width, passes the budget and covers unknown attributes and citation fields", () => {
+    for (const rule of [
+      "ancho de junta en mm",
+      "nunca se asume",
+      "en budget",
+      "withinBudget",
+      "difference",
+      'lista "unknown"',
+      "compatibilityCitationId",
+      "jointCitationId",
+      "citationIds",
+      "error sin status",
+    ]) {
+      expect(SYSTEM_PROMPT, rule).toContain(rule);
+    }
+  });
 });

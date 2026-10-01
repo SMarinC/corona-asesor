@@ -35,7 +35,7 @@ export interface AgentHooks {
   onFinish?: (summary: TurnSummary) => void;
 }
 
-/** The `status` of our ToolResult, or `tool_error` when the SDK rejected the call (e.g. invalid input). */
+/** The `status` of our ToolResult, or `tool_error` for a tool-error output (e.g. execute threw). */
 export function toolStatus(toolOutput: unknown): string {
   const out = toolOutput as { type?: unknown; output?: { status?: unknown } } | null;
   if (out?.type === "tool-error") return "tool_error";
@@ -54,6 +54,8 @@ export function createCoronaAgent({
   hooks?: AgentHooks;
 }) {
   let stepStartedAt = Date.now();
+  // Calls already reported through onToolExecutionEnd; onStepEnd reports only the rest.
+  const reportedCalls = new Set<string>();
   return new ToolLoopAgent({
     model,
     instructions: SYSTEM_PROMPT,
@@ -68,9 +70,17 @@ export function createCoronaAgent({
       return stepNumber >= MAX_STEPS - 1 ? { toolChoice: "none" } : {};
     },
     onToolExecutionEnd: (event) => {
+      reportedCalls.add(event.toolCall.toolCallId);
       hooks.onTool?.({ tool: event.toolCall.toolName, ms: event.toolExecutionMs, status: toolStatus(event.toolOutput) });
     },
     onStepEnd: (step) => {
+      // Calls the SDK rejects before execution (invalid input, unknown tool) never reach onToolExecutionEnd.
+      for (const part of step.content) {
+        if (part.type === "tool-error" && !reportedCalls.has(part.toolCallId)) {
+          reportedCalls.add(part.toolCallId);
+          hooks.onTool?.({ tool: part.toolName, ms: 0, status: "tool_error" });
+        }
+      }
       hooks.onStep?.({
         step: step.stepNumber,
         ms: Date.now() - stepStartedAt,

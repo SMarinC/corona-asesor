@@ -53,9 +53,12 @@ describe("Corona agent harness", () => {
       toolTurn([{ toolName: "computeMaterials", input: { lengthM: -3, widthM: 2, tileSku: "T1" } }]),
       textTurn("Necesito medidas válidas."),
     ]);
-    const { steps } = await run(model);
+    const onTool = vi.fn();
+    const { steps } = await run(model, { onTool });
     expect(steps).toHaveLength(2);
     expect(steps[0].content.some((part) => part.type === "tool-error")).toBe(true);
+    expect(onTool).toHaveBeenCalledTimes(1);
+    expect(onTool).toHaveBeenCalledWith(expect.objectContaining({ tool: "computeMaterials", status: "tool_error" }));
   });
 
   it("disables tools on the last allowed step so the turn always ends with an answer", async () => {
