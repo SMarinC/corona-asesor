@@ -63,6 +63,11 @@ describe("mapMaterials", () => {
     expect(mapMaterials(["Porcelatech"])).toEqual(["porcelatech"]);
     expect(mapMaterials(["Gres"])).toEqual(["stoneware"]);
   });
+
+  it("classifies Gres as porcelain only when the product name says porcelánico", () => {
+    expect(mapMaterials(["Gres"], "Gres Porcelánico Cemento 60x60")).toEqual(["porcelain"]);
+    expect(mapMaterials(["Gres"], "Piso Gres Rústico 30x30")).toEqual(["stoneware"]);
+  });
 });
 
 describe("normalizeProduct", () => {

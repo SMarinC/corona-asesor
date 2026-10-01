@@ -83,12 +83,13 @@ export function mapTraffic(label: string | null): Traffic | null {
   return null;
 }
 
-export function mapMaterials(values: string[]): TileMaterial[] {
+export function mapMaterials(values: string[], productName = ""): TileMaterial[] {
+  const namedPorcelain = normalizeText(productName).includes("porcelan");
   const out = new Set<TileMaterial>();
   for (const value of values.map(normalizeText)) {
     if (value.includes("porcelatech")) out.add("porcelatech");
     else if (value.includes("porcel")) out.add("porcelain");
-    else if (value.includes("gres")) out.add("stoneware");
+    else if (value.includes("gres")) out.add(namedPorcelain ? "porcelain" : "stoneware");
     else if (value.includes("ceramic")) out.add("ceramic");
   }
   return [...out];
@@ -114,7 +115,7 @@ function normalizeTile(base: ProductBase, subcategory: string | null, specs: Spe
     piecesPerBox: positiveNumber(pdf.unidades_por_caja),
     finish: list(specs, "Acabado")[0] ?? text(pdf.acabado),
     design: list(specs, "Diseño")[0] ?? null,
-    materials: mapMaterials(list(specs, "Materiales")),
+    materials: mapMaterials(list(specs, "Materiales"), base.name),
     usageAreas,
     ...deriveEnvironment(usageAreas),
     traffic: mapTraffic(trafficLabel),

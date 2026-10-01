@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createCatalog, getCatalog } from "@/lib/data/catalog";
-import { parseKg } from "@/lib/domain/parse";
+import { normalizeText, parseKg } from "@/lib/domain/parse";
 import { makeTile } from "@/tests/fixtures/products";
 
 describe("createCatalog", () => {
@@ -46,5 +46,10 @@ describe("getCatalog (data/catalog.json)", () => {
 
   it("keeps the 12 adhesives with a compatibility citation", () => {
     expect(catalog.adhesives.filter((a) => a.compatibilityCitationId !== null).length).toBe(12);
+  });
+
+  it("never labels a porcelain-named tile as stoneware", () => {
+    const wrong = catalog.tiles.filter((t) => t.materials.includes("stoneware") && normalizeText(t.name).includes("porcelan"));
+    expect(wrong.map((t) => t.sku)).toEqual([]);
   });
 });
