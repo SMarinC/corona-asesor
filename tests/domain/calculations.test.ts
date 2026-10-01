@@ -56,4 +56,7 @@ describe("computeGrout", () => {
     const large = computeGrout(10, { length: 600, width: 600 }, 8, 3, 2);
     expect(small.kg).toBeGreaterThan(large.kg);
   });
+  it("rejects a non-positive density", () => {
+    expect(() => computeGrout(10, { length: 600, width: 600 }, 9, 3, 2, 0)).toThrow(RangeError);
+  });
 });

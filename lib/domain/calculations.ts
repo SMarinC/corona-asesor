@@ -90,6 +90,7 @@ export function computeGrout(
   assertPositive("thicknessMm", thicknessMm);
   assertPositive("jointMm", jointMm);
   assertPositive("packageKg", packageKg);
+  assertPositive("densityGCm3", densityGCm3);
   const consumption =
     ((tile.length + tile.width) / (tile.length * tile.width)) * jointMm * thicknessMm * densityGCm3;
   const kg = consumption * areaM2;
