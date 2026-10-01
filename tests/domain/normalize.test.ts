@@ -169,4 +169,16 @@ describe("normalizeProduct", () => {
     const grout = normalizeProduct(raw({ category: "Boquillas", subcategory: name, name }));
     expect(grout).toMatchObject({ kind: "grout", groutType, packageKg, jointMm: null, jointCitationId: null });
   });
+
+  it("prefers the SKU's own package size over the family sheet", () => {
+    const grout = normalizeProduct(
+      raw({
+        category: "Boquillas",
+        subcategory: "CONCOLOR® Junta Estrecha",
+        name: "CONCOLOR® Junta Estrecha 5 Kg Blanco",
+        specs_pdf: JSON.stringify({ presentacion_kg: 2 }),
+      }),
+    );
+    expect(grout).toMatchObject({ kind: "grout", packageKg: 5 });
+  });
 });

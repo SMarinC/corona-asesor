@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createCatalog, getCatalog } from "@/lib/data/catalog";
+import { parseKg } from "@/lib/domain/parse";
 import { makeTile } from "@/tests/fixtures/products";
 
 describe("createCatalog", () => {
@@ -30,5 +31,20 @@ describe("getCatalog (data/catalog.json)", () => {
     for (const adhesive of catalog.adhesives) {
       if (adhesive.compatibleMaterials !== null) expect(adhesive.compatibilityCitationId).not.toBeNull();
     }
+  });
+
+  it("uses the kg amount in the SKU's own name as package size", () => {
+    for (const a of catalog.adhesives) {
+      const kg = parseKg(a.name);
+      if (kg !== null) expect(a.bagKg, a.sku).toBe(kg);
+    }
+    for (const g of catalog.grouts) {
+      const kg = parseKg(g.name);
+      if (kg !== null) expect(g.packageKg, g.sku).toBe(kg);
+    }
+  });
+
+  it("keeps the 12 adhesives with a compatibility citation", () => {
+    expect(catalog.adhesives.filter((a) => a.compatibilityCitationId !== null).length).toBe(12);
   });
 });

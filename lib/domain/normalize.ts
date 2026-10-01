@@ -133,7 +133,7 @@ function normalizeAdhesive(base: ProductBase, specs: Specs, pdf: Specs): Adhesiv
     compatibilityCitationId: null,
     coverageKgM2: parseCoverageKgM2(coverageText),
     coverageText,
-    bagKg: positiveNumber(pdf.presentacion_kg) ?? parseKg(base.name),
+    bagKg: parseKg(base.name) ?? positiveNumber(pdf.presentacion_kg),
     standard: text(pdf.clasificacion_normativa),
   };
 }
@@ -145,7 +145,7 @@ function normalizeGrout(base: ProductBase, subcategory: string | null, specs: Sp
     groutType: groutType(base.name),
     jointMm: null,
     jointCitationId: null,
-    packageKg: positiveNumber(pdf.presentacion_kg) ?? parseKg(base.name, subcategory),
+    packageKg: parseKg(base.name) ?? positiveNumber(pdf.presentacion_kg) ?? parseKg(subcategory),
     coverageText: text(pdf.rendimiento_texto) ?? list(specs, "Rendimiento")[0] ?? null,
   };
 }
