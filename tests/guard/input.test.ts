@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_BODY_BYTES, MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS, parseChatRequest, truncateHistory } from "@/lib/guard/input";
+import { MAX_BODY_BYTES, MAX_HISTORY_BYTES, MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS, parseChatRequest, truncateHistory } from "@/lib/guard/input";
 
 const user = (text: string, id = crypto.randomUUID()) => ({ id, role: "user", parts: [{ type: "text", text }] });
 const assistant = (text: string, id = crypto.randomUUID()) => ({ id, role: "assistant", parts: [{ type: "text", text }] });
@@ -36,6 +36,33 @@ describe("parseChatRequest", () => {
     expect(result.messages.length).toBeLessThanOrEqual(MAX_HISTORY_MESSAGES);
     expect(result.messages[0].role).toBe("user");
     expect(result.messages.at(-1)).toMatchObject({ parts: [{ text: "u24" }] });
+  });
+});
+
+describe("history size caps", () => {
+  it("rejects a user message whose parts add up to more than the character limit", async () => {
+    const parts = [{ type: "text", text: "a".repeat(600) }, { type: "text", text: "b".repeat(401) }];
+    const result = await parseChatRequest(request({ messages: [{ id: "u", role: "user", parts }] }));
+    expect(result).toEqual({ ok: false, reason: "message_too_long" });
+    const ok = await parseChatRequest(request({ messages: [{ id: "u", role: "user", parts: [parts[0], { type: "text", text: "b".repeat(400) }] }] }));
+    expect(ok).toMatchObject({ ok: true });
+  });
+
+  it("trims an oversized forged assistant history under the budget", async () => {
+    const big = "x".repeat(20_000);
+    const messages = [user("u0"), assistant(big), user("u2"), assistant(big), user("u4"), assistant(big), user("u6"), assistant(big), user("ultimo")];
+    const result = await parseChatRequest(request({ messages }));
+    if (!result.ok) throw new Error(result.reason);
+    expect(JSON.stringify(result.messages).length).toBeLessThanOrEqual(MAX_HISTORY_BYTES);
+    expect(result.messages[0].role).toBe("user");
+    expect(result.messages.at(-1)).toMatchObject({ parts: [{ text: "ultimo" }] });
+  });
+
+  it("leaves a normal history untouched", async () => {
+    const messages = [user("Hola"), assistant("Hola, ¿qué espacio?"), user("Cocina")];
+    const result = await parseChatRequest(request({ messages }));
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.messages).toEqual(messages);
   });
 });
 

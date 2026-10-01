@@ -4,6 +4,8 @@ import { z } from "zod";
 export const MAX_MESSAGE_CHARS = 1_000;
 export const MAX_HISTORY_MESSAGES = 20;
 export const MAX_BODY_BYTES = 512 * 1024;
+/** Budget for the history resent on every agent step, measured as JSON length. */
+export const MAX_HISTORY_BYTES = 64 * 1024;
 
 const messageSchema = z
   .object({
@@ -25,6 +27,13 @@ export function truncateHistory<T extends { role: string }>(messages: T[], max: 
   return firstUser <= 0 ? tail : tail.slice(firstUser);
 }
 
+/** Drops the oldest messages until the history fits the budget; always keeps the last message and starts with a user turn. */
+export function fitHistoryBudget<T extends { role: string }>(messages: T[], maxBytes: number = MAX_HISTORY_BYTES): T[] {
+  let start = 0;
+  while (start < messages.length - 1 && (JSON.stringify(messages.slice(start)).length > maxBytes || messages[start].role !== "user")) start++;
+  return messages.slice(start);
+}
+
 export async function parseChatRequest(req: Request): Promise<ParsedChat> {
   const raw = await req.text();
   if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return { ok: false, reason: "body_too_large" };
@@ -41,11 +50,13 @@ export async function parseChatRequest(req: Request): Promise<ParsedChat> {
 
   for (const message of parsed.data.messages) {
     if (message.role !== "user") continue;
+    let total = 0;
     for (const part of message.parts) {
       const text = (part as { text?: unknown }).text;
       if (part.type !== "text" || typeof text !== "string") return { ok: false, reason: "unsupported_user_part" };
-      if (text.length > MAX_MESSAGE_CHARS) return { ok: false, reason: "message_too_long" };
+      total += text.length;
     }
+    if (total > MAX_MESSAGE_CHARS) return { ok: false, reason: "message_too_long" };
   }
 
   const last = parsed.data.messages.at(-1);
@@ -53,5 +64,5 @@ export async function parseChatRequest(req: Request): Promise<ParsedChat> {
   if (lastText.length === 0) return { ok: false, reason: "last_message_not_user" };
 
   // Shape-checked here; tool parts are validated against the tool schemas by safeValidateUIMessages in the handler.
-  return { ok: true, messages: truncateHistory(parsed.data.messages as unknown as UIMessage[]) };
+  return { ok: true, messages: fitHistoryBudget(truncateHistory(parsed.data.messages as unknown as UIMessage[])) };
 }
