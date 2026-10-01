@@ -46,7 +46,7 @@ function list(specs: Specs, key: string): string[] {
 }
 
 function text(value: unknown): string | null {
-  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+  return typeof value === "string" && value.trim() !== "" ? value.replace(/\s+/g, " ").trim() : null;
 }
 
 function positiveNumber(value: unknown): number | null {

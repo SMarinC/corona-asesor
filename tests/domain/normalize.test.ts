@@ -186,4 +186,11 @@ describe("normalizeProduct", () => {
     );
     expect(grout).toMatchObject({ kind: "grout", packageKg: 5 });
   });
+
+  it("collapses whitespace in the normative standard", () => {
+    const adhesive = normalizeProduct(
+      raw({ category: "Pegantes", name: "Pegante X", specs_pdf: JSON.stringify({ clasificacion_normativa: "C1  \nI1" }) }),
+    );
+    expect(adhesive).toMatchObject({ kind: "adhesive", standard: "C1 I1" });
+  });
 });
