@@ -1,31 +1,23 @@
-# --- Secretos ---
-.env
-*.key
-credentials.json
+# dependencies / build
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
 
-# --- Documentos ---
-*.pdf
+# env (only the example is versioned)
+.env*
+!.env.example
 
+# vercel
+.vercel
 
-# --- Artefactos de datos generados ---
-data/processed/
-*.duckdb
-*.duckdb.wal
-chroma/
-data/cotizaciones/*.pdf
+# prototype source databases (inputs to scripts/, never versioned)
+data/source/
 
-# --- Python ---
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-env/
-.pytest_cache/
-.ipynb_checkpoints/
-
-# --- Sistema / editores ---
+# os / editors
 .DS_Store
 .vscode/
 .idea/
-~$*
+npm-debug.log*
