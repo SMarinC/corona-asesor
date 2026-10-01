@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateCompatibility, type ProjectConditions, worstVerdict } from "@/lib/domain/compatibility";
 import { makeAdhesive, makeGrout, makeTile } from "@/tests/fixtures/products";
 
-const bathroom: ProjectConditions = { environment: "indoor", wetArea: true, traffic: "medium", jointWidthMm: 3 };
+const bathroom: ProjectConditions = { environment: "indoor", surface: "floor", wetArea: true, traffic: "medium", jointWidthMm: 3 };
 
 function verdictOf(rule: string, result: ReturnType<typeof evaluateCompatibility>) {
   return result.checks.find((c) => c.rule === rule)?.verdict;
@@ -20,7 +20,7 @@ describe("evaluateCompatibility", () => {
   it("accepts a fully documented bathroom combination", () => {
     const result = evaluateCompatibility(makeTile(), bathroom, makeAdhesive(), makeGrout());
     expect(result.verdict).toBe("compatible");
-    expect(result.checks).toHaveLength(8);
+    expect(result.checks).toHaveLength(9);
   });
 
   it("rejects an indoor-only tile outdoors", () => {
@@ -41,9 +41,30 @@ describe("evaluateCompatibility", () => {
     expect(verdictOf("Humedad", result)).toBe("incompatible");
   });
 
-  it("skips the traffic rule for wall tiles", () => {
+  it("skips the traffic rule for wall projects", () => {
     const wall = makeTile({ surface: "wall", traffic: null, trafficLabel: "Paredes" });
-    expect(verdictOf("Tráfico", evaluateCompatibility(wall, { ...bathroom, traffic: "high" }))).toBe("compatible");
+    const result = evaluateCompatibility(wall, { ...bathroom, surface: "wall", traffic: "high" });
+    expect(verdictOf("Tráfico", result)).toBe("compatible");
+  });
+
+  it("rejects a wall tile on a floor project", () => {
+    const wall = makeTile({ surface: "wall" });
+    expect(verdictOf("Superficie", evaluateCompatibility(wall, bathroom))).toBe("incompatible");
+  });
+
+  it("asks for review when a floor tile goes on a wall", () => {
+    const result = evaluateCompatibility(makeTile(), { ...bathroom, surface: "wall" });
+    expect(verdictOf("Superficie", result)).toBe("needs_review");
+  });
+
+  it("accepts a floor-and-wall tile on a wall project", () => {
+    const tile = makeTile({ name: "Piso Pared Prueba" });
+    expect(verdictOf("Superficie", evaluateCompatibility(tile, { ...bathroom, surface: "wall" }))).toBe("compatible");
+  });
+
+  it("asks for review when a floor tile declares no traffic", () => {
+    const tile = makeTile({ traffic: null, trafficLabel: null });
+    expect(verdictOf("Tráfico", evaluateCompatibility(tile, bathroom))).toBe("needs_review");
   });
 
   it("rejects residential traffic for a high-traffic project", () => {
@@ -80,7 +101,7 @@ describe("evaluateCompatibility", () => {
   });
 
   it("requires a declared joint width for grout", () => {
-    const noJoint: ProjectConditions = { environment: "indoor", wetArea: true, traffic: "medium" };
+    const noJoint: ProjectConditions = { environment: "indoor", surface: "floor", wetArea: true, traffic: "medium" };
     const result = evaluateCompatibility(makeTile(), noJoint, undefined, makeGrout());
     expect(verdictOf("Boquilla ↔ junta", result)).toBe("needs_review");
   });

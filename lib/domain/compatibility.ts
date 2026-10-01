@@ -1,9 +1,11 @@
-import type { Adhesive, Environment, Grout, Tile, TileMaterial, Traffic } from "./types";
+import { normalizeText } from "./parse";
+import type { Adhesive, Environment, Grout, Surface, Tile, TileMaterial, Traffic } from "./types";
 
 export type Verdict = "compatible" | "incompatible" | "needs_review";
 
 export interface ProjectConditions {
   environment: Environment;
+  surface: Surface;
   wetArea: boolean;
   traffic: Traffic;
   jointWidthMm?: number;
@@ -38,6 +40,24 @@ export function worstVerdict(verdicts: Verdict[]): Verdict {
   return verdicts.reduce<Verdict>((worst, v) => (SEVERITY[v] > SEVERITY[worst] ? v : worst), "compatible");
 }
 
+function checkSurface(tile: Tile, project: ProjectConditions): Check {
+  const rule = "Superficie";
+  if (tile.surface === project.surface) {
+    return { rule, verdict: "compatible", message: "Superficie del proyecto y del revestimiento coinciden." };
+  }
+  if (project.surface === "floor") {
+    return { rule, verdict: "incompatible", message: "Es un revestimiento de pared; no está indicado para pisos." };
+  }
+  if (normalizeText(tile.name).includes("piso pared")) {
+    return { rule, verdict: "compatible", message: "Indicado para piso y pared." };
+  }
+  return {
+    rule,
+    verdict: "needs_review",
+    message: "Es un revestimiento de piso; confirmar en su ficha si se puede instalar en pared.",
+  };
+}
+
 function checkEnvironment(tile: Tile, project: ProjectConditions): Check {
   const rule = "Ambiente";
   const outdoor = project.environment === "outdoor";
@@ -60,7 +80,7 @@ function checkHumidity(tile: Tile, project: ProjectConditions): Check {
 
 function checkTraffic(tile: Tile, project: ProjectConditions): Check {
   const rule = "Tráfico";
-  if (tile.surface === "wall") return { rule, verdict: "compatible", message: "Revestimiento de pared: no recibe tránsito." };
+  if (project.surface === "wall") return { rule, verdict: "compatible", message: "Instalación en pared: no recibe tránsito." };
   if (tile.traffic === null) {
     return { rule, verdict: "needs_review", message: `La ficha no declara un nivel de tráfico utilizable (${tile.trafficLabel ?? "sin dato"}).` };
   }
@@ -85,17 +105,20 @@ function checkAdhesive(tile: Tile, adhesive: Adhesive, project: ProjectCondition
   const rule = "Pegante ↔ material";
   if (tile.materials.length === 0) {
     checks.push({ rule, verdict: "needs_review", message: "El revestimiento no declara su material." });
-  } else if (adhesive.compatibleMaterials === null) {
-    checks.push({ rule, verdict: "needs_review", message: "No hay una indicación verificada en la ficha del pegante sobre materiales compatibles." });
   } else {
     const excluded = tile.materials.filter((m) => adhesive.excludedMaterials.includes(m));
-    const missing = tile.materials.filter((m) => !adhesive.compatibleMaterials!.includes(m));
+    const compatible = adhesive.compatibleMaterials;
     if (excluded.length > 0) {
       checks.push({ rule, verdict: "incompatible", message: `La ficha del pegante excluye ${materialNames(excluded)}.`, citationId: citation });
-    } else if (missing.length > 0) {
-      checks.push({ rule, verdict: "needs_review", message: `La ficha del pegante no menciona ${materialNames(missing)}.`, citationId: citation });
+    } else if (compatible === null) {
+      checks.push({ rule, verdict: "needs_review", message: "No hay una indicación verificada en la ficha del pegante sobre materiales compatibles." });
     } else {
-      checks.push({ rule, verdict: "compatible", message: `La ficha del pegante lo indica para ${materialNames(tile.materials)}.`, citationId: citation });
+      const missing = tile.materials.filter((m) => !compatible.includes(m));
+      if (missing.length > 0) {
+        checks.push({ rule, verdict: "needs_review", message: `La ficha del pegante no menciona ${materialNames(missing)}.`, citationId: citation });
+      } else {
+        checks.push({ rule, verdict: "compatible", message: `La ficha del pegante lo indica para ${materialNames(tile.materials)}.`, citationId: citation });
+      }
     }
   }
 
@@ -143,6 +166,7 @@ export function evaluateCompatibility(
   grout?: Grout,
 ): CompatibilityResult {
   const checks: Check[] = [
+    checkSurface(tile, project),
     checkEnvironment(tile, project),
     checkHumidity(tile, project),
     checkTraffic(tile, project),
