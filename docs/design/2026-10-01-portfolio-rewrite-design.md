@@ -109,9 +109,11 @@ is feasible but out of scope, because this project exists to demonstrate
    backoff and a resumable checkpoint (free-tier safe); L2-normalize; quantize
    to int8.
 5. Write `data/catalog.json`, `data/sheets.json` (text + metadata +
-   `citationId` + `skus`) and `data/sheets.index.bin` (~0.8 MB). Target total
-   ≤ 3 MB (prototype: 58 MB).
-6. Write `data/manifest.json` (counts, model ID, dimensions, build date).
+   `citationId` + `skus`) and `data/sheets.index.bin` (~0.7 MB). Limit
+   ≤ 3.5 MB total, enforced by the build (actual: 3.1 MB; prototype: 58 MB).
+6. Write `data/manifest.json` (counts, model ID, dimensions, build date, and the
+   sha256 of `sheets.json`, checked at load time so the index can never drift
+   from the chunks it was built from).
 
 ### 4.1 Normalization rules
 
@@ -130,11 +132,15 @@ extracted from the technical sheets. It is now the primary source.
   never `false`.**
 - **Materials** normalized to `ceramic | porcelain | porcelatech | stoneware`
   (PorcelaTech is kept separate: some adhesives accept it while explicitly
-  excluding gres porcelánico).
+  excluding gres porcelánico). Corona labels its porcelain tiles' material as
+  "Gres"; when the product name says "porcelánico"/"porcelanato" they are
+  classified as `porcelain`, matching how the adhesive sheets name them.
 - **Prices** are per box for tiles (verified on corona.co: "Precio por Caja"),
   per bag/unit for adhesives and grouts.
 - **Adhesives:** coverage range (kg/m²) parsed from the sheet text (e.g.
-  "5.0-6.0 kg/m2 según formato" → {5, 6}); bag size from `presentacion_kg`.
+  "5.0-6.0 kg/m2 según formato" → {5, 6}); bag size from the SKU's own name
+  ("… 25 kg"), else the sheet's `presentacion_kg` (family sheets are shared
+  across sizes, so the name wins — same rule for grout packages).
   Compatible materials, explicitly excluded materials and outdoor suitability
   come from a curated product-line table where **every entry carries a verbatim
   quote from that product's "Usos" section; the pipeline fails if the quote is
@@ -144,7 +150,8 @@ extracted from the technical sheets. It is now the primary source.
 - **Grouts:** joint range **extracted from the grout's own sheet** ("juntas de
   1 a 5 mm") and stored with its `citationId`; not found → `null`. Type:
   cementitious / epoxy / repair (repair products are never offered for grouting).
-- Images and product URL preserved.
+- Product URL preserved; images capped at the first 3 (the UI never shows more,
+  and the long CDN URLs were two thirds of the catalog's size).
 
 ### Runtime search
 
@@ -176,8 +183,8 @@ Tools never throw into the loop; errors are data the model can react to.
 | `searchSupplies` | kind (`adhesive`/`grout`), tileMaterial, outdoor, jointWidthMm, color, limit | Adhesives filtered by compatible/excluded material and outdoor suitability; grouts by joint range and color (repair products excluded). |
 | `getProduct` | sku | Full normalized product. |
 | `searchTechnicalSheets` | query, sku?, k? | Returns fragments with `citationId`, sku, section, source sheet, score, search mode. |
-| `computeMaterials` | lengthM, widthM, wastePct?, tileSku, adhesiveSku?, groutSku?, jointWidthMm?, overrides? | Computes area + waste, boxes, adhesive kg/bags, grout kg/units. Adhesive uses the **upper bound** of the coverage range (conservative; stated in the output). Grout uses the standard joint-volume formula (labeled as an estimate). Values missing from the catalog (`m2PerBox`, `adhesiveCoverageKgM2`, `bagKg`) may be supplied as `{ value, citationId }`; the tool **verifies the cited chunk belongs to that SKU and the number appears in its text** (locale-aware: `1,44` ≡ `1.44`), rejecting it otherwise. Still-missing values → `needs_review` listing them. |
-| `checkCompatibility` | tileSku, environment, wetArea, traffic, jointWidthMm?, adhesiveSku?, groutSku? | Rules engine. Project conditions are **required** (no hidden defaults). Verdict = worst of: environment, humidity, traffic (skipped for walls), adhesive↔material, grout↔joint, availability. Unknown data → "Requiere revisión", never "Incompatible". |
+| `computeMaterials` | lengthM, widthM, wastePct?, tileSku, adhesiveSku?, groutSku?, jointWidthMm?, overrides? | Computes area + waste, boxes, adhesive kg/bags, grout kg/units. Adhesive uses the **upper bound** of the coverage range (conservative; stated in the output). Grout uses the standard joint-volume formula (labeled as an estimate). Values missing from the catalog (`m2PerBox`, `adhesiveCoverageKgM2`, `bagKg`) may be supplied as `{ value, citationId }`; the tool **verifies the cited chunk belongs to that SKU and the number appears in its text as a standalone token in the right context** (after "M2 POR CAJA" for box coverage, before "kg/m²" for adhesive coverage, before "kg" for bag size; locale-aware: `1,44` ≡ `1.44`), rejecting it otherwise — so stray numbers like the "2" in "m2" or "2017" never verify. Still-missing values → `needs_review` listing them. |
+| `checkCompatibility` | tileSku, surface, environment, wetArea, traffic, jointWidthMm?, adhesiveSku?, groutSku? | Rules engine. Project conditions are **required** (no hidden defaults). Verdict = worst of: surface (wall tile on a floor → incompatible), environment, humidity, traffic (skipped for wall projects), adhesive↔material, adhesive↔environment, grout↔joint, availability. Unknown data → "Requiere revisión", never "Incompatible". |
 | `buildQuote` | lines: `{ sku, quantity }[]`, budget?, projectSummary?, includeLinks? | Looks up **all prices from the catalog** (never accepts prices from the model). Lines without a price → `needs_review`. `withinBudget` is `null` when no budget is given. Returns the structured quote used by the panel and the PDF. |
 | `getCompanyInfo` | section? | Institutional data and links for out-of-catalog categories. |
 
