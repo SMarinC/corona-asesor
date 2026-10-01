@@ -187,10 +187,20 @@ describe("handleChat", () => {
     const { deps } = makeDeps({ model });
     const body = await (await handleChat(chatRequest([user("Piso para baño")]), deps)).text();
     expect(body).toContain('"errorText":"quota_exhausted"');
-    await new Promise((r) => setTimeout(r, 50));
-    const lines = [...jsonLines(logSpy), ...jsonLines(errorSpy)].filter((l) => l.event === "chat_turn");
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatchObject({ outcome: "quota_exhausted" });
+    const turnLines = () => [...jsonLines(logSpy), ...jsonLines(errorSpy)].filter((l) => l.event === "chat_turn");
+    await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
+    expect(turnLines()[0]).toMatchObject({ outcome: "quota_exhausted" });
+  });
+
+  it("logs a single ok chat_turn line when a rejected tool call is followed by a recovery step", async () => {
+    const model = scriptedModel([toolTurn([{ toolName: "noSuchTool", input: {} }]), textTurn("Perdón, ¿qué superficie?")]);
+    const { deps } = makeDeps({ model });
+    const body = await (await handleChat(chatRequest([user("Piso")]), deps)).text();
+    expect(body).toContain("tool-output-error");
+    expect(body).toContain("Perdón, ¿qué superficie?");
+    const turnLines = () => [...jsonLines(logSpy), ...jsonLines(errorSpy)].filter((l) => l.event === "chat_turn");
+    await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
+    expect(turnLines()[0]).toMatchObject({ level: "info", outcome: "ok", steps: 2, tools: [{ tool: "noSuchTool", status: "tool_error" }] });
   });
 
   it("logs one structured line per turn without the raw IP and charges extra steps to both global caps", async () => {

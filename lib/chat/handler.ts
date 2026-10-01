@@ -1,4 +1,4 @@
-import { createAgentUIStreamResponse, type LanguageModel, safeValidateUIMessages } from "ai";
+import { createAgentUIStreamResponse, InvalidToolInputError, type LanguageModel, NoSuchToolError, safeValidateUIMessages } from "ai";
 import { createCoronaAgent, type CoronaUIMessage } from "@/lib/agent/agent";
 import type { CoronaTools } from "@/lib/agent/tools";
 import { type ChatErrorCode, errorResponse, streamErrorCode } from "@/lib/guard/errors";
@@ -82,7 +82,12 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
       abortSignal: req.signal,
       onError: (error) => {
         const code = streamErrorCode(error);
-        turn.failed(code, error);
+        // The SDK routes tool-error parts through this same callback: first with the NoSuchToolError /
+        // InvalidToolInputError, then again with its stringified form for the tool-output-error part. Those are
+        // recoverable and already counted as tool_error by the agent's onTool hook; only stream-level errors
+        // (Error objects from the provider) end the turn.
+        const toolLevel = typeof error === "string" || NoSuchToolError.isInstance(error) || InvalidToolInputError.isInstance(error);
+        if (!toolLevel) turn.failed(code, error);
         return code;
       },
     });
