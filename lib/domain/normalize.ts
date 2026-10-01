@@ -150,6 +150,8 @@ function normalizeGrout(base: ProductBase, subcategory: string | null, specs: Sp
   };
 }
 
+export const MAX_IMAGES_PER_PRODUCT = 3;
+
 /** Returns `null` for product-family pages and categories outside the agent's scope. */
 export function normalizeProduct(raw: RawProduct): Product | null {
   if (raw.is_variant !== true) return null;
@@ -161,7 +163,7 @@ export function normalizeProduct(raw: RawProduct): Product | null {
     name: text(raw.name) ?? raw.sku,
     description: text(raw.description),
     url: text(raw.url),
-    imageUrls: images.filter((i): i is string => typeof i === "string" && i !== ""),
+    imageUrls: images.filter((i): i is string => typeof i === "string" && i !== "").slice(0, MAX_IMAGES_PER_PRODUCT),
     price: positiveNumber(raw.price),
     inStock: raw.is_in_stock === true,
     datasheetUrl: text(raw.ficha_tecnica_url),

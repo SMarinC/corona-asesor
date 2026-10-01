@@ -70,6 +70,11 @@ describe("normalizeProduct", () => {
     expect(normalizeProduct(raw({ is_variant: false }))).toBeNull();
   });
 
+  it("caps product images at three, keeping order", () => {
+    const product = normalizeProduct(raw({ images: JSON.stringify(["u1", "u2", "u3", "u4", "u5", "u6", "u7"]) }));
+    expect(product?.imageUrls).toEqual(["u1", "u2", "u3"]);
+  });
+
   it("normalizes a floor tile using the sheet-extracted specs_pdf column", () => {
     const tile = normalizeProduct(
       raw({
