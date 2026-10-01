@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { createSheetSearch, keywordSearch, loadSheetArtifacts } from "@/lib/data/sheets";
+import { assertSheetsMatchManifest, createSheetSearch, keywordSearch, loadSheetArtifacts } from "@/lib/data/sheets";
 import { dequantizeRow, decodeIndex, encodeIndex } from "@/lib/data/vector";
 import type { SheetChunk } from "@/lib/domain/types";
 
@@ -53,5 +54,21 @@ describe("loadSheetArtifacts (data/)", () => {
     const row = Math.floor(real.length / 2);
     const search = createSheetSearch({ chunks: real, index: realIndex, embedQuery: async () => Array.from(dequantizeRow(realIndex, row)) });
     return search.search("x", { k: 1 }).then((r) => expect(r.hits[0].chunk.citationId).toBe(real[row].citationId));
+  });
+});
+
+describe("assertSheetsMatchManifest", () => {
+  const bytes = new TextEncoder().encode("[]");
+  const hash = createHash("sha256").update(bytes).digest("hex");
+
+  it("accepts a matching chunk count and hash", () => {
+    expect(() => assertSheetsMatchManifest(bytes, 3, { chunks: 3, sheetsSha256: hash })).not.toThrow();
+    expect(() => assertSheetsMatchManifest(bytes, 3, { chunks: 3 })).not.toThrow();
+  });
+  it("throws on a chunk count mismatch", () => {
+    expect(() => assertSheetsMatchManifest(bytes, 3, { chunks: 4 })).toThrow(/chunks/);
+  });
+  it("throws on a hash mismatch", () => {
+    expect(() => assertSheetsMatchManifest(bytes, 3, { chunks: 3, sheetsSha256: "0".repeat(64) })).toThrow(/sha256/);
   });
 });

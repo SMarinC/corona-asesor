@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { round } from "@/lib/domain/calculations";
@@ -67,8 +68,29 @@ export function createSheetSearch(deps: { chunks: SheetChunk[]; index: Quantized
   };
 }
 
+export interface SheetsManifest {
+  chunks: number;
+  sheetsSha256?: string;
+}
+
+/** Throws when data/sheets.json is not the file the embedding index was built from. */
+export function assertSheetsMatchManifest(sheetsBytes: Uint8Array, chunkCount: number, manifest: SheetsManifest): void {
+  if (manifest.chunks !== chunkCount) {
+    throw new Error(`data/manifest.json lists ${manifest.chunks} chunks but data/sheets.json has ${chunkCount}; re-run npm run data:embed.`);
+  }
+  if (manifest.sheetsSha256 !== undefined) {
+    const actual = createHash("sha256").update(sheetsBytes).digest("hex");
+    if (actual !== manifest.sheetsSha256) {
+      throw new Error("data/sheets.json sha256 differs from data/manifest.json; the index was built from other chunks. Re-run npm run data:embed.");
+    }
+  }
+}
+
 export function loadSheetArtifacts(): { chunks: SheetChunk[]; index: QuantizedIndex } {
-  const chunks = JSON.parse(readFileSync(path.join(DATA_DIR, "sheets.json"), "utf8")) as SheetChunk[];
+  const sheetsBytes = readFileSync(path.join(DATA_DIR, "sheets.json"));
+  const chunks = JSON.parse(sheetsBytes.toString("utf8")) as SheetChunk[];
+  const manifest = JSON.parse(readFileSync(path.join(DATA_DIR, "manifest.json"), "utf8")) as SheetsManifest;
+  assertSheetsMatchManifest(sheetsBytes, chunks.length, manifest);
   const bytes = new Uint8Array(readFileSync(path.join(DATA_DIR, "sheets.index.bin")));
   return { chunks, index: decodeIndex(bytes, chunks.length, EMBEDDING_DIMENSIONS) };
 }

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 import { google } from "@ai-sdk/google";
@@ -55,6 +56,7 @@ writeFileSync(
       embeddingModel: EMBEDDING_MODEL,
       dimensions: EMBEDDING_DIMENSIONS,
       chunks: sheets.length,
+      sheetsSha256: createHash("sha256").update(readFileSync("data/sheets.json")).digest("hex"),
       products: catalog.length,
       builtAt: new Date().toISOString().slice(0, 10),
       source: "Preprocessed snapshot of a scrape of Corona Colombia's public catalog (AgentSprint by ReshapeX).",
