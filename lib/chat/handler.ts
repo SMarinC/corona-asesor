@@ -1,0 +1,79 @@
+import { createAgentUIStreamResponse, type LanguageModel, safeValidateUIMessages } from "ai";
+import { createCoronaAgent, type CoronaUIMessage } from "@/lib/agent/agent";
+import type { CoronaTools } from "@/lib/agent/tools";
+import { type ChatErrorCode, errorResponse, streamErrorCode } from "@/lib/guard/errors";
+import { parseChatRequest } from "@/lib/guard/input";
+import { clientIp, hashIp } from "@/lib/guard/ip";
+import { checkLimits, type GuardLimits, type LimitCheck, recordModelCalls } from "@/lib/guard/rate-limit";
+import { errorMessage, log } from "@/lib/log";
+import { createTurnLogger } from "./turn-log";
+
+export interface ChatDeps {
+  /** Defaults to Gemini; tests inject a mock. */
+  model?: LanguageModel;
+  /** Lazy, so rejected requests never load the catalog. */
+  getTools: () => CoronaTools;
+  limits: GuardLimits;
+  isBot: () => Promise<boolean>;
+  newRequestId?: () => string;
+}
+
+/** Guards in spec order (BotID → rate limits → input), then streams one agent turn. */
+export async function handleChat(req: Request, deps: ChatDeps): Promise<Response> {
+  const requestId = deps.newRequestId?.() ?? crypto.randomUUID();
+  const ipHash = hashIp(clientIp(req.headers));
+  const reject = (code: ChatErrorCode, reason: string, retryAfter?: number) => {
+    log("warn", "chat_rejected", { requestId, ipHash, code, reason });
+    return errorResponse(code, { retryAfter });
+  };
+
+  if (await deps.isBot()) return reject("bot_detected", "botid");
+
+  // Fail open if the limiter backend is down: BotID and Gemini's own quota still apply.
+  let limit: LimitCheck;
+  try {
+    limit = await checkLimits(deps.limits, ipHash);
+  } catch (error) {
+    log("error", "rate_limit_unavailable", { requestId, message: errorMessage(error) });
+    limit = { ok: true };
+  }
+  if (!limit.ok) return reject(limit.code, limit.code, limit.retryAfter);
+
+  const parsed = await parseChatRequest(req);
+  if (!parsed.ok) return reject("invalid_input", parsed.reason);
+
+  const tools = deps.getTools();
+  const validated = await safeValidateUIMessages<CoronaUIMessage>({ messages: parsed.messages, tools });
+  if (!validated.success) return reject("invalid_input", "ui_message_validation");
+
+  const turn = createTurnLogger({ requestId, ipHash });
+  const agent = createCoronaAgent({
+    tools,
+    model: deps.model,
+    hooks: {
+      ...turn.hooks,
+      onFinish: (summary) => {
+        turn.hooks.onFinish(summary);
+        recordModelCalls(deps.limits, summary.steps).catch((error) =>
+          log("warn", "global_cap_record_failed", { requestId, message: errorMessage(error) }),
+        );
+      },
+    },
+  });
+
+  try {
+    return await createAgentUIStreamResponse({
+      agent,
+      uiMessages: validated.data,
+      abortSignal: req.signal,
+      onError: (error) => {
+        const code = streamErrorCode(error);
+        turn.failed(code, error);
+        return code;
+      },
+    });
+  } catch (error) {
+    turn.failed("model_error", error);
+    return errorResponse("model_error");
+  }
+}
