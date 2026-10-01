@@ -1,0 +1,8 @@
+{
+  "embeddingModel": "gemini-embedding-2",
+  "dimensions": 768,
+  "chunks": 912,
+  "products": 341,
+  "builtAt": "2026-10-01",
+  "source": "Preprocessed snapshot of a scrape of Corona Colombia's public catalog (AgentSprint by ReshapeX)."
+}
