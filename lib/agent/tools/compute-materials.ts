@@ -97,6 +97,10 @@ const REJECTION_ES: Record<RejectionReason, string> = {
   catalog_has_value: "El catálogo ya trae este dato; se usa el valor del catálogo.",
 };
 
+/** Tells the model how to fill a missing catalog value: from a cited technical-sheet fragment. */
+const SHEET_HINT = (field: keyof NonNullable<ComputeMaterialsInput["overrides"]>) =>
+  `búscalo en su ficha técnica con searchTechnicalSheets (filtrando por su SKU) y pásalo en overrides.${field} como { value, citationId }.`;
+
 const ADHESIVE_NOTE = "Usa el límite superior del rendimiento de la ficha (estimación conservadora) sobre el área sin desperdicio.";
 const GROUT_NOTE = `Estimación por volumen de junta (densidad ${GROUT_DENSITY_G_CM3} g/cm³, profundidad = espesor del revestimiento) sobre el área sin desperdicio.`;
 
@@ -151,15 +155,17 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
     const { boxes, coveredM2 } = computeBoxes(area.areaWithWasteM2, m2PerBox.value);
     tileQuantity = { sku: tile.sku, name: tile.name, m2PerBox: m2PerBox.value, m2PerBoxSource: m2PerBox.source, citationId: m2PerBox.citationId, boxes, coveredM2 };
   } else {
-    missing.push({ field: "m2PerBox", reason: `El catálogo no indica los m² por caja de ${tile.name}; búscalo en su ficha técnica y cítalo.` });
+    missing.push({ field: "m2PerBox", reason: `El catálogo no indica los m² por caja de ${tile.name}; ${SHEET_HINT("m2PerBox")}` });
   }
 
   let adhesiveQuantity: AdhesiveQuantity | undefined;
   if (adhesive) {
     const coverage = resolveValue(deps, adhesive.sku, "adhesiveCoverageKgM2", "coverageKgM2", adhesive.coverageKgM2?.max ?? null, overrides.adhesiveCoverageKgM2, rejectedOverrides);
     const bagKg = resolveValue(deps, adhesive.sku, "bagKg", "bagKg", adhesive.bagKg, overrides.bagKg, rejectedOverrides);
-    if (!coverage) missing.push({ field: "adhesiveCoverageKgM2", reason: `No hay rendimiento (kg/m²) verificado para ${adhesive.name}.` });
-    if (!bagKg) missing.push({ field: "bagKg", reason: `No hay peso del bulto verificado para ${adhesive.name}.` });
+    if (!coverage) {
+      missing.push({ field: "adhesiveCoverageKgM2", reason: `No hay rendimiento (kg/m²) verificado para ${adhesive.name}; ${SHEET_HINT("adhesiveCoverageKgM2")}` });
+    }
+    if (!bagKg) missing.push({ field: "bagKg", reason: `No hay peso del bulto verificado para ${adhesive.name}; ${SHEET_HINT("bagKg")}` });
     if (coverage && bagKg) {
       const { kg, bags } = computeAdhesive(area.areaM2, coverage.value, bagKg.value);
       const citationIds = [...new Set([coverage.citationId, bagKg.citationId].filter((id): id is string => id !== null))];

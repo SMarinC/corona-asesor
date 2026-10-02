@@ -34,8 +34,23 @@ describe("computeMaterials tool", () => {
     expect(result.status).toBe("needs_review");
     if (result.status !== "needs_review") return;
     expect(result.missing.map((m) => m.field)).toEqual(["m2PerBox"]);
+    expect(result.missing[0].reason).toContain("searchTechnicalSheets");
+    expect(result.missing[0].reason).toContain("overrides.m2PerBox");
     expect(result.data.area).toEqual({ areaM2: 6, wastePct: 0.1, areaWithWasteM2: 6.6 });
     expect(result.data.tile).toBeUndefined();
+  });
+
+  it("tells the model to look up missing adhesive data in the technical sheets and cite it", () => {
+    const result = executeComputeMaterials(deps, { ...room, tileSku: "T1", adhesiveSku: "A2" });
+    expect(result.status).toBe("needs_review");
+    if (result.status !== "needs_review") return;
+    expect(result.missing.map((m) => m.field)).toEqual(["adhesiveCoverageKgM2", "bagKg"]);
+    for (const { field, reason } of result.missing) {
+      expect(reason, field).toContain("PEGACOR® Flex Gris");
+      expect(reason, field).toContain("searchTechnicalSheets");
+      expect(reason, field).toContain(`overrides.${field}`);
+      expect(reason, field).toContain("citationId");
+    }
   });
 
   it("accepts a cited value that the sheet really states for that product", () => {

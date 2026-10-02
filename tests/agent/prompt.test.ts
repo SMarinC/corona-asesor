@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { PROMPT_VERSION, SYSTEM_PROMPT } from "@/lib/agent/prompt";
 import { TOOL_NAMES } from "@/lib/agent/tools";
 
+const NL = String.fromCharCode(10);
+
 describe("system prompt", () => {
   it("is versioned", () => {
     expect(PROMPT_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}\.\d+$/);
@@ -32,5 +34,33 @@ describe("system prompt", () => {
     ]) {
       expect(SYSTEM_PROMPT, rule).toContain(rule);
     }
+  });
+
+  it("makes citations mandatory for specific claims, with a concrete example", () => {
+    for (const rule of ["compatibilidad pegante↔material", "uso en exteriores", "rango de junta", "agrega su [cXXXX]", "citationIds"]) {
+      expect(SYSTEM_PROMPT, rule).toContain(rule);
+    }
+  });
+
+  it("checks the citations of checkCompatibility, searchSupplies and computeMaterials before closing", () => {
+    const checklist = SYSTEM_PROMPT.split(NL).filter((line) => /^- .*cita/.test(line) && ["checkCompatibility", "searchSupplies", "computeMaterials"].every((t) => line.includes(t)));
+    expect(checklist).toHaveLength(1);
+  });
+
+  it("looks up missing tile and adhesive data in the sheets and passes it as a cited override", () => {
+    const step3 = SYSTEM_PROMPT.split(NL).find((line) => line.startsWith("3. "));
+    for (const part of ["pegante", "m² por caja", "rendimiento", "peso del bulto", "searchTechnicalSheets", "overrides", "{ value, citationId }"]) {
+      expect(step3, part).toContain(part);
+    }
+  });
+
+  it("filters adhesives for exteriors and treats pricePerM2 as a reference only", () => {
+    const step4 = SYSTEM_PROMPT.split(NL).find((line) => line.startsWith("4. "));
+    expect(step4).toContain("outdoor: true");
+    expect(SYSTEM_PROMPT).toContain("pricePerM2 es solo referencia; la cotización va por caja");
+  });
+
+  it("separates traffic from measurements in the data checklist", () => {
+    expect(SYSTEM_PROMPT).toContain("alto), medidas");
   });
 });

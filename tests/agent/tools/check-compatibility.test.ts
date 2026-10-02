@@ -46,9 +46,38 @@ describe("checkCompatibility tool", () => {
     expect(executeCheckCompatibility(deps, { ...bathroom, tileSku: "T1", groutSku: "ZZ9" })).toMatchObject({ status: "error", code: "unknown_sku" });
   });
 
-  it("takes the worst verdict across tile, adhesive and grout", () => {
+  it("takes the worst verdict across tile and adhesive, keeping the deciding check's message and citation", () => {
     // A1 excludes porcelain, and T3 is porcelain.
     const result = executeCheckCompatibility(deps, { surface: "floor", environment: "outdoor", wetArea: true, traffic: "high", tileSku: "T3", adhesiveSku: "A1" });
     expect(result).toMatchObject({ status: "ok", data: { verdict: "incompatible", products: { adhesive: { sku: "A1" }, grout: null } } });
+    if (result.status !== "ok") return;
+    expect(result.data.checks).toContainEqual({
+      rule: "Pegante ↔ material",
+      verdict: "incompatible",
+      message: "La ficha del pegante excluye gres porcelánico.",
+      citationId: "c0001",
+    });
+  });
+
+  it("lists the citations of its checks once, at the top level", () => {
+    const result = executeCheckCompatibility(deps, { ...bathroom, environment: "outdoor", tileSku: "T1", adhesiveSku: "A1", groutSku: "G1", jointWidthMm: 3 });
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    // A1's material and outdoor checks both cite c0001; G1's joint check cites c0002.
+    expect(result.data.checks.filter((c) => c.citationId === "c0001")).toHaveLength(2);
+    expect(result.data.citationIds).toEqual(["c0001", "c0002"]);
+    expect(result.data.checks).toContainEqual(expect.objectContaining({ rule: "Boquilla ↔ junta", message: "Junta de 3 mm dentro del rango 1–5 mm de la ficha.", citationId: "c0002" }));
+  });
+
+  it("returns an empty citation list when no check is cited", () => {
+    const result = executeCheckCompatibility(deps, { ...bathroom, tileSku: "T1" });
+    expect(result).toMatchObject({ status: "ok", data: { citationIds: [] } });
+  });
+
+  it("does not report a traffic level the user never gave for a wall", () => {
+    const wall = executeCheckCompatibility(deps, { surface: "wall", environment: "indoor", wetArea: true, tileSku: "T2" });
+    expect(wall).toMatchObject({ status: "ok", data: { project: { surface: "wall", traffic: null } } });
+    const floor = executeCheckCompatibility(deps, { ...bathroom, tileSku: "T1" });
+    expect(floor).toMatchObject({ status: "ok", data: { project: { traffic: "medium" } } });
   });
 });

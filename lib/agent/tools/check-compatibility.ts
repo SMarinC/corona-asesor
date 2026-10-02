@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { type Check, evaluateCompatibility, type ProjectConditions, type Verdict } from "@/lib/domain/compatibility";
+import type { Traffic } from "@/lib/domain/types";
 import type { ToolDeps } from "./deps";
 import { isToolError, lookup } from "./lookup";
 import { ok, runTool, type ToolResult, toolError } from "./result";
@@ -32,7 +33,10 @@ export interface CompatibilityData {
   verdict: Verdict;
   verdictLabel: string;
   checks: Check[];
-  project: ProjectConditions;
+  /** Every citationId in `checks`, deduplicated, so the model can cite them without digging into each check. */
+  citationIds: string[];
+  /** The conditions as the user gave them; `traffic` is null when it was not given (walls). */
+  project: Omit<ProjectConditions, "traffic"> & { traffic: Traffic | null };
   products: { tile: ProductRef; adhesive: ProductRef | null; grout: ProductRef | null };
 }
 
@@ -58,11 +62,13 @@ export function executeCheckCompatibility(deps: ToolDeps, input: CheckCompatibil
     jointWidthMm: input.jointWidthMm,
   };
   const { verdict, checks } = evaluateCompatibility(tile, project, adhesive ?? undefined, grout ?? undefined);
+  const citationIds = [...new Set(checks.flatMap((check) => (check.citationId ? [check.citationId] : [])))];
   return ok({
     verdict,
     verdictLabel: VERDICT_LABEL[verdict],
     checks,
-    project,
+    citationIds,
+    project: { ...project, traffic: input.traffic ?? null },
     products: { tile: ref(tile), adhesive: adhesive ? ref(adhesive) : null, grout: grout ? ref(grout) : null },
   });
 }

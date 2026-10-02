@@ -63,6 +63,8 @@ export async function parseChatRequest(req: Request): Promise<ParsedChat> {
   const lastText = last?.role === "user" ? last.parts.map((p) => (p as { text?: string }).text ?? "").join("").trim() : "";
   if (lastText.length === 0) return { ok: false, reason: "last_message_not_user" };
 
-  // Shape-checked here; tool parts are validated against the tool schemas by safeValidateUIMessages in the handler.
+  // Shape-checked here. In the handler, safeValidateUIMessages then checks the UI-message structure and each tool
+  // part's input against that tool's inputSchema. Tool outputs in the history are NOT validated: our tools declare
+  // no outputSchema, so a replayed tool output reaches the model as the client sent it.
   return { ok: true, messages: fitHistoryBudget(truncateHistory(parsed.data.messages as unknown as UIMessage[])) };
 }

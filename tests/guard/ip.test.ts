@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clientIp, hashIp } from "@/lib/guard/ip";
 
@@ -28,7 +29,15 @@ describe("hashIp salt handling", () => {
   });
 
   it("differs per salt and is not the plain sha256 of the IP", () => {
-    expect(hashIp("203.0.113.7", "a")).not.toBe(hashIp("203.0.113.7", "b"));
+    vi.spyOn(console, "warn").mockImplementation(() => {}); // the empty salt warns
+    const ip = "203.0.113.7";
+    expect(hashIp(ip, "a")).not.toBe(hashIp(ip, "b"));
+    const plain = createHash("sha256").update(ip).digest("hex");
+    for (const salt of ["", "a"]) {
+      const hash = hashIp(ip, salt);
+      expect(hash, `salt "${salt}"`).not.toBe(plain);
+      expect(hash, `salt "${salt}"`).not.toBe(plain.slice(0, 16));
+    }
   });
 
   it("warns once per process when the salt is missing, as error in production", async () => {
