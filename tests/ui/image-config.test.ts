@@ -19,3 +19,10 @@ describe("next/image remote patterns", () => {
     expect(hasRemoteMatch([], patterns, new URL("https://corona.co/otra/x.jpg"))).toBe(false);
   });
 });
+
+describe("file tracing", () => {
+  it("keeps the local prototype databases out of the citations route trace", () => {
+    // Brackets are a glob character class, so the dynamic segment must be escaped or the key never matches.
+    expect(nextConfig.outputFileTracingExcludes?.["/api/citations/\\[id\\]"]).toEqual(["./data/source/**/*"]);
+  });
+});

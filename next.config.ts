@@ -10,7 +10,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "corona.co", pathname: "/medias/**" }],
   },
   // The chat route reads these with fs at runtime, which file tracing cannot see.
-  // /api/citations/[id] needs no entry here: it is prerendered at build time (generateStaticParams), so it never reads data at runtime.
   outputFileTracingIncludes: {
     "/api/chat": [
       "./data/catalog.json",
@@ -21,8 +20,11 @@ const nextConfig: NextConfig = {
     ],
   },
   // The cwd-relative data path makes the tracer pull in the whole folder, including the local prototype databases.
+  // The citations route is prerendered but still emits a function whose readFileSync makes nft trace data/, so it needs
+  // the exclude too. Its key escapes the brackets because picomatch reads [id] as a character class.
   outputFileTracingExcludes: {
     "/api/chat": ["./data/source/**/*"],
+    "/api/citations/\\[id\\]": ["./data/source/**/*"],
   },
 };
 
