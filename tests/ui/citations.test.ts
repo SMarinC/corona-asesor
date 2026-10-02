@@ -19,6 +19,18 @@ describe("citationIdsIn", () => {
     expect(citationIdsIn(output)).toEqual(["c0046", "c0084", "c0759"]);
   });
 
+  it("skips rejectedOverrides: those ids were written by the model, not returned by a tool", () => {
+    const output = {
+      status: "ok",
+      data: {
+        tile: { citationId: "c0046" },
+        adhesive: { citationIds: ["c0084"] },
+        rejectedOverrides: [{ field: "bagKg", citationId: "c9999", reason: "unknown_citation", message: "x" }],
+      },
+    };
+    expect(citationIdsIn(output)).toEqual(["c0046", "c0084"]);
+  });
+
   it("ignores ids under other keys and malformed ids", () => {
     expect(citationIdsIn({ sku: "c0001", note: "[c0002]", citationId: "x12", citationIds: ["c12"] })).toEqual([]);
   });
