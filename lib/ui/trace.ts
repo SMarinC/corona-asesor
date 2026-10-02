@@ -23,9 +23,12 @@ export function createTimingStore(now: () => number = Date.now) {
       let next: Timings | null = null;
       messages.forEach((message, index) => {
         if (message.role !== "assistant") return;
-        const current = (next ?? timings)[message.id] ?? { stepStarts: [], endedAt: null };
-        const steps = message.parts.filter((part) => part.type === "step-start").length;
+        const known = (next ?? timings)[message.id];
         const live = streaming && index === messages.length - 1;
+        // Messages never seen while streaming (restored history, batched final update) get no timing.
+        if (!known && !live) return;
+        const current = known ?? { stepStarts: [], endedAt: null };
+        const steps = message.parts.filter((part) => part.type === "step-start").length;
         if (current.stepStarts.length >= steps && (live || current.endedAt !== null)) return;
         const at = now();
         const stepStarts = [...current.stepStarts];

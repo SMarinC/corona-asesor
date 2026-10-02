@@ -33,6 +33,8 @@ export type LineCheck = "computed" | "differs" | "not_computed";
 export interface ProjectQuote {
   data: Partial<QuoteData>;
   needsReview: boolean;
+  /** True when a computeMaterials call completed after this quote, so the quote may no longer match the latest numbers. */
+  stale: boolean;
   /** Keyed by SKU. A quantity the calculator never produced is shown as needing review, never as a fact. */
   lineChecks: Record<string, LineCheck>;
 }
@@ -83,6 +85,10 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
   let materialsReview: ReviewItem[] = [];
   let quoteReview: ReviewItem[] = [];
   let toolCalls = 0;
+  let compatibilityReview: ReviewItem[] = [];
+  // Calculations completed since the previous quote, and the set the latest quote is checked against.
+  let pending: Partial<MaterialsData>[] = [];
+  let quoteCalcs: Partial<MaterialsData>[] = [];
 
   for (const message of messages) {
     if (message.role !== "assistant") continue;
@@ -103,10 +109,14 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
         tileSku = part.input.tileSku;
         if (data.area) state = { ...state, space: { ...data.area, lengthM: part.input.lengthM, widthM: part.input.widthM } };
         state = { ...state, materials: { tile: data.tile ?? null, adhesive: data.adhesive ?? null, grout: data.grout ?? null } };
+        pending.push(data);
         materialsReview = output.status === "needs_review" ? reviewFrom("computeMaterials", output.missing) : [];
       } else if (isToolPartOf(part, "checkCompatibility") && part.output.status === "ok") {
         const { data } = part.output;
         tileSku = data.products.tile.sku;
+        compatibilityReview = data.checks
+          .filter((check) => check.verdict === "needs_review")
+          .map((check) => ({ tool: "checkCompatibility", field: `check:${check.rule}`, reason: check.message }));
         state = {
           ...state,
           compatibility: data,
@@ -120,13 +130,19 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
         };
       } else if (isToolPartOf(part, "buildQuote") && part.output.status !== "error") {
         const output = part.output;
-        state = { ...state, quote: { data: output.data, needsReview: output.status === "needs_review", lineChecks: {} } };
+        state = { ...state, quote: { data: output.data, needsReview: output.status === "needs_review", stale: false, lineChecks: {} } };
+        // A quote is checked against the calculations since the previous quote; a re-quote with none keeps the previous set.
+        if (pending.length > 0) quoteCalcs = pending;
+        pending = [];
         quoteReview = output.status === "needs_review" ? reviewFrom("buildQuote", output.missing) : [];
       }
     }
   }
 
-  const quote = state.quote ? withLineChecks(state.quote, state.materials) : null;
+  const quote = state.quote ? { ...withLineChecks(state.quote, quoteCalcs), stale: pending.length > 0 } : null;
+  const staleReview: ReviewItem[] = quote?.stale
+    ? [{ tool: "buildQuote", field: "stale", reason: "La cotización es anterior al último cálculo de materiales; pide una nueva cotización." }]
+    : [];
   const lineReview: ReviewItem[] = [];
   for (const line of quote?.data.lines ?? []) {
     const check = quote?.lineChecks[line.sku];
@@ -141,21 +157,25 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
     ...state,
     quote,
     tile: tileSku ? (tiles.get(tileSku) ?? null) : null,
-    review: [...materialsReview, ...quoteReview, ...lineReview],
+    review: [...materialsReview, ...compatibilityReview, ...quoteReview, ...staleReview, ...lineReview],
     citations: [...citations],
     toolCalls,
   };
 }
 
-function withLineChecks(quote: ProjectQuote, materials: ProjectMaterials | null): ProjectQuote {
-  const computed = new Map<string, number>();
-  if (materials?.tile) computed.set(materials.tile.sku, materials.tile.boxes);
-  if (materials?.adhesive) computed.set(materials.adhesive.sku, materials.adhesive.bags);
-  if (materials?.grout) computed.set(materials.grout.sku, materials.grout.units);
+function withLineChecks(quote: ProjectQuote, calcs: Partial<MaterialsData>[]): ProjectQuote {
+  const computed = new Map<string, number[]>();
+  const add = (sku: string, value: number) => computed.set(sku, [...(computed.get(sku) ?? []), value]);
+  for (const calc of calcs) {
+    if (calc.tile) add(calc.tile.sku, calc.tile.boxes);
+    if (calc.adhesive) add(calc.adhesive.sku, calc.adhesive.bags);
+    if (calc.grout) add(calc.grout.sku, calc.grout.units);
+  }
   const lineChecks: Record<string, LineCheck> = {};
   for (const line of quote.data.lines ?? []) {
-    const expected = computed.get(line.sku);
-    lineChecks[line.sku] = expected === undefined ? "not_computed" : expected === line.quantity ? "computed" : "differs";
+    const values = computed.get(line.sku);
+    const sum = values?.reduce((a, b) => a + b, 0);
+    lineChecks[line.sku] = values === undefined ? "not_computed" : values.includes(line.quantity) || sum === line.quantity ? "computed" : "differs";
   }
   return { ...quote, lineChecks };
 }

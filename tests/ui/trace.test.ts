@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildTrace, createTimingStore, turnDuration } from "@/lib/ui/trace";
+import type { CoronaPart } from "@/lib/ui/tool-parts";
 import { assistantMessage, bathroomConversation, toolPart, userMessage } from "../fixtures/ui-messages";
 
 describe("buildTrace", () => {
@@ -53,5 +54,26 @@ describe("createTimingStore", () => {
 
     store.reset();
     expect(store.getSnapshot()).toEqual({});
+  });
+
+  it("gives no timing to messages never observed while streaming", () => {
+    const store = createTimingStore(() => 5_000);
+    let notified = 0;
+    store.subscribe(() => notified++);
+    const [user, restored] = bathroomConversation();
+    store.observe([user, restored], false);
+    expect(store.getSnapshot()).toEqual({});
+    expect(notified).toBe(0);
+    expect(buildTrace(restored, store.getSnapshot()[restored.id]).every((s) => s.durationMs === null)).toBe(true);
+  });
+});
+
+describe("buildTrace with a streaming tool part", () => {
+  it("shows a part whose input is still streaming as running", () => {
+    const streaming = { type: "tool-searchSupplies", toolCallId: "t1", state: "input-streaming", input: undefined } as unknown as CoronaPart;
+    const steps = buildTrace(assistantMessage([{ type: "step-start" }, streaming]), undefined);
+    expect(steps).toHaveLength(1);
+    expect(steps[0].tools).toEqual([{ toolCallId: "t1", name: "searchSupplies", label: "Buscando insumos", phase: "running" }]);
+    expect(steps[0].wroteText).toBe(false);
   });
 });
