@@ -5,7 +5,10 @@ export interface CitationFragment {
   citationId: string;
   section: string;
   docType: string;
+  /** At most MAX_FRAGMENT_SKUS of them; see skuCount. */
   skus: string[];
+  skuCount: number;
+  skusTruncated: boolean;
   text: string;
   truncated: boolean;
 }
@@ -20,6 +23,8 @@ export function toCitationFragment(chunk: SheetChunk): CitationFragment {
     section: chunk.section,
     docType: chunk.docType,
     skus: chunk.skus.slice(0, MAX_FRAGMENT_SKUS),
+    skuCount: chunk.skus.length,
+    skusTruncated: chunk.skus.length > MAX_FRAGMENT_SKUS,
     text: truncated ? `${chunk.text.slice(0, MAX_FRAGMENT_CHARS)}…` : chunk.text,
     truncated,
   };

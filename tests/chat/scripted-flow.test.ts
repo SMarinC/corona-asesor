@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
 import { createTools, getToolDeps } from "@/lib/agent/tools";
 import { handleChat } from "@/lib/chat/handler";
-import { scriptedModelEnabled } from "@/lib/chat/production";
+import { createProductionChatDeps, scriptedModelEnabled } from "@/lib/chat/production";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
 import { createMemoryGuardLimits, DEFAULT_GUARD_CONFIG } from "@/lib/guard/rate-limit";
 import { citationIdsIn } from "@/lib/ui/citations";
@@ -62,12 +62,27 @@ describe("scripted demo turn through the real handler and tools", () => {
     const returned = assistant.parts.flatMap((p) => ("output" in p ? citationIdsIn(p.output) : []));
     for (const id of cited) expect(returned).toContain(id);
     expect(text).toContain("$330.012");
+
+    // The prose is tied to the tool outputs: if the catalog or the maths change, this fails instead of lying.
+    const { tile, adhesive, grout } = project.materials!;
+    const es = (n: number) => String(n).replace(".", ",");
+    expect(text).toContain(`${tile!.boxes} cajas, que cubren ${es(tile!.coveredM2)} m²`);
+    expect(text).toContain(`${adhesive!.bags} bultos de ${es(adhesive!.bagKg)} kg`);
+    expect(text).toContain(`${grout!.units} unidad de ${es(grout!.packageKg)} kg`);
   });
 
-  it("is never enabled on Vercel production", () => {
+  it("is enabled only locally: never on Vercel previews or production", () => {
     expect(scriptedModelEnabled({ CORONA_SCRIPTED_MODEL: "1" })).toBe(true);
-    expect(scriptedModelEnabled({ CORONA_SCRIPTED_MODEL: "1", VERCEL_ENV: "preview" })).toBe(true);
+    expect(scriptedModelEnabled({ CORONA_SCRIPTED_MODEL: "1", VERCEL_ENV: "development" })).toBe(true);
+    expect(scriptedModelEnabled({ CORONA_SCRIPTED_MODEL: "1", VERCEL_ENV: "preview" })).toBe(false);
     expect(scriptedModelEnabled({ CORONA_SCRIPTED_MODEL: "1", VERCEL_ENV: "production" })).toBe(false);
+    expect(scriptedModelEnabled({ VERCEL_ENV: "development" })).toBe(false);
     expect(scriptedModelEnabled({})).toBe(false);
+  });
+
+  it("only builds the script model when enabled", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    expect((await createProductionChatDeps({ CORONA_SCRIPTED_MODEL: "1" })).model).toBeDefined();
+    expect((await createProductionChatDeps({ CORONA_SCRIPTED_MODEL: "1", VERCEL_ENV: "production" })).model).toBeUndefined();
   });
 });

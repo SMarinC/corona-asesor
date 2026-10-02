@@ -7,6 +7,6 @@ export const maxDuration = 60;
 let deps: ChatDeps | null = null;
 
 export async function POST(req: Request): Promise<Response> {
-  deps ??= createProductionChatDeps();
+  deps ??= await createProductionChatDeps();
   return handleChat(req, deps);
 }
