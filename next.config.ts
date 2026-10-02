@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: "https", hostname: "corona.co", pathname: "/medias/**" }],
   },
-  // The chat route reads these with fs at runtime, which file tracing cannot see.
+  // These routes read the artifacts with fs at runtime, which file tracing cannot see.
   outputFileTracingIncludes: {
     "/api/chat": [
       "./data/catalog.json",
@@ -18,10 +18,12 @@ const nextConfig: NextConfig = {
       "./data/manifest.json",
       "./data/company-context.json",
     ],
+    "/api/citations/\\[id\\]": ["./data/sheets.json"],
   },
   // The cwd-relative data path makes the tracer pull in the whole folder, including the local prototype databases.
   outputFileTracingExcludes: {
     "/api/chat": ["./data/source/**/*"],
+    "/api/citations/\\[id\\]": ["./data/source/**/*"],
   },
 };
 
