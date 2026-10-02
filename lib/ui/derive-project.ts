@@ -87,7 +87,8 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
   let toolCalls = 0;
   let compatibilityReview: ReviewItem[] = [];
   // Calculations completed since the previous quote, and the set the latest quote is checked against.
-  let pending: Partial<MaterialsData>[] = [];
+  // A later call for the same tile replaces the earlier one (last call wins); different tiles accumulate.
+  let pending: { tileSku: string; data: Partial<MaterialsData> }[] = [];
   let quoteCalcs: Partial<MaterialsData>[] = [];
 
   for (const message of messages) {
@@ -109,7 +110,7 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
         tileSku = part.input.tileSku;
         if (data.area) state = { ...state, space: { ...data.area, lengthM: part.input.lengthM, widthM: part.input.widthM } };
         state = { ...state, materials: { tile: data.tile ?? null, adhesive: data.adhesive ?? null, grout: data.grout ?? null } };
-        pending.push(data);
+        pending = [...pending.filter((call) => call.tileSku !== part.input.tileSku), { tileSku: part.input.tileSku, data }];
         materialsReview = output.status === "needs_review" ? reviewFrom("computeMaterials", output.missing) : [];
       } else if (isToolPartOf(part, "checkCompatibility") && part.output.status === "ok") {
         const { data } = part.output;
@@ -132,7 +133,7 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
         const output = part.output;
         state = { ...state, quote: { data: output.data, needsReview: output.status === "needs_review", stale: false, lineChecks: {} } };
         // A quote is checked against the calculations since the previous quote; a re-quote with none keeps the previous set.
-        if (pending.length > 0) quoteCalcs = pending;
+        if (pending.length > 0) quoteCalcs = pending.map((call) => call.data);
         pending = [];
         quoteReview = output.status === "needs_review" ? reviewFrom("buildQuote", output.missing) : [];
       }

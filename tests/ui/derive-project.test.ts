@@ -168,4 +168,35 @@ describe("deriveProject", () => {
     expect(project.compatibility?.verdict).toBe("needs_review");
     expect(project.review).toEqual(expected.map((c) => ({ tool: "checkCompatibility", field: `check:${c.rule}`, reason: c.message })));
   });
+
+  it("does not let a superseded what-if calculation validate a quantity (last call wins per tile)", () => {
+    const deps = makeToolDeps();
+    const room = { lengthM: 3, widthM: 2, tileSku: "T1" };
+    const bigger = { lengthM: 4, widthM: 3, tileSku: "T1" };
+    const a = executeComputeMaterials(deps, room);
+    const b = executeComputeMaterials(deps, bigger);
+    if (a.status === "error" || b.status === "error") throw new Error("fixture: calculations should return data");
+    expect(a.data.tile?.boxes).not.toBe(b.data.tile?.boxes);
+    const quoteInput = { lines: [{ sku: "T1", quantity: a.data.tile!.boxes }] };
+    const project = deriveProject([
+      assistantMessage([
+        toolPart("computeMaterials", room, a),
+        toolPart("computeMaterials", bigger, b),
+        toolPart("buildQuote", quoteInput, executeBuildQuote(deps, quoteInput)),
+      ]),
+    ]);
+    expect(project.materials?.tile?.boxes).toBe(b.data.tile?.boxes);
+    expect(project.quote?.lineChecks).toEqual({ T1: "differs" });
+    expect(project.review.map((r) => r.field)).toEqual(["quantity:T1"]);
+  });
+
+  it("does not launder an invented line or a wrong quantity through a re-quote", () => {
+    const [user, first] = bathroomConversation();
+    const deps = makeToolDeps();
+    const input = { lines: [{ sku: "T1", quantity: 5 }, { sku: "A1", quantity: 9 }, { sku: "G2", quantity: 3 }] };
+    const again = assistantMessage([toolPart("buildQuote", input, executeBuildQuote(deps, input))]);
+    const project = deriveProject([user, first, userMessage("Agrega reparador"), again]);
+    expect(project.quote?.lineChecks).toEqual({ T1: "computed", A1: "differs", G2: "not_computed" });
+    expect(project.review.map((r) => r.field)).toEqual(["quantity:A1", "quantity:G2"]);
+  });
 });
