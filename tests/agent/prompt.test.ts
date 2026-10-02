@@ -19,6 +19,11 @@ describe("system prompt", () => {
     }
   });
 
+  it("asks for plain-text headings, without emojis", () => {
+    expect(SYSTEM_PROMPT).toContain("No uses emojis");
+    expect(PROMPT_VERSION).toBe("2026-10-02.4");
+  });
+
   it("does not use real corpus ids in the citation example", () => {
     expect(SYSTEM_PROMPT).not.toContain("[c0170]");
     expect(SYSTEM_PROMPT).not.toContain("[c0171]");
