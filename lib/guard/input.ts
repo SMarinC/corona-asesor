@@ -1,8 +1,8 @@
 import type { UIMessage } from "ai";
 import { z } from "zod";
+import { MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS } from "./limits";
 
-export const MAX_MESSAGE_CHARS = 1_000;
-export const MAX_HISTORY_MESSAGES = 20;
+export { MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS };
 export const MAX_BODY_BYTES = 512 * 1024;
 /** Budget for the history resent on every agent step, measured as JSON length. */
 export const MAX_HISTORY_BYTES = 64 * 1024;

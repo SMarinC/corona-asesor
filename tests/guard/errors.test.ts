@@ -13,6 +13,8 @@ describe("errorResponse", () => {
     const body = await res.json();
     expect(body.error.code).toBe("invalid_input");
     expect(body.error.message).toMatch(/1\.000 caracteres/);
+    // Shape and validation failures land here too, so the message also offers a fresh start.
+    expect(body.error.message).toMatch(/conversación nueva/);
   });
 
   it("adds retryAfter to the body and the Retry-After header", async () => {

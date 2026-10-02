@@ -18,7 +18,7 @@ const MESSAGE_ES: Record<ChatErrorCode, string> = {
   bot_detected: "No pudimos verificar que seas una persona. Recarga la página e inténtalo de nuevo.",
   rate_limited: "Enviaste muchos mensajes seguidos. Espera un momento antes de continuar.",
   quota_exhausted: "La demo alcanzó su límite de uso por ahora. Vuelve a intentarlo más tarde.",
-  invalid_input: "El mensaje no es válido. Escribe un texto de máximo 1.000 caracteres.",
+  invalid_input: "No pudimos procesar la conversación. Envía un mensaje de texto de hasta 1.000 caracteres o empieza una conversación nueva.",
   model_error: "El asistente no está disponible en este momento. Inténtalo de nuevo.",
 };
 
