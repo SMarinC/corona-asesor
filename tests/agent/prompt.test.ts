@@ -14,9 +14,14 @@ describe("system prompt", () => {
   });
 
   it("states the grounding rules", () => {
-    for (const rule of ["por caja", "10 %", "[c0170]", "Requiere revisión", "Nunca estimes", "solo estimes"]) {
+    for (const rule of ["por caja", "10 %", "[c9998]", "Requiere revisión", "Nunca estimes", "solo estimes"]) {
       expect(SYSTEM_PROMPT, rule).toContain(rule);
     }
+  });
+
+  it("does not use real corpus ids in the citation example", () => {
+    expect(SYSTEM_PROMPT).not.toContain("[c0170]");
+    expect(SYSTEM_PROMPT).not.toContain("[c0171]");
   });
 
   it("collects the joint width, passes the budget and covers unknown attributes and citation fields", () => {
