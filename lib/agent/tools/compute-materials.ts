@@ -179,10 +179,10 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
     const format = tile.formatMm;
     const thickness = tile.thicknessMm;
     const packageKg = grout.packageKg;
-    if (joint === undefined) missing.push({ field: "jointWidthMm", reason: "Falta el ancho de junta del proyecto (mm)." });
-    if (format === null) missing.push({ field: "formatMm", reason: `El catálogo no indica el formato de ${tile.name}.` });
-    if (thickness === null) missing.push({ field: "thicknessMm", reason: `El catálogo no indica el espesor de ${tile.name}.` });
-    if (packageKg === null) missing.push({ field: "packageKg", reason: `El catálogo no indica el peso por unidad de ${grout.name}.` });
+    if (joint === undefined) missing.push({ field: "jointWidthMm", reason: "Falta el ancho de junta del proyecto (mm); sin ese dato no se puede calcular la boquilla." });
+    if (format === null) missing.push({ field: "formatMm", reason: `El catálogo no indica el formato de ${tile.name}; sin el formato no se puede calcular la boquilla.` });
+    if (thickness === null) missing.push({ field: "thicknessMm", reason: `El catálogo no indica el espesor de ${tile.name}; sin el espesor no se puede calcular la boquilla.` });
+    if (packageKg === null) missing.push({ field: "packageKg", reason: `El catálogo no indica el peso por unidad de ${grout.name}; sin ese dato no se puede calcular la boquilla.` });
     if (joint !== undefined && format !== null && thickness !== null && packageKg !== null) {
       const { consumptionKgM2, kg, units } = computeGrout(area.areaM2, format, thickness, joint, packageKg);
       groutQuantity = { sku: grout.sku, name: grout.name, jointWidthMm: joint, consumptionKgM2, kg, packageKg, units, note: GROUT_NOTE };

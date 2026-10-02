@@ -109,6 +109,7 @@ describe("computeMaterials tool", () => {
     expect(noJoint).toMatchObject({ status: "needs_review", missing: [{ field: "jointWidthMm" }], data: { tile: { boxes: 5 } } });
     const noThickness = executeComputeMaterials(deps, { ...room, tileSku: "T4", groutSku: "G1", jointWidthMm: 3 });
     expect(noThickness).toMatchObject({ status: "needs_review", missing: [{ field: "thicknessMm" }] });
+    if (noThickness.status === "needs_review") expect(noThickness.missing[0].reason).toContain("sin el espesor no se puede calcular la boquilla");
   });
 
   it("returns lookup problems as data", () => {

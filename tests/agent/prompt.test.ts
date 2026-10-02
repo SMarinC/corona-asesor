@@ -68,4 +68,11 @@ describe("system prompt", () => {
   it("separates traffic from measurements in the data checklist", () => {
     expect(SYSTEM_PROMPT).toContain("alto), medidas");
   });
+
+  it("never lets buildQuote receive a quantity computeMaterials did not return", () => {
+    const step7 = SYSTEM_PROMPT.split(NL).find((line) => line.startsWith("7. "));
+    for (const part of ["solo las cantidades que computeMaterials devolvió", "boxes", "bags", "units", "no entra en buildQuote", "Requiere revisión", "di qué dato falta", "nunca escribas una cantidad"]) {
+      expect(step7, part).toContain(part);
+    }
+  });
 });
