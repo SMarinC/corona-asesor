@@ -134,10 +134,11 @@ export async function checkLimits(limits: GuardLimits, ipKey: string, now: numbe
   return { ok: true };
 }
 
-/** The guard reserved one model call; once the turn ends, add the rest of its steps to both global counters. */
-export async function recordModelCalls(limits: GuardLimits, steps: number): Promise<void> {
-  if (steps > 1) {
-    await limits.globalPerMinute.limit(GLOBAL_KEY, steps - 1);
-    await limits.globalDaily.limit(GLOBAL_KEY, steps - 1);
-  }
+/**
+ * Charges `calls` model calls (default 1) to both global counters. The guard already reserved a turn's first call;
+ * the chat handler charges each later one as it starts, so aborted and failed turns are counted too.
+ */
+export async function recordModelCall(limits: GuardLimits, calls = 1): Promise<void> {
+  if (calls <= 0) return;
+  await Promise.all([limits.globalPerMinute.limit(GLOBAL_KEY, calls), limits.globalDaily.limit(GLOBAL_KEY, calls)]);
 }

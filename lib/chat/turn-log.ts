@@ -1,13 +1,22 @@
 import type { AgentHooks, StepLog, ToolCallLog, TurnSummary } from "@/lib/agent/agent";
 import { errorMessage, log } from "@/lib/log";
 
-/** Collects a turn's tool and step events and emits exactly one structured `chat_turn` line. */
+/**
+ * Collects a turn's tool and step events and emits exactly one structured `chat_turn` line: whichever of
+ * onFinish, failed or aborted comes first wins; the others are ignored.
+ */
 export function createTurnLogger(base: { requestId: string; ipHash: string }, now: () => number = Date.now) {
   const startedAt = now();
   const tools: ToolCallLog[] = [];
   const steps: StepLog[] = [];
-  // After a stream error the SDK still fires onEnd; the failure line is the turn's only chat_turn line.
-  let failed = false;
+  // After a stream error the SDK still fires onEnd, and a client can disconnect after the turn ended: only the first
+  // outcome is logged.
+  let done = false;
+  const finish = () => {
+    if (done) return false;
+    done = true;
+    return true;
+  };
 
   const hooks = {
     onTool: (entry: ToolCallLog) => {
@@ -17,7 +26,7 @@ export function createTurnLogger(base: { requestId: string; ipHash: string }, no
       steps.push(entry);
     },
     onFinish: (summary: TurnSummary) => {
-      if (failed) return;
+      if (!finish()) return;
       log("info", "chat_turn", {
         ...base,
         outcome: summary.hitStepCap ? "step_cap" : "ok",
@@ -27,13 +36,25 @@ export function createTurnLogger(base: { requestId: string; ipHash: string }, no
         tools,
       });
     },
-  } satisfies Required<AgentHooks>;
+  } satisfies Required<Omit<AgentHooks, "onModelCall">>;
 
   return {
     hooks,
     failed: (code: string, error: unknown) => {
-      failed = true;
+      if (!finish()) return;
       log("error", "chat_turn", { ...base, outcome: code, message: errorMessage(error), durationMs: now() - startedAt, steps: steps.length, tools });
+    },
+    /** The client went away mid-turn; the SDK then skips onEnd, so this is the turn's line. */
+    aborted: () => {
+      if (!finish()) return;
+      log("warn", "chat_turn", {
+        ...base,
+        outcome: "aborted",
+        durationMs: now() - startedAt,
+        steps: steps.length,
+        stepLatenciesMs: steps.map((s) => s.ms),
+        tools,
+      });
     },
   };
 }

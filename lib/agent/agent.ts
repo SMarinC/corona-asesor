@@ -30,6 +30,8 @@ export interface TurnSummary {
 }
 
 export interface AgentHooks {
+  /** Awaited before each model call (one per step), e.g. to charge it to the global quota. */
+  onModelCall?: (stepNumber: number) => Promise<void> | void;
   onTool?: (entry: ToolCallLog) => void;
   onStep?: (entry: StepLog) => void;
   onFinish?: (summary: TurnSummary) => void;
@@ -71,9 +73,11 @@ export function createCoronaAgent({
     // One retry for transient failures; hammering a 429 only burns free-tier quota.
     maxRetries: 1,
     // On the last allowed step tools are disabled, so the turn always ends with an answer.
-    prepareStep: ({ stepNumber }) => {
+    prepareStep: ({ stepNumber }) => (stepNumber >= MAX_STEPS - 1 ? { toolChoice: "none" } : {}),
+    // The SDK awaits this right before the step's model call; it fires once per step, not again on a retry.
+    onStepStart: async ({ stepNumber }) => {
+      await hooks.onModelCall?.(stepNumber);
       stepStartedAt = Date.now();
-      return stepNumber >= MAX_STEPS - 1 ? { toolChoice: "none" } : {};
     },
     onToolExecutionEnd: (event) => {
       reportedCalls.add(event.toolCall.toolCallId);

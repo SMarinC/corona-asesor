@@ -7,7 +7,7 @@ import {
   DEFAULT_GUARD_CONFIG,
   GLOBAL_KEY,
   readGuardConfig,
-  recordModelCalls,
+  recordModelCall,
 } from "@/lib/guard/rate-limit";
 
 describe("createMemoryLimiter", () => {
@@ -74,15 +74,22 @@ describe("checkLimits", () => {
   });
 });
 
-describe("recordModelCalls", () => {
-  it("adds the extra model calls of the turn to both global caps", async () => {
+describe("recordModelCall", () => {
+  it("charges one model call, or n, to both global caps", async () => {
     const limits = createMemoryGuardLimits(DEFAULT_GUARD_CONFIG);
     const daily = vi.spyOn(limits.globalDaily, "limit");
     const minute = vi.spyOn(limits.globalPerMinute, "limit");
-    await recordModelCalls(limits, 4);
-    await recordModelCalls(limits, 1);
-    expect(daily.mock.calls).toEqual([[GLOBAL_KEY, 3]]);
-    expect(minute.mock.calls).toEqual([[GLOBAL_KEY, 3]]);
+    await recordModelCall(limits);
+    await recordModelCall(limits, 3);
+    await recordModelCall(limits, 0);
+    expect(daily.mock.calls).toEqual([
+      [GLOBAL_KEY, 1],
+      [GLOBAL_KEY, 3],
+    ]);
+    expect(minute.mock.calls).toEqual([
+      [GLOBAL_KEY, 1],
+      [GLOBAL_KEY, 3],
+    ]);
   });
 });
 

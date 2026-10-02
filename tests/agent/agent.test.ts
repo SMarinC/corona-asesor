@@ -83,6 +83,22 @@ describe("Corona agent harness", () => {
     expect(hooks.onFinish).toHaveBeenCalledWith({ steps: 2, finishReason: "stop", inputTokens: 20, outputTokens: 10, hitStepCap: false });
   });
 
+  it("awaits onModelCall before every model call, with its step number", async () => {
+    const events: string[] = [];
+    const turns = [toolTurn([{ toolName: "searchTiles", input: { surface: "floor" } }]), toolTurn([{ toolName: "getProduct", input: { sku: "T1" } }]), textTurn("Listo.")];
+    const model = scriptedModel((_options, call) => {
+      events.push(`model ${call}`);
+      return turns[call];
+    });
+    const onModelCall = async (step: number) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      events.push(`charge ${step}`);
+    };
+    const { steps } = await run(model, { onModelCall });
+    expect(steps).toHaveLength(3);
+    expect(events).toEqual(["charge 0", "model 0", "charge 1", "model 1", "charge 2", "model 2"]);
+  });
+
   it("reads the status of tool results and SDK tool errors", () => {
     expect(toolStatus({ type: "tool-result", output: { status: "needs_review" } })).toBe("needs_review");
     expect(toolStatus({ type: "tool-error", error: "bad input" })).toBe("tool_error");

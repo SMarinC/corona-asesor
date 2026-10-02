@@ -10,11 +10,12 @@ import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
 const user = (text: string) => ({ id: crypto.randomUUID(), role: "user", parts: [{ type: "text", text }] });
 const assistant = (text: string) => ({ id: crypto.randomUUID(), role: "assistant", parts: [{ type: "text", text }] });
 
-function chatRequest(messages: unknown[], ip = "203.0.113.7"): Request {
+function chatRequest(messages: unknown[], ip = "203.0.113.7", signal?: AbortSignal): Request {
   return new Request("http://localhost/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": ip },
     body: JSON.stringify({ id: "chat-1", trigger: "submit-message", messages }),
+    signal,
   });
 }
 
@@ -204,16 +205,91 @@ describe("handleChat", () => {
   });
 
   it("logs one structured line per turn without the raw IP and charges extra steps to both global caps", async () => {
-    const model = scriptedModel([toolTurn([{ toolName: "searchTiles", input: { surface: "floor" } }]), textTurn("Listo.")]);
+    const model = scriptedModel([
+      toolTurn([{ toolName: "searchTiles", input: { surface: "floor" } }]),
+      toolTurn([{ toolName: "getProduct", input: { sku: "T1" } }]),
+      textTurn("Listo."),
+    ]);
     const { deps } = makeDeps({ model });
     const globalLimit = vi.spyOn(deps.limits.globalDaily, "limit");
     const minuteLimit = vi.spyOn(deps.limits.globalPerMinute, "limit");
     await (await handleChat(chatRequest([user("Piso para baño")]), deps)).text();
+    // Charged while the turn streams (awaited per model call), not fire-and-forget after it: no waiting needed.
+    const extra = [["global", 1], ["global", 1]];
+    expect(globalLimit.mock.calls).toEqual([["global"], ...extra]);
+    expect(minuteLimit.mock.calls).toEqual([["global"], ...extra]);
     await vi.waitFor(() => expect(jsonLines(logSpy).filter((l) => l.event === "chat_turn")).toHaveLength(1));
     const line = jsonLines(logSpy).find((l) => l.event === "chat_turn");
-    expect(line).toMatchObject({ requestId: "req-1", outcome: "ok", steps: 2, tools: [{ tool: "searchTiles", status: "ok" }] });
+    expect(line).toMatchObject({ requestId: "req-1", outcome: "ok", steps: 3, tools: [{ tool: "searchTiles", status: "ok" }, { tool: "getProduct", status: "ok" }] });
     expect(JSON.stringify(line)).not.toContain("203.0.113.7");
-    await vi.waitFor(() => expect(globalLimit.mock.calls).toEqual([["global"], ["global", 1]]));
-    await vi.waitFor(() => expect(minuteLimit.mock.calls).toEqual([["global"], ["global", 1]]));
+  });
+
+  it("charges every model call and logs one aborted chat_turn line when the client aborts mid-turn", async () => {
+    const client = new AbortController();
+    let markStarted: () => void = () => {};
+    const thirdCallStarted = new Promise<void>((resolve) => (markStarted = resolve));
+    const turns = [toolTurn([{ toolName: "searchTiles", input: { surface: "floor" } }]), toolTurn([{ toolName: "getProduct", input: { sku: "T1" } }])];
+    let calls = 0;
+    const model = new MockLanguageModelV4({
+      doStream: async (options) => {
+        const call = calls++;
+        if (call < turns.length) return turns[call];
+        // The third model call streams until the client goes away.
+        markStarted();
+        return {
+          stream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({ type: "stream-start", warnings: [] });
+              const fail = () => controller.error(new DOMException("The operation was aborted.", "AbortError"));
+              if (options.abortSignal?.aborted) fail();
+              else options.abortSignal?.addEventListener("abort", fail, { once: true });
+            },
+          }),
+        };
+      },
+    });
+    const { deps } = makeDeps({ model });
+    const globalLimit = vi.spyOn(deps.limits.globalDaily, "limit");
+    const minuteLimit = vi.spyOn(deps.limits.globalPerMinute, "limit");
+    const res = await handleChat(chatRequest([user("Piso para baño")], "203.0.113.7", client.signal), deps);
+    const body = res.text();
+    await thirdCallStarted;
+    client.abort();
+    await body;
+
+    // Admission reserved call 0; calls 1 and 2 (the one in flight when the client left) are charged as they start.
+    expect(model.doStreamCalls).toHaveLength(3);
+    const charged = [["global"], ["global", 1], ["global", 1]];
+    expect(globalLimit.mock.calls).toEqual(charged);
+    expect(minuteLimit.mock.calls).toEqual(charged);
+
+    const turnLines = () => [...jsonLines(logSpy), ...jsonLines(warnSpy), ...jsonLines(errorSpy)].filter((l) => l.event === "chat_turn");
+    await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(turnLines()).toHaveLength(1);
+    expect(turnLines()[0]).toMatchObject({
+      level: "warn",
+      requestId: "req-1",
+      outcome: "aborted",
+      steps: 2,
+      tools: [{ tool: "searchTiles", status: "ok" }, { tool: "getProduct", status: "ok" }],
+    });
+  });
+
+  it("keeps streaming and logs a warning when charging a model call fails", async () => {
+    const model = scriptedModel([toolTurn([{ toolName: "searchTiles", input: { surface: "floor" } }]), textTurn("Listo.")]);
+    const { deps } = makeDeps({ model });
+    const admission = deps.limits.globalDaily;
+    let dailyCalls = 0;
+    deps.limits.globalDaily = {
+      limit: async (key, cost) => {
+        if (dailyCalls++ === 0) return admission.limit(key, cost);
+        throw new Error("redis down");
+      },
+    };
+    const body = await (await handleChat(chatRequest([user("Piso para baño")]), deps)).text();
+    expect(body).toContain("Listo.");
+    expect(jsonLines(warnSpy)).toContainEqual(expect.objectContaining({ event: "global_cap_record_failed", requestId: "req-1", step: 1, message: "redis down" }));
+    await vi.waitFor(() => expect(jsonLines(logSpy)).toContainEqual(expect.objectContaining({ event: "chat_turn", outcome: "ok", steps: 2 })));
   });
 });

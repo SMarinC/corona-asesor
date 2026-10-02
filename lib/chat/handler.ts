@@ -4,7 +4,7 @@ import type { CoronaTools } from "@/lib/agent/tools";
 import { type ChatErrorCode, errorResponse, streamErrorCode } from "@/lib/guard/errors";
 import { parseChatRequest } from "@/lib/guard/input";
 import { clientIp, hashIp } from "@/lib/guard/ip";
-import { checkLimits, type GuardLimits, type LimitCheck, recordModelCalls } from "@/lib/guard/rate-limit";
+import { checkLimits, type GuardLimits, type LimitCheck, recordModelCall } from "@/lib/guard/rate-limit";
 import { errorMessage, log } from "@/lib/log";
 import { createTurnLogger } from "./turn-log";
 
@@ -66,14 +66,23 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
     model: deps.model,
     hooks: {
       ...turn.hooks,
-      onFinish: (summary) => {
-        turn.hooks.onFinish(summary);
-        recordModelCalls(deps.limits, summary.steps).catch((error) =>
-          log("warn", "global_cap_record_failed", { requestId, message: errorMessage(error) }),
-        );
+      // checkLimits reserved step 0's model call. Every later call is charged, awaited, right before it starts:
+      // a client abort, a stream error or a frozen serverless instance after the response cannot drop the charge.
+      onModelCall: async (step) => {
+        if (step === 0) return;
+        try {
+          await recordModelCall(deps.limits);
+        } catch (error) {
+          log("warn", "global_cap_record_failed", { requestId, step, message: errorMessage(error) });
+        }
       },
     },
   });
+
+  // On a client abort the SDK skips onEnd (and its onAbort only fires if someone still reads the stream), so the
+  // request signal is what tells the turn logger. After a normal end or a failure, aborted() is a no-op.
+  if (req.signal.aborted) turn.aborted();
+  else req.signal.addEventListener("abort", () => turn.aborted(), { once: true });
 
   try {
     return await createAgentUIStreamResponse({
