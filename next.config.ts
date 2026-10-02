@@ -2,6 +2,13 @@ import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Stop `next dev` from regenerating AGENTS.md / CLAUDE.md at the repo root.
+  agentRules: false,
+  // Product photos come from Corona's public CDN; nothing else is allowed through the optimizer.
+  // No `search` key: the catalog URLs carry a ?context= query that must stay allowed.
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "corona.co", pathname: "/medias/**" }],
+  },
   // The chat route reads these with fs at runtime, which file tracing cannot see.
   outputFileTracingIncludes: {
     "/api/chat": [

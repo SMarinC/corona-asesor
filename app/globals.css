@@ -1,26 +1,186 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+/* Streamdown renders the answer with Tailwind classes that live in node_modules. */
+@source "../node_modules/streamdown/dist/*.js";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Corona Asesor tokens. Porcelain surfaces, ink text and Corona blue (#005EB8) for actions and selection only.
+ * Grout grey draws structure. Verdict colors are reserved for compatibility and review states.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f7f9;
+  --foreground: #0f1b2d;
+  --card: #ffffff;
+  --card-foreground: #0f1b2d;
+  --popover: #ffffff;
+  --popover-foreground: #0f1b2d;
+  --primary: #005eb8;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eef4;
+  --secondary-foreground: #0f1b2d;
+  --muted: #edf1f5;
+  --muted-foreground: #526173;
+  --accent: #e3edf8;
+  --accent-foreground: #003f7d;
+  --destructive: #b42318;
+  --border: #d9e1e8;
+  --input: #c9d3dd;
+  --ring: #005eb8;
+  --radius: 0.75rem;
+
+  /* Grout lines in the floor plan and table rules. */
+  --grout: #c3ccd5;
+  --ok: #157f3d;
+  --ok-surface: #e7f5ec;
+  --review: #a14d06;
+  --review-surface: #fdf1e3;
+  --bad: #b42318;
+  --bad-surface: #fdecea;
+
+  --chart-1: #005eb8;
+  --chart-2: #4f8fd0;
+  --chart-3: #9dbfe3;
+  --chart-4: #526173;
+  --chart-5: #c3ccd5;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f1b2d;
+  --sidebar-primary: #005eb8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e3edf8;
+  --sidebar-accent-foreground: #003f7d;
+  --sidebar-border: #d9e1e8;
+  --sidebar-ring: #005eb8;
+}
+
+.dark {
+  --background: #0b1626;
+  --foreground: #e6edf5;
+  --card: #111f33;
+  --card-foreground: #e6edf5;
+  --popover: #13243b;
+  --popover-foreground: #e6edf5;
+  --primary: #3d8fe0;
+  --primary-foreground: #04101f;
+  --secondary: #1a2c44;
+  --secondary-foreground: #e6edf5;
+  --muted: #16273d;
+  --muted-foreground: #9fb0c4;
+  --accent: #173659;
+  --accent-foreground: #cfe3f8;
+  --destructive: #f2786d;
+  --border: #22364f;
+  --input: #2b425e;
+  --ring: #3d8fe0;
+
+  --grout: #2b425e;
+  --ok: #5fc98a;
+  --ok-surface: #10301f;
+  --review: #f0a656;
+  --review-surface: #3a2410;
+  --bad: #f2786d;
+  --bad-surface: #3b1512;
+
+  --sidebar: #111f33;
+  --sidebar-foreground: #e6edf5;
+  --sidebar-primary: #3d8fe0;
+  --sidebar-primary-foreground: #04101f;
+  --sidebar-accent: #173659;
+  --sidebar-accent-foreground: #cfe3f8;
+  --sidebar-border: #22364f;
+  --sidebar-ring: #3d8fe0;
 }
 
 @theme inline {
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-inter);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-grout: var(--grout);
+  --color-ok: var(--ok);
+  --color-ok-surface: var(--ok-surface);
+  --color-review: var(--review);
+  --color-review-surface: var(--review-surface);
+  --color-bad: var(--bad);
+  --color-bad-surface: var(--bad-surface);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  textarea {
+    caret-color: var(--primary);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Prices, quantities and latencies line up in columns. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
