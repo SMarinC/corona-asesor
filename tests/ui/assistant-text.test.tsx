@@ -28,4 +28,33 @@ describe("AssistantText", () => {
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noreferrer");
   });
+
+  it("never renders a half-typed citation as a live link while streaming", () => {
+    render(
+      <CitationsProvider ids={[]}>
+        <AssistantText text="cerámica [c00" streaming />
+      </CitationsProvider>,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("uses noopener on external links", async () => {
+    render(
+      <CitationsProvider ids={[]}>
+        <AssistantText text="Mira [la ficha](https://example.com/ficha)." streaming={false} />
+      </CitationsProvider>,
+    );
+    const link = await screen.findByRole("link", { name: "la ficha" });
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.className).toContain("wrap-anywhere");
+  });
+
+  it("drops images the model writes", () => {
+    const { container } = render(
+      <CitationsProvider ids={[]}>
+        <AssistantText text="Mira ![pixel](https://tracker.example/p.png) y <img src='https://tracker.example/q.png'>" streaming={false} />
+      </CitationsProvider>,
+    );
+    expect(container.querySelector("img")).toBeNull();
+  });
 });

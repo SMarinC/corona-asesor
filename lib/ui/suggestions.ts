@@ -8,11 +8,11 @@ export const SUGGESTIONS: Suggestion[] = [
   {
     title: "Piso de baño con presupuesto",
     prompt:
-      "Quiero enchapar el piso de un baño de 3 x 2 m. Es zona húmeda, interior, tráfico residencial normal, junta de 3 mm y tengo un presupuesto de 1.500.000 pesos.",
+      "Quiero enchapar el piso de un baño de 3 x 2 m. Es zona húmeda, interior, tráfico medio, junta de 3 mm y tengo un presupuesto de 1.500.000 pesos.",
   },
   {
     title: "Terraza exterior",
-    prompt: "Necesito piso para una terraza exterior descubierta de 4 x 5 m, con tráfico alto y junta de 5 mm. ¿Qué me recomiendas y cuánto cuesta?",
+    prompt: "Necesito piso para una terraza exterior descubierta de 4 x 5 m, zona húmeda por la lluvia, con tráfico alto y junta de 5 mm. ¿Qué me recomiendas y cuánto cuesta?",
   },
   {
     title: "Pared de cocina",

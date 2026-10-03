@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUp, Square } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MAX_MESSAGE_CHARS } from "@/lib/guard/limits";
 import { formatNumber } from "@/lib/ui/format";
@@ -20,6 +20,8 @@ export interface ComposerProps {
 
 export function Composer({ onSend, onStop, busy, blockedReason }: ComposerProps) {
   const [text, setText] = useState("");
+  const id = useId();
+  const helpId = `${id}-help`;
   const length = text.length;
   const tooLong = length > MAX_MESSAGE_CHARS;
   const canSend = !busy && blockedReason === null && text.trim().length > 0 && !tooLong;
@@ -39,11 +41,11 @@ export function Composer({ onSend, onStop, busy, blockedReason }: ComposerProps)
 
   return (
     <form onSubmit={submit} className="rounded-2xl border bg-card p-2 shadow-[0_1px_2px_rgb(15_27_45/0.06),0_8px_24px_-12px_rgb(15_27_45/0.18)] focus-within:border-primary/60">
-      <label htmlFor="composer" className="sr-only">
+      <label htmlFor={id} className="sr-only">
         Describe tu proyecto
       </label>
       <textarea
-        id="composer"
+        id={id}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKeyDown}
@@ -51,11 +53,11 @@ export function Composer({ onSend, onStop, busy, blockedReason }: ComposerProps)
         placeholder={blockedReason ?? "Describe el espacio: piso o pared, medidas, si es húmedo o exterior, junta y presupuesto"}
         disabled={blockedReason !== null}
         aria-invalid={tooLong}
-        aria-describedby="composer-help"
+        aria-describedby={helpId}
         className="block max-h-48 min-h-12 w-full resize-none bg-transparent px-2 py-1.5 text-[0.95rem] leading-relaxed outline-none [field-sizing:content] placeholder:text-muted-foreground disabled:cursor-not-allowed"
       />
       <div className="flex items-center justify-between gap-2 pl-2">
-        <p id="composer-help" className={cn("text-xs tabular", tooLong ? "text-bad" : "text-muted-foreground")}>
+        <p id={helpId} className={cn("text-xs tabular", tooLong ? "text-bad" : "text-muted-foreground")}>
           {length >= COUNTER_FROM ? `${formatNumber(length)} / ${formatNumber(MAX_MESSAGE_CHARS)} caracteres` : "Enter para enviar, Shift + Enter para una línea nueva"}
         </p>
         {busy ? (

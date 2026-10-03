@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CircleAlert, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type ChatErrorView, chatErrorCopy } from "@/lib/ui/chat-error";
@@ -20,14 +21,15 @@ export interface ErrorNoticeProps {
 /** One error at a time, above the input: what happened, how long to wait, and the one action that helps. */
 export function ErrorNotice({ failure, remaining, onRetry, onRestart }: ErrorNoticeProps) {
   const { kind } = failure.view;
+  const [announcedFrom] = useState(() => remaining);
   const waiting = kind === "rate_limited" || kind === "quota_exhausted";
   const counting = waiting && remaining !== null && remaining > 0;
   const Icon = waiting ? Clock : CircleAlert;
   return (
     <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-review-surface px-3.5 py-2.5 text-sm text-review">
       <Icon aria-hidden className="size-4 shrink-0" />
-      {/* An alert re-reads every change: announce the wait once from the server value and keep the ticking copy visual only. */}
-      {counting && <span className="sr-only">{chatErrorCopy(failure.view, failure.view.retryAfter)}</span>}
+      {/* An alert re-reads every change: announce the wait once from the time left when it appeared and keep the ticking copy visual only. */}
+      {counting && <span className="sr-only">{chatErrorCopy(failure.view, announcedFrom || remaining)}</span>}
       <p aria-hidden={counting || undefined} className="min-w-0 flex-1 tabular">
         {chatErrorCopy(failure.view, remaining)}
       </p>

@@ -71,6 +71,16 @@ describe("Composer", () => {
   });
 });
 
+describe("Composer ids", () => {
+  it("ties the label and the help text through generated ids, not fixed ones", () => {
+    const { box } = setup();
+    expect(box.id).not.toBe("composer");
+    expect(box.getAttribute("aria-describedby")).not.toBe("composer-help");
+    expect(document.getElementById(box.getAttribute("aria-describedby")!)).toBeTruthy();
+    expect(screen.getByLabelText("Describe tu proyecto")).toBe(box);
+  });
+});
+
 describe("ErrorNotice", () => {
   const noop = () => {};
 
@@ -105,5 +115,11 @@ describe("ErrorNotice", () => {
     expect(screen.queryByRole("button")).toBeNull();
     const alert = screen.getByRole("alert");
     expect(alert.querySelectorAll("[aria-hidden='true']:not(svg)").length).toBe(1);
+    expect(alert.querySelector(".sr-only")?.textContent).toContain("1 min");
+  });
+
+  it("announces the time left when it mounts, not the server's original value", () => {
+    render(<ErrorNotice failure={{ view: { kind: "rate_limited", retryAfter: 600 }, retryAt: 0 }} remaining={90} onRetry={noop} onRestart={noop} />);
+    expect(screen.getByRole("alert").querySelector(".sr-only")?.textContent).toContain("2 min");
   });
 });

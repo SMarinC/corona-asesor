@@ -8,14 +8,18 @@ import { Citation } from "./citations-context";
 const components: Components = {
   a: ({ href, children }) => {
     const url = typeof href === "string" ? href : undefined;
+    // Streamdown closes a half-typed "[c00" as a link to this placeholder; keep it as plain text until it completes.
+    if (url === "streamdown:incomplete-link") return <span>{children as ReactNode}</span>;
     const citation = citationIdFromHref(url);
     if (citation) return <Citation id={citation} />;
     return (
-      <a href={url} target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-2">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-2 wrap-anywhere">
         {children as ReactNode}
       </a>
     );
   },
+  // Images from the model are a tracking vector; product images live in the cards.
+  img: () => null,
 };
 
 /** The model's answer as streaming markdown; "[c0084]" becomes a chip that opens the cited fragment. */

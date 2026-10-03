@@ -51,4 +51,21 @@ describe("useCountdown", () => {
     act(() => vi.advanceTimersByTime(5_000));
     expect(result.current).toBe(0);
   });
+
+  it("starts no timer without a deadline", () => {
+    vi.useFakeTimers();
+    renderHook(() => useCountdown(null));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("SUGGESTIONS", () => {
+  it("use the agent's own vocabulary and state the wet area and joint of every project", () => {
+    for (const s of SUGGESTIONS) {
+      expect(s.prompt, s.title).toMatch(/junta de \d+ mm/);
+      expect(s.prompt, s.title).toMatch(/zona húmeda/);
+      expect(s.prompt, s.title).not.toContain("residencial normal");
+    }
+    expect(SUGGESTIONS.filter((s) => /piso|terraza/i.test(s.title)).every((s) => /tráfico (bajo|medio|alto)/.test(s.prompt))).toBe(true);
+  });
 });
