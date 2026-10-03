@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { MaterialsSummary } from "@/components/tools/analysis-results";
+import { TileResults } from "@/components/tools/product-results";
+import { VerdictBadge, VerdictDot } from "@/components/tools/verdict-badge";
 import { CitationsProvider } from "@/components/chat/citations-context";
 import { ToolCard } from "@/components/tools/tool-card";
 import { executeComputeMaterials } from "@/lib/agent/tools/compute-materials";
@@ -48,7 +51,7 @@ describe("ToolCard", () => {
 
   it("flags a citation that no tool returned", () => {
     show(find("searchSupplies"), []);
-    expect(screen.getByRole("button", { name: "La cita c0001 no viene de ninguna herramienta" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cita c0001 no verificada: ninguna herramienta la devolvió" })).toBeTruthy();
   });
 
   it("shows computed quantities in boxes, bags and units", () => {
@@ -84,6 +87,84 @@ describe("ToolCard", () => {
     expect(screen.getByText("SKU que no existen en el catálogo: ZZ9.")).toBeTruthy();
     cleanup();
     show(errorPart("computeMaterials", {}, "Invalid input for tool computeMaterials: Type validation failed"));
-    expect(screen.getByText("La herramienta rechazó los datos; el asesor puede corregir la llamada.")).toBeTruthy();
+    expect(screen.getByText("La herramienta no pudo completar la consulta.")).toBeTruthy();
+  });
+
+  it("does not show a green check when the verdict needs review or is incompatible", () => {
+    const part = find("checkCompatibility") as unknown as { output: { data: object } };
+    for (const [verdict, label, phase] of [
+      ["needs_review", "Compatibilidad: requiere revisión", "review"],
+      ["incompatible", "Compatibilidad: incompatible", "error"],
+    ] as const) {
+      const output = { ...part.output, data: { ...part.output.data, verdict } };
+      show({ ...part, output } as unknown as CoronaToolPart);
+      expect(screen.getByText(label)).toBeTruthy();
+      expect(screen.queryByText("Compatibilidad verificada")).toBeNull();
+      expect(screen.getByRole("listitem").dataset.phase).toBe(phase);
+      cleanup();
+    }
+  });
+
+  it("labels an errored call and does not claim the data was rejected", () => {
+    show(errorPart("searchTiles", {}, "boom"));
+    expect(screen.getByText("Buscando revestimientos: no se pudo completar")).toBeTruthy();
+    expect(screen.getByRole("listitem").dataset.phase).toBe("error");
+    expect(screen.queryByText(/rechazó/)).toBeNull();
+  });
+});
+
+describe("result bodies", () => {
+  const tiles = () => {
+    const result = (find("searchTiles") as unknown as { output: { data: { results: Parameters<typeof TileResults>[0]["results"] } } }).output.data.results;
+    return Array.from({ length: 5 }, (_, i) => ({ ...result[0], sku: `X${i}`, name: `Baldosa ${i}`, imageUrl: "https://corona.co/medias/x.jpg" }));
+  };
+
+  it("shows three results and toggles the rest with aria-expanded", () => {
+    render(<TileResults results={tiles()} />);
+    expect(screen.getAllByText(/Baldosa/)).toHaveLength(3);
+    const toggle = screen.getByRole("button", { name: "Ver 2 más" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(toggle);
+    expect(screen.getAllByText(/Baldosa/)).toHaveLength(5);
+    expect(screen.getByRole("button", { name: "Ver menos" }).getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("marks unknown attributes as needing review and keeps thumbnails decorative", () => {
+    const [tile] = tiles();
+    const { container } = render(<TileResults results={[{ ...tile, unknown: ["wetArea", "traffic"] }]} />);
+    expect(screen.getByText(/Sin dato en el catálogo: zona húmeda, tráfico\. Requiere revisión\./)).toBeTruthy();
+    const images = container.querySelectorAll("img");
+    expect(images.length).toBeGreaterThan(0);
+    for (const img of images) expect(img.getAttribute("alt")).toBe("");
+  });
+
+  it("renders each verdict with its own label, never swapping review for a verdict", () => {
+    render(
+      <div>
+        <VerdictBadge verdict="incompatible" />
+        <VerdictBadge verdict="needs_review" />
+        <VerdictDot verdict="needs_review" />
+      </div>,
+    );
+    expect(screen.getByText("Incompatible")).toBeTruthy();
+    expect(screen.getAllByText("Requiere revisión")).toHaveLength(1);
+    expect(screen.queryByText("Compatible")).toBeNull();
+    expect(screen.getByRole("img", { name: "Requiere revisión" })).toBeTruthy();
+  });
+
+  it("shows a citation chip next to values taken from a technical sheet", () => {
+    const output = (find("computeMaterials") as unknown as { output: { data: Parameters<typeof MaterialsSummary>[0]["data"] } }).output.data;
+    const data = {
+      ...output,
+      tile: { ...output.tile!, citationId: "c0001" },
+      adhesive: { ...output.adhesive!, citationIds: ["c0002"] },
+    };
+    render(
+      <CitationsProvider ids={["c0001"]}>
+        <MaterialsSummary data={data} />
+      </CitationsProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Ver la cita c0001 de la ficha técnica" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cita c0002 no verificada: ninguna herramienta la devolvió" })).toBeTruthy();
   });
 });

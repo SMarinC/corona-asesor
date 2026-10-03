@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Citation } from "@/components/chat/citations-context";
 import type { SearchSuppliesData, SupplyResult } from "@/lib/agent/tools/search-supplies";
 import type { TileResult } from "@/lib/agent/tools/search-tiles";
-import type { TileSummary } from "@/lib/agent/tools/summaries";
+import { PRICE_UNIT, type TileSummary } from "@/lib/agent/tools/summaries";
 import type { Product, TileMaterial } from "@/lib/domain/types";
 import { formatCOP, formatFormat, formatNumber } from "@/lib/ui/format";
 
@@ -33,9 +33,10 @@ export function Price({ price, unit }: { price: number | null; unit: keyof typeo
   );
 }
 
-function Thumb({ src, alt }: { src: string | null; alt: string }) {
+/** Decorative: the product name is printed right next to it. */
+function Thumb({ src }: { src: string | null }) {
   if (!src) return <span aria-hidden className="size-14 shrink-0 rounded-md bg-muted" />;
-  return <Image src={src} alt={alt} width={56} height={56} sizes="56px" className="size-14 shrink-0 rounded-md bg-muted object-cover" />;
+  return <Image src={src} alt="" width={56} height={56} sizes="56px" className="size-14 shrink-0 rounded-md bg-muted object-cover" />;
 }
 
 function Unknown({ attributes }: { attributes: string[] }) {
@@ -54,7 +55,7 @@ function ShowMore<T>({ items, render }: { items: T[]; render: (item: T) => React
     <>
       <ul className="space-y-2">{shown.map(render)}</ul>
       {items.length > VISIBLE && (
-        <button type="button" onClick={() => setExpanded(!expanded)} className="mt-2 text-xs font-medium text-primary hover:underline">
+        <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="mt-2 text-xs font-medium text-primary hover:underline">
           {expanded ? "Ver menos" : `Ver ${items.length - VISIBLE} más`}
         </button>
       )}
@@ -70,7 +71,7 @@ function tileFacts(tile: TileSummary): string {
 export function TileRow({ tile, unknown = [] }: { tile: TileSummary; unknown?: string[] }) {
   return (
     <li className="flex gap-3">
-      <Thumb src={tile.imageUrl} alt={tile.name} />
+      <Thumb src={tile.imageUrl} />
       <div className="min-w-0 space-y-0.5 text-sm">
         <p className="font-medium text-foreground">{tile.name}</p>
         <p className="text-muted-foreground">
@@ -114,7 +115,7 @@ export function SupplyResults({ data }: { data: SearchSuppliesData }) {
       items={data.results}
       render={(item) => (
         <li key={item.sku} className="flex gap-3">
-          <Thumb src={item.imageUrl} alt={item.name} />
+          <Thumb src={item.imageUrl} />
           <div className="min-w-0 space-y-0.5 text-sm">
             <p className="font-medium text-foreground">{item.name}</p>
             <p className="text-muted-foreground">
@@ -130,10 +131,10 @@ export function SupplyResults({ data }: { data: SearchSuppliesData }) {
 }
 
 export function ProductDetail({ product }: { product: Product }) {
-  const unit = product.kind === "tile" ? "caja" : product.kind === "adhesive" ? "bulto" : "unidad";
+  const unit = PRICE_UNIT[product.kind];
   return (
     <div className="flex gap-3">
-      <Thumb src={product.imageUrls[0] ?? null} alt={product.name} />
+      <Thumb src={product.imageUrls[0] ?? null} />
       <div className="min-w-0 space-y-0.5 text-sm">
         <p className="font-medium text-foreground">{product.name}</p>
         <p className="text-muted-foreground">

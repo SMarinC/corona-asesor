@@ -11,15 +11,15 @@ import { formatCOP, formatM2, formatNumber, formatQuantity } from "@/lib/ui/form
 import { VerdictBadge, VerdictDot } from "./verdict-badge";
 
 export function MaterialsSummary({ data }: { data: Partial<MaterialsData> }) {
-  const rows: { label: string; value: string; detail: string }[] = [];
+  const rows: { label: string; value: string; detail: string; citations: string[] }[] = [];
   if (data.tile) {
-    rows.push({ label: data.tile.name, value: formatQuantity(data.tile.boxes, "caja"), detail: `cubren ${formatM2(data.tile.coveredM2)}` });
+    rows.push({ label: data.tile.name, value: formatQuantity(data.tile.boxes, "caja"), detail: `cubren ${formatM2(data.tile.coveredM2)}`, citations: data.tile.citationId ? [data.tile.citationId] : [] });
   }
   if (data.adhesive) {
-    rows.push({ label: data.adhesive.name, value: formatQuantity(data.adhesive.bags, "bulto"), detail: `${formatNumber(data.adhesive.kg)} kg` });
+    rows.push({ label: data.adhesive.name, value: formatQuantity(data.adhesive.bags, "bulto"), detail: `${formatNumber(data.adhesive.kg)} kg`, citations: data.adhesive.citationIds });
   }
   if (data.grout) {
-    rows.push({ label: data.grout.name, value: formatQuantity(data.grout.units, "unidad"), detail: `${formatNumber(data.grout.kg)} kg estimados` });
+    rows.push({ label: data.grout.name, value: formatQuantity(data.grout.units, "unidad"), detail: `${formatNumber(data.grout.kg)} kg estimados`, citations: [] });
   }
   return (
     <div className="space-y-2 text-sm">
@@ -32,7 +32,12 @@ export function MaterialsSummary({ data }: { data: Partial<MaterialsData> }) {
         <ul className="divide-y divide-border rounded-lg border bg-card">
           {rows.map((row) => (
             <li key={row.label} className="flex items-baseline justify-between gap-3 px-3 py-2">
-              <span className="min-w-0 truncate">{row.label}</span>
+              <span className="min-w-0">
+                <span>{row.label}</span>
+                {row.citations.map((id) => (
+                  <Citation key={id} id={id} />
+                ))}
+              </span>
               <span className="shrink-0 text-right tabular">
                 <span className="font-medium">{row.value}</span> <span className="text-xs text-muted-foreground">{row.detail}</span>
               </span>

@@ -21,5 +21,5 @@ export function VerdictBadge({ verdict, className }: { verdict: Verdict; classNa
 /** A small colored dot for one rule inside a compatibility list. */
 export function VerdictDot({ verdict }: { verdict: Verdict }) {
   const tone = { compatible: "bg-ok", needs_review: "bg-review", incompatible: "bg-bad" }[verdict];
-  return <span aria-label={STYLE[verdict].label} className={cn("mt-1.5 inline-block size-2 shrink-0 rounded-full", tone)} />;
+  return <span role="img" aria-label={STYLE[verdict].label} className={cn("mt-1.5 inline-block size-2 shrink-0 rounded-full", tone)} />;
 }
