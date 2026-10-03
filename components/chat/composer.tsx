@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUp, Square } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MAX_MESSAGE_CHARS } from "@/lib/guard/limits";
 import { formatNumber } from "@/lib/ui/format";
@@ -24,6 +24,14 @@ export function Composer({ onSend, onStop, busy, blockedReason }: ComposerProps)
   const helpId = `${id}-help`;
   const length = text.length;
   const tooLong = length > MAX_MESSAGE_CHARS;
+  const boxRef = useRef<HTMLTextAreaElement>(null);
+  const wasBlocked = useRef(false);
+  const blocked = blockedReason !== null;
+  // A disabled textarea drops focus; give it back when the lock lifts so the visitor can keep typing.
+  useEffect(() => {
+    if (wasBlocked.current && !blocked) boxRef.current?.focus();
+    wasBlocked.current = blocked;
+  }, [blocked]);
   const canSend = !busy && blockedReason === null && text.trim().length > 0 && !tooLong;
 
   const submit = (event?: FormEvent) => {
@@ -46,6 +54,7 @@ export function Composer({ onSend, onStop, busy, blockedReason }: ComposerProps)
       </label>
       <textarea
         id={id}
+        ref={boxRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKeyDown}
