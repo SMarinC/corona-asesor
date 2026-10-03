@@ -19,9 +19,12 @@ describe("system prompt", () => {
     }
   });
 
-  it("asks for plain-text headings, without emojis", () => {
-    expect(SYSTEM_PROMPT).toContain("No uses emojis");
-    expect(PROMPT_VERSION).toBe("2026-10-02.4");
+  it("asks for plain-text headings, without emojis or decorative headings, in one style line", () => {
+    const line = "No uses emojis ni encabezados decorativos; usa títulos y viñetas en texto plano.";
+    expect(SYSTEM_PROMPT).toContain(line);
+    expect(SYSTEM_PROMPT.split(line)).toHaveLength(2);
+    expect(SYSTEM_PROMPT.match(/No uses emojis/g)).toHaveLength(1);
+    expect(PROMPT_VERSION).toBe("2026-10-03.1");
   });
 
   it("does not use real corpus ids in the citation example", () => {
