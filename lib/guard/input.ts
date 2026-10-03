@@ -1,11 +1,9 @@
 import type { UIMessage } from "ai";
 import { z } from "zod";
-import { MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS } from "./limits";
+import { fitHistoryBudget, MAX_HISTORY_BYTES, MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS, truncateHistory } from "./limits";
 
-export { MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS };
+export { fitHistoryBudget, MAX_HISTORY_BYTES, MAX_HISTORY_MESSAGES, MAX_MESSAGE_CHARS, truncateHistory };
 export const MAX_BODY_BYTES = 512 * 1024;
-/** Budget for the history resent on every agent step, measured as JSON length. */
-export const MAX_HISTORY_BYTES = 64 * 1024;
 
 const messageSchema = z
   .object({
@@ -19,20 +17,6 @@ const messageSchema = z
 const bodySchema = z.object({ messages: z.array(messageSchema).min(1).max(200) }).loose();
 
 export type ParsedChat = { ok: true; messages: UIMessage[] } | { ok: false; reason: string };
-
-/** Keeps the last `max` messages and drops leading assistant turns so history starts with the user. */
-export function truncateHistory<T extends { role: string }>(messages: T[], max: number = MAX_HISTORY_MESSAGES): T[] {
-  const tail = messages.slice(-max);
-  const firstUser = tail.findIndex((m) => m.role === "user");
-  return firstUser <= 0 ? tail : tail.slice(firstUser);
-}
-
-/** Drops the oldest messages until the history fits the budget; always keeps the last message and starts with a user turn. */
-export function fitHistoryBudget<T extends { role: string }>(messages: T[], maxBytes: number = MAX_HISTORY_BYTES): T[] {
-  let start = 0;
-  while (start < messages.length - 1 && (JSON.stringify(messages.slice(start)).length > maxBytes || messages[start].role !== "user")) start++;
-  return messages.slice(start);
-}
 
 export async function parseChatRequest(req: Request): Promise<ParsedChat> {
   const raw = await req.text();

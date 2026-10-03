@@ -1,15 +1,20 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ComposerDock } from "@/components/chat/composer-dock";
 import type { ChatFailure } from "@/components/chat/error-notice";
 
-const chat = vi.hoisted(() => ({ state: { messages: [] as unknown[], status: "ready" } }));
+const chat = vi.hoisted(() => ({
+  state: { messages: [] as unknown[], status: "ready" },
+  options: undefined as undefined | { onError: (e: unknown) => void },
+  sendMessage: undefined as unknown as ReturnType<typeof vi.fn>,
+}));
 vi.mock("@ai-sdk/react", () => ({
-  useChat: () => ({
+  useChat: (opts: { onError: (e: unknown) => void }) => ({
+    ...((chat.options = opts), {}),
     messages: chat.state.messages,
     status: chat.state.status,
-    sendMessage: vi.fn(),
+    sendMessage: chat.sendMessage,
     stop: vi.fn(),
     regenerate: vi.fn(),
     setMessages: vi.fn(),
@@ -17,9 +22,11 @@ vi.mock("@ai-sdk/react", () => ({
   }),
 }));
 
-import { ChatApp } from "@/components/chat/chat-app";
+import { ChatApp, prepareChatRequest } from "@/components/chat/chat-app";
+import { MAX_HISTORY_BYTES } from "@/lib/guard/limits";
 
 beforeEach(() => {
+  chat.sendMessage = vi.fn();
   vi.useFakeTimers();
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} });
 });
@@ -48,6 +55,23 @@ describe("ComposerDock", () => {
     expect(document.activeElement).toBe(box());
   });
 
+  it("does not steal focus from another element when the lock lifts", () => {
+    const failure: ChatFailure = { view: { kind: "rate_limited", retryAfter: 5 }, retryAt: Date.now() + 5_000 };
+    render(
+      <>
+        <button type="button">Otro</button>
+        {dock(failure)}
+      </>,
+    );
+    const other = screen.getByRole("button", { name: "Otro" });
+    other.focus();
+    act(() => {
+      vi.advanceTimersByTime(6_000);
+    });
+    expect(box().disabled).toBe(false);
+    expect(document.activeElement).toBe(other);
+  });
+
   it("locks for quota_exhausted and bot_detected, but not for a model error", () => {
     const quota: ChatFailure = { view: { kind: "quota_exhausted", retryAfter: 60 }, retryAt: Date.now() + 60_000 };
     const { rerender } = render(dock(quota));
@@ -70,18 +94,85 @@ describe("ComposerDock", () => {
   });
 });
 
+const fail = (body: unknown) => act(() => chat.options?.onError(Object.assign(new Error("Request failed"), { responseBody: JSON.stringify(body) })));
+const rateLimited = { error: { code: "rate_limited", retryAfter: 5 } };
+const userMsg = (id: string, text: string) => ({ id, role: "user", parts: [{ type: "text", text }] });
+
 describe("ChatApp", () => {
   it("keeps the log silent per token and announces one summary when the turn settles", () => {
-    chat.state = { messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hola" }] }], status: "streaming" };
+    chat.state = { messages: [userMsg("m1", "hola")], status: "streaming" };
     const { rerender } = render(<ChatApp />);
     const log = screen.getByRole("log");
     expect(log.getAttribute("aria-live")).toBe("off");
     expect(log.getAttribute("aria-busy")).toBe("true");
-    const status = screen.getByRole("status");
-    expect(status.textContent).toBe("El asesor está trabajando.");
+    expect(screen.getByRole("status").textContent).toBe("El asesor está trabajando.");
     chat.state = { ...chat.state, status: "ready" };
     rerender(<ChatApp />);
     expect(screen.getByRole("status").textContent).toBe("Respuesta lista.");
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Asesor Corona");
+  });
+
+  it("says the response was stopped, not ready, after Stop", () => {
+    chat.state = { messages: [userMsg("m1", "hola")], status: "streaming" };
+    const { rerender } = render(<ChatApp />);
+    fireEvent.click(screen.getByRole("button", { name: "Detener la respuesta" }));
+    chat.state = { ...chat.state, status: "ready" };
+    rerender(<ChatApp />);
+    expect(screen.getByRole("status").textContent).toBe("Respuesta detenida.");
+  });
+
+  it("locks the composer on a rate-limit error and remounts the notice on a second failure", () => {
+    render(<ChatApp />);
+    fail(rateLimited);
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect((screen.getByLabelText("Describe tu proyecto") as HTMLTextAreaElement).disabled).toBe(true);
+    const first = screen.getByRole("alert");
+    fail(rateLimited);
+    expect(screen.getByRole("alert")).not.toBe(first);
+  });
+
+  it("clears the failure when a message is sent, and ignores sends while busy", () => {
+    const { rerender } = render(<ChatApp />);
+    fail({ error: { code: "model_error" } });
+    expect(screen.getByRole("alert")).toBeTruthy();
+    const box = screen.getByLabelText("Describe tu proyecto");
+    fireEvent.change(box, { target: { value: "piso de baño" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    chat.state = { messages: [], status: "streaming" };
+    rerender(<ChatApp />);
+    fireEvent.click(screen.getAllByRole("button").find((b) => b.textContent?.includes("Piso"))!);
+    expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables suggestion chips during a wait and re-enables them when it ends", () => {
+    render(<ChatApp />);
+    fail(rateLimited);
+    const chip = () => screen.getAllByRole("button").find((b) => b.textContent?.includes("Piso")) as HTMLButtonElement;
+    expect(chip().disabled).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(6_000);
+    });
+    expect(chip().disabled).toBe(false);
+  });
+});
+
+describe("prepareChatRequest", () => {
+  it("sends the history the server would keep: under the byte budget, starting and ending with a user turn", () => {
+    const big = "x".repeat(20_000);
+    const messages = [];
+    for (let i = 0; i < 8; i++) {
+      messages.push(userMsg("u" + i, "pregunta " + i));
+      messages.push({ id: "a" + i, role: "assistant", parts: [{ type: "tool-searchTechnicalSheets", state: "output-available", output: big }] });
+    }
+    messages.push(userMsg("last", "y la boquilla?"));
+    expect(JSON.stringify(messages).length).toBeGreaterThan(MAX_HISTORY_BYTES);
+    const { body } = prepareChatRequest!({ id: "c1", messages } as never) as { body: { id: string; messages: { id: string; role: string }[] } };
+    expect(body.id).toBe("c1");
+    expect(JSON.stringify(body.messages).length).toBeLessThanOrEqual(MAX_HISTORY_BYTES);
+    expect(body.messages[0].role).toBe("user");
+    expect(body.messages.at(-1)?.id).toBe("last");
   });
 });

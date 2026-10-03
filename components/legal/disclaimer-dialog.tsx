@@ -22,7 +22,7 @@ export function DisclaimerDialog({ trigger }: { trigger: React.ReactNode }) {
           <p>{CREDITS}</p>
           <p>
             <a href={SOURCE_URL} target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-2">
-              Ver el código fuente
+              Ver el código fuente<span className="sr-only"> (se abre en una pestaña nueva)</span>
             </a>
           </p>
         </div>

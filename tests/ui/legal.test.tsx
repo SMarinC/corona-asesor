@@ -12,11 +12,12 @@ describe("disclaimer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Demo académica" }));
     const dialog = await screen.findByRole("dialog", { name: "Sobre esta demo" });
     const text = dialog.textContent ?? "";
-    for (const phrase of ["AgentSprint by ReshapeX", "información pública", "No se usó información privilegiada", "propuesta de mejora", "pertenecen a Organización Corona"]) {
+    for (const phrase of ["AgentSprint by ReshapeX", "información pública", "No se usó información privilegiada", "propuesta de mejora", "pertenecen a Organización Corona", "no está afiliado"]) {
       expect(text, phrase).toContain(phrase);
     }
     expect(text).toContain("Daniel Garzón, Juan Miranda y Santiago Marín");
     expect(text).toContain("nivel gratuito de la API de Gemini");
+    expect(text).toContain("(se abre en una pestaña nueva)");
   });
 
   it("names the team and the rewrite author only, with no AI-assistant attribution", () => {

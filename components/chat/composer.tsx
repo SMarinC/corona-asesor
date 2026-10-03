@@ -29,7 +29,11 @@ export function Composer({ onSend, onStop, busy, blockedReason }: ComposerProps)
   const blocked = blockedReason !== null;
   // A disabled textarea drops focus; give it back when the lock lifts so the visitor can keep typing.
   useEffect(() => {
-    if (wasBlocked.current && !blocked) boxRef.current?.focus();
+    if (wasBlocked.current && !blocked) {
+      // Only when focus was actually lost; never pull it back from something the visitor moved to.
+      const active = document.activeElement;
+      if (!active || active === document.body) boxRef.current?.focus();
+    }
     wasBlocked.current = blocked;
   }, [blocked]);
   const canSend = !busy && blockedReason === null && text.trim().length > 0 && !tooLong;

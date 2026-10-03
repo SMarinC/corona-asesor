@@ -6,20 +6,20 @@ import { formatWait } from "@/lib/ui/format";
 import { Composer } from "./composer";
 import { type ChatFailure, ErrorNotice } from "./error-notice";
 
-/** Failures that stop the visitor from sending, ignoring any countdown that is already over. */
-export function isLockingFailure(failure: ChatFailure | null): boolean {
-  const kind = failure?.view.kind;
-  return kind === "rate_limited" || kind === "quota_exhausted" || kind === "bot_detected";
-}
-
+/** One rule for both the input and the suggestion chips; `remaining` is the live countdown, null when nothing ticks. */
 export function blockedReason(failure: ChatFailure | null, remaining: number | null): string | null {
   if (!failure) return null;
   const { kind } = failure.view;
-  if ((kind === "rate_limited" || kind === "quota_exhausted") && remaining !== null && remaining > 0) {
-    return `Podrás escribir de nuevo en ${formatWait(remaining)}`;
+  if ((kind === "rate_limited" || kind === "quota_exhausted") && failure.retryAt !== null && (remaining === null || remaining > 0)) {
+    return remaining === null ? "Espera un momento para escribir de nuevo" : `Podrás escribir de nuevo en ${formatWait(remaining)}`;
   }
   if (kind === "bot_detected") return "Recarga la página para continuar";
   return null;
+}
+
+/** The same lock for the chips, without the per-second countdown: `waitOver` flips once at the deadline. */
+export function isLocked(failure: ChatFailure | null, waitOver: boolean): boolean {
+  return blockedReason(failure, waitOver ? 0 : null) !== null;
 }
 
 export interface ComposerDockProps {

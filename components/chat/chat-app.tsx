@@ -10,22 +10,23 @@ import { ToolStep } from "@/components/tools/tool-step";
 import { useDeadlinePassed } from "@/hooks/use-deadline-passed";
 import { useTurnTimings } from "@/hooks/use-turn-timings";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
-import { MAX_HISTORY_MESSAGES } from "@/lib/guard/limits";
+import { fitHistoryBudget, truncateHistory } from "@/lib/guard/limits";
 import { parseChatError } from "@/lib/ui/chat-error";
 import { deriveProject } from "@/lib/ui/derive-project";
 import { DISCLAIMER_SHORT } from "@/lib/ui/legal";
 import { CitationsProvider } from "./citations-context";
-import { ComposerDock, isLockingFailure } from "./composer-dock";
+import { ComposerDock, isLocked } from "./composer-dock";
 import { EmptyState } from "./empty-state";
 import type { ChatFailure } from "./error-notice";
 import { Message } from "./message";
 import { SiteHeader } from "./site-header";
 
-/** The server trims history too; sending only the tail keeps requests small on long chats. */
-const transport = new DefaultChatTransport<CoronaUIMessage>({
-  api: "/api/chat",
-  prepareSendMessagesRequest: ({ id, messages }) => ({ body: { id, messages: messages.slice(-MAX_HISTORY_MESSAGES) } }),
+/** Sends exactly the history the server would keep: the server rejects bodies over its byte cap before trimming. */
+export const prepareChatRequest: NonNullable<ConstructorParameters<typeof DefaultChatTransport<CoronaUIMessage>>[0]>["prepareSendMessagesRequest"] = ({ id, messages }) => ({
+  body: { id, messages: fitHistoryBudget(truncateHistory(messages)) },
 });
+
+const transport = new DefaultChatTransport<CoronaUIMessage>({ api: "/api/chat", prepareSendMessagesRequest: prepareChatRequest });
 
 /**
  * Keeps the newest content in view while the visitor stays near the bottom. A ResizeObserver also catches growth
@@ -62,6 +63,7 @@ function useStickToBottom() {
 export function ChatApp() {
   const [failure, setFailure] = useState<ChatFailure | null>(null);
   const [failureId, setFailureId] = useState(0);
+  const [stopped, setStopped] = useState(false);
   const { messages, sendMessage, status, stop, regenerate, setMessages, clearError } = useChat<CoronaUIMessage>({
     transport,
     onError: (error) => {
@@ -75,22 +77,30 @@ export function ChatApp() {
   const { timings, store } = useTurnTimings(messages, busy);
   // One timer flips this at the deadline; the per-second countdown lives in ComposerDock, away from the messages.
   const waitOver = useDeadlinePassed(failure?.retryAt ?? null);
-  const suggestionsLocked = isLockingFailure(failure) && !waitOver;
+  const suggestionsLocked = isLocked(failure, waitOver);
   const { scrollRef, contentRef, stick } = useStickToBottom();
   const waitingForFirstPart = status === "submitted" || (busy && messages.at(-1)?.role === "user");
 
   const send = (text: string) => {
+    if (busy || suggestionsLocked) return;
     stick();
+    setStopped(false);
     setFailure(null);
     clearError();
     void sendMessage({ text });
   };
   const retry = () => {
+    setStopped(false);
     setFailure(null);
     clearError();
     void regenerate();
   };
+  const stopTurn = () => {
+    setStopped(true);
+    void stop();
+  };
   const restart = () => {
+    setStopped(false);
     void stop();
     setMessages([]);
     setFailure(null);
@@ -123,9 +133,9 @@ export function ChatApp() {
             </div>
             <div className="mx-auto w-full max-w-2xl min-w-0 space-y-2 px-4 pt-2 pb-3">
               <p role="status" className="sr-only">
-                {busy ? "El asesor está trabajando." : status === "ready" && messages.length > 0 ? "Respuesta lista." : ""}
+                {busy ? "El asesor está trabajando." : status === "ready" && messages.length > 0 ? (stopped ? "Respuesta detenida." : "Respuesta lista.") : ""}
               </p>
-              <ComposerDock failure={failure} failureId={failureId} busy={busy} onSend={send} onStop={() => void stop()} onRetry={retry} onRestart={restart}>
+              <ComposerDock failure={failure} failureId={failureId} busy={busy} onSend={send} onStop={stopTurn} onRetry={retry} onRestart={restart}>
                 <MobileProjectBar project={project} busy={busy}>
                   {panel}
                 </MobileProjectBar>
