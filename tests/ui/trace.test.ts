@@ -29,6 +29,25 @@ describe("buildTrace", () => {
   });
 });
 
+describe("buildTrace verdicts", () => {
+  it("agrees with the cards: a compatibility verdict that is not compatible never shows as done", () => {
+    const [, assistant] = bathroomConversation();
+    for (const [verdict, label, phase] of [
+      ["needs_review", "Compatibilidad: requiere revisión", "review"],
+      ["incompatible", "Compatibilidad: incompatible", "error"],
+    ] as const) {
+      const parts = assistant.parts.map((part) => {
+        if (part.type !== "tool-checkCompatibility" || part.state !== "output-available") return part;
+        const output = part.output as { data: object };
+        return { ...part, output: { ...output, data: { ...output.data, verdict } } };
+      });
+      const steps = buildTrace({ ...assistant, parts } as typeof assistant, undefined);
+      const tool = steps.flatMap((s) => s.tools).find((t) => t.name === "checkCompatibility");
+      expect(tool).toMatchObject({ label, phase });
+    }
+  });
+});
+
 describe("createTimingStore", () => {
   it("timestamps new steps as they stream in and closes the turn when streaming stops", () => {
     let clock = 1_000;

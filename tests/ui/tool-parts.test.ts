@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isToolPart, toolLabel, toolNameOf, toolPhase, toolResult } from "@/lib/ui/tool-parts";
+import { isToolPart, toolFailed, toolLabel, toolNameOf, toolPhase, toolResult } from "@/lib/ui/tool-parts";
 import { errorPart, toolPart } from "../fixtures/ui-messages";
 
 describe("tool parts", () => {
@@ -33,5 +33,25 @@ describe("tool parts", () => {
       "Materiales calculados, con datos por revisar",
     );
     expect(toolLabel(errorPart("buildQuote", {}, "x"))).toBe("Armando la cotización: no se pudo completar");
+  });
+});
+
+describe("compatibility verdict in the shared phase and label", () => {
+  const compat = (verdict: string) =>
+    toolPart("checkCompatibility", {}, { status: "ok", data: { verdict, checks: [] } });
+
+  it("maps a finished check to done, review or error by its verdict", () => {
+    expect(toolPhase(compat("compatible"))).toBe("done");
+    expect(toolLabel(compat("compatible"))).toBe("Compatibilidad verificada");
+    expect(toolPhase(compat("needs_review"))).toBe("review");
+    expect(toolLabel(compat("needs_review"))).toBe("Compatibilidad: requiere revisión");
+    expect(toolPhase(compat("incompatible"))).toBe("error");
+    expect(toolLabel(compat("incompatible"))).toBe("Compatibilidad: incompatible");
+  });
+
+  it("tells a failed call apart from an incompatible verdict", () => {
+    expect(toolFailed(compat("incompatible"))).toBe(false);
+    expect(toolFailed(errorPart("checkCompatibility", {}, "x"))).toBe(true);
+    expect(toolFailed(toolPart("buildQuote", {}, { status: "error", code: "x", message: "y" }))).toBe(true);
   });
 });

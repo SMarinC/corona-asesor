@@ -25,12 +25,32 @@ export function toolResult<N extends ToolName>(part: ToolPartOf<N>): ToolResultO
   return (part.state === "output-available" ? part.output : null) as ToolResultOf<N> | null;
 }
 
+/** The verdict of a finished checkCompatibility call, or null for any other call or while it runs. */
+function compatibilityVerdict(part: CoronaToolPart): string | null {
+  if (!isToolPartOf(part, "checkCompatibility") || part.state !== "output-available") return null;
+  const output = part.output as { status?: string; data?: { verdict?: string } };
+  return output.status === "ok" ? (output.data?.verdict ?? null) : null;
+}
+
+/**
+ * Where a call is, as every consumer (cards, trace timeline) shows it. A finished compatibility check that is not
+ * "compatible" must not read as a success: needs_review is "review" and incompatible is "error".
+ */
 export function toolPhase(part: CoronaToolPart): ToolPhase {
   if (part.state === "output-error" || part.state === "output-denied") return "error";
   if (part.state !== "output-available") return "running";
+  const verdict = compatibilityVerdict(part);
+  if (verdict === "needs_review") return "review";
+  if (verdict === "incompatible") return "error";
   const status = (part.output as { status?: string }).status;
   if (status === "needs_review") return "review";
   return status === "error" ? "error" : "done";
+}
+
+/** True when the call itself failed (SDK error or a tool error), as opposed to finishing with an incompatible verdict. */
+export function toolFailed(part: CoronaToolPart): boolean {
+  if (part.state === "output-error" || part.state === "output-denied") return true;
+  return part.state === "output-available" && (part.output as { status?: string }).status === "error";
 }
 
 const RUNNING: Record<ToolName, string> = {
@@ -67,6 +87,9 @@ export function toolLabel(part: CoronaToolPart): string {
     if (kind === "grout") [running, done] = ["Buscando boquillas", "Boquillas encontradas"];
   }
   if (phase === "running") return running;
+  const verdict = compatibilityVerdict(part);
+  if (verdict === "needs_review") return "Compatibilidad: requiere revisión";
+  if (verdict === "incompatible") return "Compatibilidad: incompatible";
   if (phase === "review") return `${done}, con datos por revisar`;
   if (phase === "error") return `${running}: no se pudo completar`;
   return done;
