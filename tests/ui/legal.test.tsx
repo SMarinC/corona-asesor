@@ -20,6 +20,12 @@ describe("disclaimer", () => {
     expect(text).toContain("(se abre en una pestaña nueva)");
   });
 
+  it("credits only what exists today", () => {
+    expect(CREDITS).not.toMatch(/evaluaciones|despliegue/i);
+    expect(CREDITS).toContain("agente");
+    expect(CREDITS).toContain("interfaz web");
+  });
+
   it("names the team and the rewrite author only, with no AI-assistant attribution", () => {
     const all = [...DISCLAIMER, DATA_USE_NOTE, CREDITS, DISCLAIMER_SHORT].join(" ");
     expect(all).not.toMatch(/claude|anthropic|chatgpt|copilot/i);

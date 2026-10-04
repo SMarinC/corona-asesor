@@ -9,8 +9,9 @@ export const DISCLAIMER = [
 export const DATA_USE_NOTE =
   "Los mensajes se procesan con el nivel gratuito de la API de Gemini de Google, que puede usar ese contenido para mejorar sus productos. No escribas datos personales.";
 
+// Plan 4 (evals and deployment) updates this line.
 export const CREDITS =
-  "Prototipo original de Daniel Garzón, Juan Miranda y Santiago Marín para AgentSprint by ReshapeX. Esta versión (arquitectura en TypeScript, agente, interfaz con streaming, evaluaciones y despliegue) es una reescritura de Santiago Marín.";
+  "Prototipo original de Daniel Garzón, Juan Miranda y Santiago Marín para AgentSprint by ReshapeX. Esta versión (agente, herramientas, protecciones e interfaz web con streaming) es una reescritura de Santiago Marín.";
 
 /** Short form for the footer and the PDF footer. It keeps every point the full text makes. */
 export const DISCLAIMER_SHORT =
