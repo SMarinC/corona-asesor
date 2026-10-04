@@ -22,7 +22,8 @@ export function DownloadQuoteButton({ project }: { project: ProjectState }) {
       link.href = url;
       link.download = "cotizacion-asesor-corona.pdf";
       link.click();
-      URL.revokeObjectURL(url);
+      // Some Safari and Firefox versions cancel the download if the URL is revoked right after click().
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
       setStatus("idle");
     } catch {
       setStatus("failed");
