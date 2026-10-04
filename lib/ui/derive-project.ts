@@ -141,8 +141,10 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
   }
 
   const quote = state.quote ? { ...withLineChecks(state.quote, quoteCalcs), stale: pending.length > 0 } : null;
+  const materialsTile = state.materials?.tile?.sku;
+  const checkedTile = state.compatibility?.products.tile.sku;
   const tileMismatchReview: ReviewItem[] =
-    state.materials && state.compatibility && state.materials.tile.sku !== state.compatibility.products.tile.sku
+    materialsTile && checkedTile && materialsTile !== checkedTile
       ? [{ tool: "checkCompatibility", field: "tile_mismatch", reason: "La compatibilidad se verificó con otro revestimiento; pide verificar el revestimiento cotizado." }]
       : [];
   const staleReview: ReviewItem[] = quote?.stale
