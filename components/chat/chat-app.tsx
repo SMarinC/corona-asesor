@@ -11,7 +11,7 @@ import { useDeadlinePassed } from "@/hooks/use-deadline-passed";
 import { useTurnTimings } from "@/hooks/use-turn-timings";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
 import { fitHistoryBudget, truncateHistory } from "@/lib/guard/limits";
-import { parseChatError } from "@/lib/ui/chat-error";
+import { chatFetch, parseChatError } from "@/lib/ui/chat-error";
 import { deriveProject } from "@/lib/ui/derive-project";
 import { DISCLAIMER_SHORT } from "@/lib/ui/legal";
 import { CitationsProvider } from "./citations-context";
@@ -26,7 +26,7 @@ export const prepareChatRequest: NonNullable<ConstructorParameters<typeof Defaul
   body: { id, messages: fitHistoryBudget(truncateHistory(messages)) },
 });
 
-const transport = new DefaultChatTransport<CoronaUIMessage>({ api: "/api/chat", prepareSendMessagesRequest: prepareChatRequest });
+const transport = new DefaultChatTransport<CoronaUIMessage>({ api: "/api/chat", fetch: chatFetch, prepareSendMessagesRequest: prepareChatRequest });
 
 /**
  * Keeps the newest content in view while the visitor stays near the bottom. A ResizeObserver also catches growth

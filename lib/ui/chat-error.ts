@@ -62,3 +62,17 @@ export function chatErrorCopy(view: ChatErrorView, remaining: number | null): st
       return "El asesor no pudo responder esta vez. Reintenta en unos segundos.";
   }
 }
+
+/**
+ * The chat request's fetch. BotID's fetch wrapper rejects with the challenge script's error `Event`, not an Error,
+ * when the server cannot be reached, and useChat only calls onError for Error instances: without this the turn
+ * failed silently. Error rejections (aborts included) pass through untouched.
+ */
+export const chatFetch: typeof fetch = async (input, init) => {
+  try {
+    return await globalThis.fetch(input, init);
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new TypeError("Failed to fetch", { cause: error });
+  }
+};

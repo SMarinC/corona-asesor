@@ -1,7 +1,7 @@
 import { APICallError } from "ai";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { errorResponse } from "@/lib/guard/errors";
-import { chatErrorCopy, MIN_RETRY_SECONDS, parseChatError } from "@/lib/ui/chat-error";
+import { chatErrorCopy, chatFetch, MIN_RETRY_SECONDS, parseChatError } from "@/lib/ui/chat-error";
 
 /** What useChat throws when the route rejects the request before streaming. */
 async function rejected(code: Parameters<typeof errorResponse>[0], retryAfter?: number) {
@@ -42,5 +42,28 @@ describe("chatErrorCopy", () => {
     expect(chatErrorCopy({ kind: "rate_limited", retryAfter: 30 }, 0)).toBe("Ya puedes escribir de nuevo.");
     expect(chatErrorCopy({ kind: "quota_exhausted", retryAfter: null }, null)).toContain("más tarde");
     expect(chatErrorCopy({ kind: "invalid_input", retryAfter: null }, null)).toContain("conversación nueva");
+  });
+});
+
+describe("chatFetch", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("turns a non-Error rejection (BotID's failed script load) into a network error useChat reports", async () => {
+    // useChat only calls onError for Error instances; BotID rejects with the script's error Event when the
+    // server is unreachable, which left the visitor with no notice at all.
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new Event("error"))));
+    const error = await chatFetch("/api/chat", { method: "POST" }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(TypeError);
+    expect(parseChatError(error).kind).toBe("network");
+  });
+
+  it("passes responses and Error rejections, aborts included, through untouched", async () => {
+    const response = new Response("{}");
+    vi.stubGlobal("fetch", vi.fn(async () => response));
+    expect(await chatFetch("/api/chat")).toBe(response);
+
+    const abort = new DOMException("The operation was aborted.", "AbortError");
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(abort)));
+    expect(await chatFetch("/api/chat").catch((e: unknown) => e)).toBe(abort);
   });
 });
