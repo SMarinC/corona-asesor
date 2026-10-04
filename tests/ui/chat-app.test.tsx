@@ -165,6 +165,37 @@ describe("ChatApp", () => {
     expect(screen.getByRole("log").parentElement?.classList.contains("relative")).toBe(true);
     expect(screen.getByRole("complementary").classList.contains("relative")).toBe(true);
   });
+
+  it("shows the empty state from its heading and sticks to the bottom only once there is a conversation", () => {
+    const callbacks: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    );
+    const { rerender } = render(<ChatApp />);
+    const scroller = screen.getByRole("log").parentElement as HTMLElement;
+    let top = 0;
+    Object.defineProperty(scroller, "scrollHeight", { configurable: true, get: () => 900 });
+    Object.defineProperty(scroller, "scrollTop", { configurable: true, get: () => top, set: (v: number) => (top = v) });
+    act(() => callbacks.forEach((cb) => cb()));
+    expect(top).toBe(0);
+
+    chat.state = { messages: [userMsg("m1", "hola")], status: "streaming" };
+    rerender(<ChatApp />);
+    act(() => callbacks.forEach((cb) => cb()));
+    expect(top).toBe(900);
+
+    chat.state = { messages: [], status: "ready" };
+    rerender(<ChatApp />);
+    expect(top).toBe(0);
+  });
 });
 
 describe("prepareChatRequest", () => {

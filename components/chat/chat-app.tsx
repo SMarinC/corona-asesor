@@ -30,12 +30,18 @@ const transport = new DefaultChatTransport<CoronaUIMessage>({ api: "/api/chat", 
 
 /**
  * Keeps the newest content in view while the visitor stays near the bottom. A ResizeObserver also catches growth
- * that is not a new message part, such as product photos finishing to load.
+ * that is not a new message part, such as product photos finishing to load. `active` is false on the empty state,
+ * which reads top-down: on a short screen it must open on its heading, not on its last suggestion.
  */
-function useStickToBottom() {
+function useStickToBottom(active: boolean) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const stuck = useRef(true);
+  const activeRef = useRef(active);
+  useEffect(() => {
+    activeRef.current = active;
+    if (!active && scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [active]);
   useEffect(() => {
     const scroller = scrollRef.current;
     const content = contentRef.current;
@@ -44,7 +50,7 @@ function useStickToBottom() {
       stuck.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 160;
     };
     const observer = new ResizeObserver(() => {
-      if (stuck.current) scroller.scrollTop = scroller.scrollHeight;
+      if (stuck.current && activeRef.current) scroller.scrollTop = scroller.scrollHeight;
     });
     scroller.addEventListener("scroll", onScroll, { passive: true });
     observer.observe(content);
@@ -78,7 +84,7 @@ export function ChatApp() {
   // One timer flips this at the deadline; the per-second countdown lives in ComposerDock, away from the messages.
   const waitOver = useDeadlinePassed(failure?.retryAt ?? null);
   const suggestionsLocked = isLocked(failure, waitOver);
-  const { scrollRef, contentRef, stick } = useStickToBottom();
+  const { scrollRef, contentRef, stick } = useStickToBottom(messages.length > 0);
   const waitingForFirstPart = status === "submitted" || (busy && messages.at(-1)?.role === "user");
 
   const send = (text: string) => {
