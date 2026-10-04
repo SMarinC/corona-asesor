@@ -3,8 +3,10 @@ import { executeBuildQuote } from "@/lib/agent/tools/build-quote";
 import { executeCheckCompatibility } from "@/lib/agent/tools/check-compatibility";
 import { executeComputeMaterials } from "@/lib/agent/tools/compute-materials";
 import { deriveProject, EMPTY_PROJECT } from "@/lib/ui/derive-project";
+import { needsReview } from "@/lib/ui/project-view";
 import { makeToolDeps } from "../fixtures/tool-deps";
 import { assistantMessage, bathroomConversation, toolPart, userMessage } from "../fixtures/ui-messages";
+import { withCheckedTile } from "../fixtures/project-variants";
 
 describe("deriveProject", () => {
   it("is empty before any tool runs", () => {
@@ -167,6 +169,19 @@ describe("deriveProject", () => {
     const project = deriveProject([assistantMessage([toolPart("checkCompatibility", input, result)])]);
     expect(project.compatibility?.verdict).toBe("needs_review");
     expect(project.review).toEqual(expected.map((c) => ({ tool: "checkCompatibility", field: `check:${c.rule}`, reason: c.message })));
+  });
+
+  it("flags the quote when the compatibility check used another tile than the materials", () => {
+    const project = deriveProject(withCheckedTile({ sku: "T3", name: "Piso Exterior Terracota 45x45" }));
+    expect(project.review).toEqual([
+      {
+        tool: "checkCompatibility",
+        field: "tile_mismatch",
+        reason: "La compatibilidad se verificó con otro revestimiento; pide verificar el revestimiento cotizado.",
+      },
+    ]);
+    expect(needsReview(project)).toBe(true);
+    expect(deriveProject(bathroomConversation()).review).toEqual([]);
   });
 
   it("does not let a superseded what-if calculation validate a quantity (last call wins per tile)", () => {

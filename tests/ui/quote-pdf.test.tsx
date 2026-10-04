@@ -109,6 +109,12 @@ describe("QuotePdf", () => {
     expect(text).toContain("Piso Exterior Terracota 45x45 (T3)");
   });
 
+  it("shows the review banner and the reason when the compatibility check used another tile", () => {
+    const text = pdfTextFor(withCheckedTile({ sku: "T3", name: "Piso Exterior Terracota 45x45" }));
+    expect(text).toContain("Requiere revisión: ver el detalle");
+    expect(text).toContain("pide verificar el revestimiento cotizado");
+  });
+
   it("never emits characters Helvetica cannot encode", () => {
     expect(pdfTextFor(bathroomConversation())).not.toContain("↔");
   });

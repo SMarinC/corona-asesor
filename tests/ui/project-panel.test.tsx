@@ -97,6 +97,20 @@ describe("ProjectPanel", () => {
     ).toBeTruthy();
   });
 
+  it("flags the quote everywhere when the compatibility check used another tile", () => {
+    const messages = withCheckedTile({ sku: "T3", name: "Piso Exterior Terracota 45x45" });
+    show(messages);
+    expect(within(reviewSection()).getByText(/pide verificar el revestimiento cotizado/)).toBeTruthy();
+    expect(screen.getByText("Dentro del presupuesto de $1.500.000. Quedan $1.009.500.").className).not.toContain("text-ok");
+    cleanup();
+    render(
+      <MobileProjectBar project={deriveProject(messages)} busy={false}>
+        x
+      </MobileProjectBar>,
+    );
+    expect(screen.getByRole("button", { name: /Total/ }).textContent).toContain("1 por revisar");
+  });
+
   it("shows the same tile once when materials and compatibility agree", () => {
     show(bathroomConversation());
     expect(screen.getByText("Calculado para Piso Prueba Blanco 60x60 (T1).")).toBeTruthy();

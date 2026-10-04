@@ -141,6 +141,10 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
   }
 
   const quote = state.quote ? { ...withLineChecks(state.quote, quoteCalcs), stale: pending.length > 0 } : null;
+  const tileMismatchReview: ReviewItem[] =
+    state.materials && state.compatibility && state.materials.tile.sku !== state.compatibility.products.tile.sku
+      ? [{ tool: "checkCompatibility", field: "tile_mismatch", reason: "La compatibilidad se verificó con otro revestimiento; pide verificar el revestimiento cotizado." }]
+      : [];
   const staleReview: ReviewItem[] = quote?.stale
     ? [{ tool: "buildQuote", field: "stale", reason: "La cotización es anterior al último cálculo de materiales; pide una nueva cotización." }]
     : [];
@@ -158,7 +162,7 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
     ...state,
     quote,
     tile: tileSku ? (tiles.get(tileSku) ?? null) : null,
-    review: [...materialsReview, ...compatibilityReview, ...quoteReview, ...staleReview, ...lineReview],
+    review: [...materialsReview, ...compatibilityReview, ...tileMismatchReview, ...quoteReview, ...staleReview, ...lineReview],
     citations: [...citations],
     toolCalls,
   };

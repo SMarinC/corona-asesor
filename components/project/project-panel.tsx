@@ -188,7 +188,7 @@ function QuoteSection({ project }: { project: ProjectState }) {
 export function ProjectPanel({ project, messages, timings }: { project: ProjectState; messages: CoronaUIMessage[]; timings: Timings }) {
   return (
     <div className="divide-y divide-border">
-      {needsReview(project) && project.review.length > 0 && <ReviewSection project={project} />}
+      {project.review.length > 0 && <ReviewSection project={project} />}
       <Section title="Espacio" empty="Aparece cuando el asesor calcule el área.">
         {project.space ? <SpaceSection project={project} /> : null}
       </Section>
