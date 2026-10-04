@@ -60,6 +60,19 @@ describe("ProjectPanel", () => {
     expect(row?.className).toContain("text-review");
   });
 
+  it("keeps the budget line neutral, never in the ok color, while the quote needs review", () => {
+    const budgetLine = () => screen.getByText(/^Dentro del presupuesto/);
+    show(bathroomConversation());
+    expect(budgetLine().className).toContain("text-ok");
+    cleanup();
+    for (const flagged of [laterRecalculation(), bathroomConversation({ quoteLines: [{ sku: "T1", quantity: 5 }, { sku: "G2", quantity: 3 }] })]) {
+      show(flagged);
+      expect(budgetLine().className).not.toContain("text-ok");
+      expect(budgetLine().className).toContain("text-muted-foreground");
+      cleanup();
+    }
+  });
+
   it("never lets a stale quote look clean", () => {
     show(laterRecalculation());
     expect(within(reviewSection()).getByText("La cotización es anterior al último cálculo de materiales; pide una nueva cotización.")).toBeTruthy();

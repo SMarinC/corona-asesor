@@ -100,7 +100,7 @@ export function QuotePdf({ project, logoSrc, generatedAt }: QuotePdfProps) {
           <Text style={s.totalValue}>{formatCOP(quote?.data.total ?? 0)}</Text>
         </View>
         {quote?.data.budget != null && (
-          <Text style={{ marginTop: 6, color: quote.data.withinBudget === true ? BLUE : REVIEW }}>
+          <Text style={{ marginTop: 6, color: quote.data.withinBudget !== true ? REVIEW : flagged ? MUTED : BLUE }}>
             {quote.data.withinBudget === true && `Dentro del presupuesto de ${formatCOP(quote.data.budget)}.`}
             {quote.data.withinBudget === false && `Supera el presupuesto de ${formatCOP(quote.data.budget)} por ${formatCOP(-(quote.data.difference ?? 0))}.`}
             {quote.data.withinBudget == null && `Presupuesto de ${formatCOP(quote.data.budget)}: requiere revisión.`}

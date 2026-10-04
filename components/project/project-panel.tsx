@@ -120,13 +120,14 @@ function CompatibilitySection({ project }: { project: ProjectState }) {
   );
 }
 
-function BudgetLine({ budget, withinBudget, difference }: { budget: number | null; withinBudget: boolean | null; difference: number | null }) {
+/** `flagged`: the quote needs review, so fitting the budget is not a verified result and must not look like one. */
+function BudgetLine({ budget, withinBudget, difference, flagged }: { budget: number | null; withinBudget: boolean | null; difference: number | null; flagged: boolean }) {
   if (budget === null) return null;
   if (withinBudget === null || difference === null) {
     return <p className="text-sm text-review">Presupuesto de {formatCOP(budget)}: requiere revisión porque falta algún precio.</p>;
   }
   return withinBudget ? (
-    <p className="text-sm text-ok tabular">
+    <p className={cn("text-sm tabular", flagged ? "text-muted-foreground" : "text-ok")}>
       Dentro del presupuesto de {formatCOP(budget)}. Quedan {formatCOP(difference)}.
     </p>
   ) : (
@@ -176,7 +177,7 @@ function QuoteSection({ project }: { project: ProjectState }) {
           </tr>
         </tfoot>
       </table>
-      <BudgetLine budget={data.budget ?? null} withinBudget={data.withinBudget ?? null} difference={data.difference ?? null} />
+      <BudgetLine budget={data.budget ?? null} withinBudget={data.withinBudget ?? null} difference={data.difference ?? null} flagged={flagged} />
       {data.priceNote && <p className="text-xs text-muted-foreground">{data.priceNote}</p>}
       <DownloadQuoteButton project={project} />
     </div>

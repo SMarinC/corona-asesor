@@ -28,6 +28,22 @@ describe("QuotePdf", () => {
     expect(hyphenate?.("Diferenciadas")).toEqual(["Diferenciadas"]);
   });
 
+  it("prints the budget line in the brand blue only when the quote is clean", () => {
+    /** The color of the Text element that carries the budget sentence. */
+    function budgetColor(node: ReactNode): string | undefined {
+      if (Array.isArray(node)) return node.map(budgetColor).find(Boolean);
+      if (!isValidElement<{ children?: ReactNode; style?: { color?: string } }>(node)) return undefined;
+      const own = node.props.style?.color;
+      if (own && /^Dentro del presupuesto/.test(textOf(node.props.children))) return own;
+      return budgetColor(node.props.children);
+    }
+    const colorFor = (messages: ReturnType<typeof bathroomConversation>) =>
+      budgetColor(QuotePdf({ project: deriveProject(messages), logoSrc: null, generatedAt: at }));
+    expect(colorFor(bathroomConversation())).toBe("#005EB8");
+    expect(colorFor(laterRecalculation())).toBe("#526173");
+    expect(colorFor(bathroomConversation({ quoteLines: [{ sku: "T1", quantity: 5 }, { sku: "G2", quantity: 3 }] }))).toBe("#526173");
+  });
+
   it("renders the quote to a PDF document", async () => {
     const project = deriveProject(bathroomConversation());
     const buffer = await renderToBuffer(<QuotePdf project={project} logoSrc={null} generatedAt={at} />);
