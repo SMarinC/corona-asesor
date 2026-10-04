@@ -9,6 +9,19 @@ const chat = vi.hoisted(() => ({
   options: undefined as undefined | { onError: (e: unknown) => void },
   sendMessage: undefined as unknown as ReturnType<typeof vi.fn>,
 }));
+const transports = vi.hoisted(() => [] as unknown[]);
+vi.mock("ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("ai")>();
+  return {
+    ...actual,
+    DefaultChatTransport: class extends actual.DefaultChatTransport<never> {
+      constructor(options: ConstructorParameters<typeof actual.DefaultChatTransport<never>>[0]) {
+        super(options);
+        transports.push(options);
+      }
+    },
+  };
+});
 vi.mock("@ai-sdk/react", () => ({
   useChat: (opts: { onError: (e: unknown) => void }) => ({
     ...((chat.options = opts), {}),
@@ -24,6 +37,7 @@ vi.mock("@ai-sdk/react", () => ({
 
 import { ChatApp, prepareChatRequest } from "@/components/chat/chat-app";
 import { MAX_HISTORY_BYTES } from "@/lib/guard/limits";
+import { chatFetch } from "@/lib/ui/chat-error";
 
 beforeEach(() => {
   chat.sendMessage = vi.fn();
@@ -41,6 +55,13 @@ const dock = (failure: ChatFailure | null, failureId = 1) => (
   <ComposerDock failure={failure} failureId={failureId} busy={false} onSend={() => {}} onStop={() => {}} onRetry={() => {}} onRestart={() => {}} />
 );
 const box = () => screen.getByLabelText("Describe tu proyecto") as HTMLTextAreaElement;
+
+describe("chat transport", () => {
+  it("sends through chatFetch, so an offline BotID rejection reaches onError", () => {
+    expect(transports).toHaveLength(1);
+    expect(transports[0]).toMatchObject({ api: "/api/chat", fetch: chatFetch });
+  });
+});
 
 describe("ComposerDock", () => {
   it("locks the input during a rate limit countdown and gives focus back when it ends", () => {
