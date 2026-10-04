@@ -1,4 +1,4 @@
-import { renderToBuffer } from "@react-pdf/renderer";
+import { Font, renderToBuffer } from "@react-pdf/renderer";
 import { isValidElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { QuotePdf } from "@/components/project/quote-pdf";
@@ -21,6 +21,13 @@ const pdfTextFor = (messages: ReturnType<typeof bathroomConversation>) =>
   textOf(QuotePdf({ project: deriveProject(messages), logoSrc: null, generatedAt: at }));
 
 describe("QuotePdf", () => {
+  it("never hyphenates a word, so a SKU in parentheses cannot read as a negative number", () => {
+    // react-pdf's default English hyphenation broke "(555332501)" into "(-" and "555332501)" in the products table.
+    const hyphenate = Font.getHyphenationCallback();
+    expect(hyphenate?.("(555332501)")).toEqual(["(555332501)"]);
+    expect(hyphenate?.("Diferenciadas")).toEqual(["Diferenciadas"]);
+  });
+
   it("renders the quote to a PDF document", async () => {
     const project = deriveProject(bathroomConversation());
     const buffer = await renderToBuffer(<QuotePdf project={project} logoSrc={null} generatedAt={at} />);

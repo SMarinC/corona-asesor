@@ -1,8 +1,12 @@
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ProjectState } from "@/lib/ui/derive-project";
 import { formatCOP, formatM2, formatQuantity } from "@/lib/ui/format";
 import { DISCLAIMER_SHORT } from "@/lib/ui/legal";
 import { needsReview, pdfText, tileMismatch } from "@/lib/ui/project-view";
+
+// The default hyphenation is English and splits digits too: "(555332501)" wrapped as "(-" + "555332501)", which
+// reads as a negative SKU. Lines break only between words.
+Font.registerHyphenationCallback((word) => [word]);
 
 const BLUE = "#005EB8";
 const INK = "#0F1B2D";
