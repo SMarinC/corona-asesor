@@ -98,7 +98,7 @@ describe("ErrorNotice", () => {
     expect(onRetry).toHaveBeenCalled();
     cleanup();
     render(<ErrorNotice failure={{ view: { kind: "network", retryAfter: null }, retryAt: null }} remaining={null} onRetry={onRetry} onRestart={onRestart} />);
-    expect(screen.getByRole("alert").textContent).toContain("No hay conexión con el servidor");
+    expect(screen.getByRole("alert").textContent).toContain("No pudimos conectar con el servidor");
     fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(onRetry).toHaveBeenCalledTimes(2);
     cleanup();

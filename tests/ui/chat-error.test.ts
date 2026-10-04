@@ -27,6 +27,12 @@ describe("parseChatError", () => {
     expect(parseChatError(new Error("model_error"))).toEqual({ kind: "model_error", retryAfter: null });
   });
 
+  it("covers blockers in the network copy", () => {
+    expect(chatErrorCopy({ kind: "network", retryAfter: null }, null)).toBe(
+      "No pudimos conectar con el servidor. Revisa tu conexión o desactiva bloqueadores para este sitio, y reintenta.",
+    );
+  });
+
   it("separates network failures from model errors", () => {
     expect(parseChatError(new TypeError("Failed to fetch")).kind).toBe("network");
     expect(parseChatError(new Error("something else")).kind).toBe("model_error");

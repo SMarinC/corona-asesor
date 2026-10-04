@@ -57,7 +57,7 @@ export function chatErrorCopy(view: ChatErrorView, remaining: number | null): st
     case "invalid_input":
       return "No pudimos procesar la conversación. Envía un mensaje de texto de hasta 1.000 caracteres o empieza una conversación nueva.";
     case "network":
-      return "No hay conexión con el servidor. Revisa tu internet y reintenta.";
+      return "No pudimos conectar con el servidor. Revisa tu conexión o desactiva bloqueadores para este sitio, y reintenta.";
     case "model_error":
       return "El asesor no pudo responder esta vez. Reintenta en unos segundos.";
   }
