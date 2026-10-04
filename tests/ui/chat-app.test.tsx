@@ -157,6 +157,14 @@ describe("ChatApp", () => {
     });
     expect(chip().disabled).toBe(false);
   });
+
+  it("positions both scroll areas, so sr-only text inside them cannot stretch the page", () => {
+    // An absolutely positioned sr-only node (the quote table caption) escapes an unpositioned scroller and adds
+    // page-level scroll that drags the header away on short screens.
+    render(<ChatApp />);
+    expect(screen.getByRole("log").parentElement?.classList.contains("relative")).toBe(true);
+    expect(screen.getByRole("complementary").classList.contains("relative")).toBe(true);
+  });
 });
 
 describe("prepareChatRequest", () => {

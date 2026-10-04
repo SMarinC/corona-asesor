@@ -116,7 +116,7 @@ export function ChatApp() {
         <SiteHeader onRestart={restart} canRestart={messages.length > 0} />
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_minmax(340px,410px)]">
           <main className="flex min-h-0 min-w-0 flex-col">
-            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+            <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto">
               {/* role="log" is implicitly live; "off" keeps it silent per token. The status line below is the one announcement. */}
               <div ref={contentRef} role="log" aria-live="off" aria-busy={busy} aria-label="Conversación" className="mx-auto max-w-2xl min-w-0 space-y-6 px-4 py-6">
                 {messages.length === 0 ? (
@@ -152,7 +152,7 @@ export function ChatApp() {
               </p>
             </div>
           </main>
-          <aside aria-labelledby="project-title" className="hidden min-h-0 overflow-y-auto border-l bg-card px-6 py-6 lg:block">
+          <aside aria-labelledby="project-title" className="relative hidden min-h-0 overflow-y-auto border-l bg-card px-6 py-6 lg:block">
             <h2 id="project-title" className="mb-5 text-lg font-semibold tracking-[-0.01em]">
               Tu proyecto
             </h2>
