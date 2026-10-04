@@ -1,4 +1,4 @@
-import { Font, renderToBuffer } from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { isValidElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { QuotePdf } from "@/components/project/quote-pdf";
@@ -21,11 +21,27 @@ const pdfTextFor = (messages: ReturnType<typeof bathroomConversation>) =>
   textOf(QuotePdf({ project: deriveProject(messages), logoSrc: null, generatedAt: at }));
 
 describe("QuotePdf", () => {
-  it("never hyphenates a word, so a SKU in parentheses cannot read as a negative number", () => {
-    // react-pdf's default English hyphenation broke "(555332501)" into "(-" and "555332501)" in the products table.
-    const hyphenate = Font.getHyphenationCallback();
-    expect(hyphenate?.("(555332501)")).toEqual(["(555332501)"]);
-    expect(hyphenate?.("Diferenciadas")).toEqual(["Diferenciadas"]);
+  it("never splits a word across text children, so a SKU in parentheses cannot wrap as a negative number", () => {
+    // react-pdf lays out each text child as its own run and may break between two runs that touch, adding a hyphen:
+    // "({line.sku})" printed "(-" at the end of one line and "555332501)" on the next.
+    const glued: string[] = [];
+    function walk(node: ReactNode): void {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!isValidElement<{ children?: ReactNode }>(node)) return;
+      // Expand our own components (react-pdf primitives are plain strings) to check what react-pdf receives.
+      if (typeof node.type === "function") return walk((node.type as (props: object) => ReactNode)(node.props));
+      const children = ([] as ReactNode[]).concat(node.props.children ?? []).filter((c) => c !== null && c !== undefined && typeof c !== "boolean");
+      for (let i = 0; i + 1 < children.length; i++) {
+        const [a, b] = [children[i], children[i + 1]];
+        const prim = (c: ReactNode) => typeof c === "string" || typeof c === "number";
+        if (prim(a) && prim(b) && !/\s$/.test(String(a)) && !/^\s/.test(String(b))) glued.push(`${a}|${b}`);
+      }
+      children.forEach(walk);
+    }
+    for (const messages of [bathroomConversation(), withCheckedTile({ sku: "T2", name: "Piso Prueba Gris 45x45" })]) {
+      walk(QuotePdf({ project: deriveProject(messages), logoSrc: null, generatedAt: at }));
+    }
+    expect(glued).toEqual([]);
   });
 
   it("prints the budget line in the brand blue only when the quote is clean", () => {
