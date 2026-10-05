@@ -67,3 +67,33 @@ describe("buildQuote quantity guard", () => {
     expect(result).toMatchObject({ status: "needs_review", data: { total: expect.any(Number) }, missing: [{ field: "quantity:T1" }] });
   });
 });
+
+describe("buildQuote quantity guard: what-ifs and several surfaces", () => {
+  type Materials = { status: string; data: { tile: { boxes: number }; adhesive: { bags: number }; grout: { units: number } } };
+
+  it("flags a quote at the superseded value of a what-if for the same tile", async () => {
+    const deps = { ...makeToolDeps(), quantities: createQuantityLedger() };
+    const compute = createComputeMaterialsTool(deps);
+    const first = await callTool<Materials>(compute, materialsInput);
+    const second = await callTool<Materials>(compute, { ...materialsInput, lengthM: 6, widthM: 5 });
+    expect(second.data.tile.boxes).not.toBe(first.data.tile.boxes);
+    const stale = await callTool(createBuildQuoteTool(deps), { lines: [{ sku: "T1", quantity: first.data.tile.boxes }] });
+    expect(stale).toMatchObject({ status: "needs_review", missing: [{ field: "quantity:T1", reason: expect.stringContaining("no coincide") }] });
+  });
+
+  it("accepts the sum of two surfaces calculated in the same turn", async () => {
+    const deps = { ...makeToolDeps(), quantities: createQuantityLedger() };
+    const compute = createComputeMaterialsTool(deps);
+    const a = await callTool<Materials>(compute, materialsInput);
+    const b = await callTool<Materials>(compute, { ...materialsInput, lengthM: 2, widthM: 2, tileSku: "T3" });
+    const quote = await callTool(createBuildQuoteTool(deps), {
+      lines: [
+        { sku: "T1", quantity: a.data.tile.boxes },
+        { sku: "T3", quantity: b.data.tile.boxes },
+        { sku: "A1", quantity: a.data.adhesive.bags + b.data.adhesive.bags },
+        { sku: "G1", quantity: a.data.grout.units + b.data.grout.units },
+      ],
+    });
+    expect(quote).toMatchObject({ status: "ok" });
+  });
+});

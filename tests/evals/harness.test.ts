@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { runTurn } from "@/evals/harness";
 import { SCENARIOS } from "@/evals/scenarios";
 import { scoreTurn } from "@/evals/score";
-import { createScriptedDemoModel } from "@/lib/chat/scripted-model";
+import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
+import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
 
 const usage = {
   inputTokens: { total: 0, noCache: 0, cacheRead: undefined, cacheWrite: undefined },
@@ -64,5 +65,16 @@ describe("eval harness", () => {
     expect(SCENARIOS).toHaveLength(12);
     expect(new Set(SCENARIOS.map((s) => s.id)).size).toBe(12);
     expect(SCENARIOS.filter((s) => s.mode === "keyword").length).toBeGreaterThan(0);
+  });
+});
+
+describe("eval harness quantity guard", () => {
+  it("hands the tools the conversation's ledger, so an invented quantity comes back needs_review", async () => {
+    const model = scriptedModel([toolTurn([{ toolName: "buildQuote", input: { lines: [{ sku: DEMO_SKUS.tile, quantity: 99 }] } }]), textTurn("Listo.")]);
+    const record = await runTurn([], "Cotiza 99 cajas", "keyword", model);
+    expect(record.error).toBeNull();
+    const quote = record.messages.at(-1)!.parts.find((p) => p.type === "tool-buildQuote") as { output?: { status: string; missing?: { field: string }[] } };
+    expect(quote.output?.status).toBe("needs_review");
+    expect(quote.output?.missing?.map((m) => m.field)).toContain(`quantity:${DEMO_SKUS.tile}`);
   });
 });

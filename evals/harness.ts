@@ -42,7 +42,7 @@ function chatDeps(mode: Scenario["mode"], model: LanguageModel | undefined, offl
   const generous = { perIpPer10Min: 1_000, perIpPerDay: 1_000, globalDailyCap: 1_000, globalPerMinuteCap: 1_000 };
   return {
     model,
-    getTools: () => createTools(deps),
+    getTools: (extra) => createTools({ ...deps, ...extra }),
     limits: createMemoryGuardLimits({ ...DEFAULT_GUARD_CONFIG, ...generous }),
     isBot: async () => false,
   };

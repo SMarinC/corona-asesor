@@ -1,6 +1,7 @@
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bathroomConversation } from "@/tests/fixtures/ui-messages";
 import { createTools } from "@/lib/agent/tools";
 import { type ChatDeps, handleChat } from "@/lib/chat/handler";
 import { createMemoryGuardLimits, DEFAULT_GUARD_CONFIG, type GuardConfig } from "@/lib/guard/rate-limit";
@@ -23,7 +24,7 @@ function makeDeps(overrides: Partial<ChatDeps> = {}, config: Partial<GuardConfig
   const model = scriptedModel([textTurn("Hola, ¿qué espacio quieres renovar?")]);
   const deps: ChatDeps = {
     model,
-    getTools: () => createTools(makeToolDeps()),
+    getTools: (extra) => createTools({ ...makeToolDeps(), ...extra }),
     limits: createMemoryGuardLimits({ ...DEFAULT_GUARD_CONFIG, ...config }),
     isBot: async () => false,
     newRequestId: () => "req-1",
@@ -291,5 +292,19 @@ describe("handleChat", () => {
     expect(body).toContain("Listo.");
     expect(jsonLines(warnSpy)).toContainEqual(expect.objectContaining({ event: "global_cap_record_failed", requestId: "req-1", step: 1, message: "redis down" }));
     await vi.waitFor(() => expect(jsonLines(logSpy)).toContainEqual(expect.objectContaining({ event: "chat_turn", outcome: "ok", steps: 2 })));
+  });
+
+  it("replays the history's calculations into the quote guard: a re-quote of computed quantities stays ok", async () => {
+    const history = bathroomConversation();
+    const quote = history[1].parts.find((p) => p.type === "tool-buildQuote") as { input: { lines: unknown[] } };
+    const { deps } = makeDeps({
+      model: scriptedModel([toolTurn([{ toolName: "buildQuote", input: { lines: quote.input.lines } }]), textTurn("Listo.")]),
+      getTools: (extra) => createTools({ ...makeToolDeps(), ...extra }),
+    });
+    const res = await handleChat(chatRequest([...history, user("Vuelve a cotizar")]), deps);
+    const body = await res.text();
+    expect(body).toContain("Listo.");
+    expect(body).not.toContain("quantity:");
+    expect(body).toContain("\"status\":\"ok\"");
   });
 });

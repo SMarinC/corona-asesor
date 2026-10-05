@@ -140,6 +140,19 @@ describe("deriveProject", () => {
     expect(fields.filter((field) => field === "quantity:G1")).toHaveLength(1);
   });
 
+  it("keeps the server's quantity reason when the full local history says the line is computed (trimmed server history)", () => {
+    const conversation = bathroomConversation();
+    const quotePart = conversation[1].parts.find((p) => p.type === "tool-buildQuote") as { output: { status: string; missing?: unknown[] } };
+    quotePart.output = {
+      ...quotePart.output,
+      status: "needs_review",
+      missing: [{ field: "quantity:G1", reason: "La cantidad de Boquilla (1) no salió de computeMaterials." }],
+    };
+    const project = deriveProject(conversation);
+    expect(project.quote?.lineChecks.G1).toBe("computed");
+    expect(project.review).toEqual([{ tool: "buildQuote", field: "quantity:G1", reason: "La cantidad de Boquilla (1) no salió de computeMaterials." }]);
+  });
+
   it("marks every line not_computed when the quote has no calculation at all", () => {
     const deps = makeToolDeps();
     const input = { lines: [{ sku: "T1", quantity: 5 }, { sku: "A1", quantity: 2 }] };

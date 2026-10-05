@@ -133,8 +133,7 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
         const output = part.output;
         state = { ...state, quote: { data: output.data, needsReview: output.status === "needs_review", stale: false, lineChecks: {} } };
         quoteCalcs = ledger.takeForQuote();
-        // Quantity flags from the server guard are recomputed below as lineChecks (which also know about staleness).
-        quoteReview = output.status === "needs_review" ? reviewFrom("buildQuote", output.missing.filter((m) => !m.field.startsWith("quantity:"))) : [];
+        quoteReview = output.status === "needs_review" ? reviewFrom("buildQuote", output.missing) : [];
       }
     }
   }
@@ -157,6 +156,11 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
       lineReview.push({ tool: "buildQuote", field: `quantity:${line.sku}`, reason: `La cantidad de ${line.name} no coincide con el cálculo de materiales.` });
     }
   }
+
+  // The panel's own line checks win over the server's flag for the same line; a server flag the panel cannot
+  // reproduce (the server saw a trimmed history) is kept, so the badge always has a reason.
+  const lineFields = new Set(lineReview.map((item) => item.field));
+  quoteReview = quoteReview.filter((item) => !(item.field.startsWith("quantity:") && lineFields.has(item.field)));
 
   return {
     ...state,

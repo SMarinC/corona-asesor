@@ -15,7 +15,7 @@ export interface ChatDeps {
   /** Defaults to Gemini; tests inject a mock. */
   model?: LanguageModel;
   /** Lazy, so rejected requests never load the catalog. `extra` carries this conversation's quantity ledger. */
-  getTools: (extra?: Pick<ToolDeps, "quantities">) => CoronaTools;
+  getTools: (extra: Pick<ToolDeps, "quantities">) => CoronaTools;
   limits: GuardLimits;
   isBot: () => Promise<boolean>;
   newRequestId?: () => string;

@@ -19,7 +19,7 @@ async function runTurn(messages: CoronaUIMessage[]): Promise<CoronaUIMessage> {
   const deps = {
     model: createScriptedDemoModel({ delayMs: 0 }),
     // As in production: the handler hands buildQuote this conversation's quantity ledger.
-    getTools: (extra?: Pick<ToolDeps, "quantities">) => createTools({ ...getToolDeps(), ...extra }),
+    getTools: (extra: Pick<ToolDeps, "quantities">) => createTools({ ...getToolDeps(), ...extra }),
     limits: createMemoryGuardLimits(DEFAULT_GUARD_CONFIG),
     isBot: async () => false,
   };
