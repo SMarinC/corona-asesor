@@ -15,7 +15,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "data:build": "tsx scripts/build-catalog.ts",
-    "data:embed": "tsx --env-file=.env.local scripts/embed-sheets.ts"
+    "data:embed": "tsx --env-file=.env.local scripts/embed-sheets.ts",
+    "evals": "tsx --env-file-if-exists=.env.local evals/run.ts",
+    "evals:embedding": "tsx --env-file-if-exists=.env.local evals/check-embedding.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.87",

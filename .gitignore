@@ -21,3 +21,6 @@ data/source/
 .vscode/
 .idea/
 npm-debug.log*
+
+# scripted eval dry runs (the real report lives in evals/report.md)
+evals/out/
