@@ -49,3 +49,34 @@ describe("createQuantityLedger", () => {
     expect(ledger.takeForQuote()).toEqual([floor, wall]);
   });
 });
+
+describe("createQuantityLedger: per-tile carry-forward", () => {
+  it("keeps the floor's calculation when only the wall is calculated before the next quote", () => {
+    const ledger = createQuantityLedger();
+    ledger.recordCalculation("T1", floor);
+    ledger.takeForQuote();
+    ledger.recordCalculation("T2", wall);
+    const calcs = ledger.takeForQuote();
+    expect(calcs).toEqual([floor, wall]);
+    expect(checkQuoteQuantities(calcs, [{ sku: "T1", quantity: 5 }, { sku: "T2", quantity: 7 }, { sku: "A1", quantity: 5 }])).toEqual({
+      T1: "computed",
+      T2: "computed",
+      A1: "computed",
+    });
+  });
+
+  it("replaces a recomputed tile, so the superseded value is caught", () => {
+    const ledger = createQuantityLedger();
+    ledger.recordCalculation("T1", floor);
+    ledger.takeForQuote();
+    ledger.recordCalculation("T1", { ...floor, tile: { sku: "T1", boxes: 9 } });
+    expect(checkQuoteQuantities(ledger.takeForQuote(), [{ sku: "T1", quantity: 5 }])).toEqual({ T1: "differs" });
+  });
+
+  it("still flags an invented line added to a re-quote", () => {
+    const ledger = createQuantityLedger();
+    ledger.recordCalculation("T1", floor);
+    ledger.takeForQuote();
+    expect(checkQuoteQuantities(ledger.takeForQuote(), [{ sku: "T1", quantity: 5 }, { sku: "G9", quantity: 2 }])).toEqual({ T1: "computed", G9: "not_computed" });
+  });
+});

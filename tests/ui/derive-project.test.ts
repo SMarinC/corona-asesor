@@ -153,6 +153,35 @@ describe("deriveProject", () => {
     expect(project.review).toEqual([{ tool: "buildQuote", field: "quantity:G1", reason: "La cantidad de Boquilla (1) no salió de computeMaterials." }]);
   });
 
+  it("keeps the floor's calculation when a later quote adds a wall, and catches a recomputed floor", () => {
+    const deps = makeToolDeps();
+    const floor = { lengthM: 3, widthM: 2, tileSku: "T1", adhesiveSku: "A1", groutSku: "G1", jointWidthMm: 3 };
+    const wall = { lengthM: 2, widthM: 2, tileSku: "T3", adhesiveSku: "A1", groutSku: "G1", jointWidthMm: 3 };
+    const bigger = { ...floor, lengthM: 6, widthM: 5 };
+    const run = (input: typeof floor) => {
+      const result = executeComputeMaterials(deps, input);
+      if (result.status !== "ok") throw new Error("fixture: calculation should be ok");
+      return { result, part: toolPart("computeMaterials", input, result) };
+    };
+    const f = run(floor);
+    const w = run(wall);
+    const b = run(bigger);
+    const quote = (lines: { sku: string; quantity: number }[]) => toolPart("buildQuote", { lines }, executeBuildQuote(deps, { lines }));
+    const floorLines = [{ sku: "T1", quantity: f.result.data.tile.boxes }];
+    const bothLines = [
+      ...floorLines,
+      { sku: "T3", quantity: w.result.data.tile.boxes },
+      { sku: "A1", quantity: f.result.data.adhesive!.bags + w.result.data.adhesive!.bags },
+    ];
+    const both = deriveProject([assistantMessage([f.part, quote(floorLines), w.part, quote(bothLines)])]);
+    expect(both.quote?.lineChecks).toEqual({ T1: "computed", T3: "computed", A1: "computed" });
+    expect(both.review).toEqual([]);
+
+    const old = deriveProject([assistantMessage([f.part, quote(floorLines), b.part, quote(floorLines)])]);
+    expect(old.quote?.lineChecks).toEqual({ T1: "differs" });
+    expect(old.review.map((r) => r.field)).toEqual(["quantity:T1"]);
+  });
+
   it("marks every line not_computed when the quote has no calculation at all", () => {
     const deps = makeToolDeps();
     const input = { lines: [{ sku: "T1", quantity: 5 }, { sku: "A1", quantity: 2 }] };

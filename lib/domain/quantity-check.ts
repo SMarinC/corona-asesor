@@ -31,9 +31,9 @@ export function checkQuoteQuantities(calcs: CalcQuantities[], lines: { sku: stri
 }
 
 /**
- * The calculations a conversation's quotes are checked against. A quote is checked against the calculations
- * completed since the previous quote (a later call for the same tile replaces an earlier one: last call wins);
- * a re-quote with no new calculation keeps the previous set.
+ * The calculations a conversation's quotes are checked against: the latest one per tile. A later call for the same
+ * tile replaces the earlier one (last call wins, so a superseded what-if is caught); tiles not recalculated since
+ * the previous quote keep their calculation, so a re-quote with no new calculation keeps the full set.
  */
 export interface QuantityLedger {
   recordCalculation(tileSku: string, quantities: CalcQuantities): void;
@@ -45,15 +45,16 @@ export interface QuantityLedger {
 
 export function createQuantityLedger(): QuantityLedger {
   let pending: { tileSku: string; quantities: CalcQuantities }[] = [];
-  let forQuote: CalcQuantities[] = [];
+  // The latest calculation per tile that any quote so far has been checked against.
+  const forQuote = new Map<string, CalcQuantities>();
   return {
     recordCalculation(tileSku, quantities) {
       pending = [...pending.filter((call) => call.tileSku !== tileSku), { tileSku, quantities }];
     },
     takeForQuote() {
-      if (pending.length > 0) forQuote = pending.map((call) => call.quantities);
+      for (const call of pending) forQuote.set(call.tileSku, call.quantities);
       pending = [];
-      return forQuote;
+      return [...forQuote.values()];
     },
     hasPendingCalculations: () => pending.length > 0,
   };

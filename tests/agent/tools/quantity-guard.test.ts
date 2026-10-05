@@ -97,3 +97,28 @@ describe("buildQuote quantity guard: what-ifs and several surfaces", () => {
     expect(quote).toMatchObject({ status: "ok" });
   });
 });
+
+describe("buildQuote quantity guard: floor, then wall in a later quote", () => {
+  type Materials = { data: { tile: { boxes: number }; adhesive: { bags: number }; grout: { units: number } } };
+
+  it("checks the second quote against both surfaces, and still catches a recomputed floor", async () => {
+    const deps = { ...makeToolDeps(), quantities: createQuantityLedger() };
+    const compute = createComputeMaterialsTool(deps);
+    const quoteTool = createBuildQuoteTool(deps);
+    const floor = await callTool<Materials>(compute, materialsInput);
+    expect(await callTool(quoteTool, { lines: [{ sku: "T1", quantity: floor.data.tile.boxes }] })).toMatchObject({ status: "ok" });
+    const wall = await callTool<Materials>(compute, { ...materialsInput, lengthM: 2, widthM: 2, tileSku: "T3" });
+    const both = await callTool(quoteTool, {
+      lines: [
+        { sku: "T1", quantity: floor.data.tile.boxes },
+        { sku: "T3", quantity: wall.data.tile.boxes },
+        { sku: "A1", quantity: floor.data.adhesive.bags + wall.data.adhesive.bags },
+      ],
+    });
+    expect(both).toMatchObject({ status: "ok" });
+    const bigger = await callTool<Materials>(compute, { ...materialsInput, lengthM: 6, widthM: 5 });
+    expect(bigger.data.tile.boxes).not.toBe(floor.data.tile.boxes);
+    const old = await callTool(quoteTool, { lines: [{ sku: "T1", quantity: floor.data.tile.boxes }] });
+    expect(old).toMatchObject({ status: "needs_review", missing: [{ field: "quantity:T1" }] });
+  });
+});
