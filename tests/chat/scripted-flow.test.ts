@@ -2,6 +2,7 @@ import { DefaultChatTransport, readUIMessageStream } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
 import { createTools, getToolDeps } from "@/lib/agent/tools";
+import type { ToolDeps } from "@/lib/agent/tools/deps";
 import { handleChat } from "@/lib/chat/handler";
 import { createProductionChatDeps, scriptedModelEnabled } from "@/lib/chat/production";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
@@ -17,7 +18,8 @@ async function runTurn(messages: CoronaUIMessage[]): Promise<CoronaUIMessage> {
   vi.spyOn(console, "log").mockImplementation(() => {});
   const deps = {
     model: createScriptedDemoModel({ delayMs: 0 }),
-    getTools: () => createTools(getToolDeps()),
+    // As in production: the handler hands buildQuote this conversation's quantity ledger.
+    getTools: (extra?: Pick<ToolDeps, "quantities">) => createTools({ ...getToolDeps(), ...extra }),
     limits: createMemoryGuardLimits(DEFAULT_GUARD_CONFIG),
     isBot: async () => false,
   };
@@ -54,6 +56,9 @@ describe("scripted demo turn through the real handler and tools", () => {
     expect(project.quote?.lineChecks).toEqual({ [DEMO_SKUS.tile]: "computed", [DEMO_SKUS.adhesive]: "computed", [DEMO_SKUS.grout]: "computed" });
     expect(project.quote?.data).toMatchObject({ total: 330012, withinBudget: true });
     expect(project.review).toEqual([]);
+    // The server-side guard saw the same-turn calculation, so the quote itself is clean.
+    const quotePart = assistant.parts.find((p) => p.type === "tool-buildQuote") as { output: { status: string } };
+    expect(quotePart.output.status).toBe("ok");
 
     // Every id the scripted answer cites was returned by a tool in this turn.
     const text = assistant.parts.flatMap((p) => (p.type === "text" ? [p.text] : [])).join("");

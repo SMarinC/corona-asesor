@@ -17,7 +17,7 @@ export async function createProductionChatDeps(env: Env = process.env): Promise<
   if (scripted) log("warn", "scripted_model_active", { reason: "CORONA_SCRIPTED_MODEL=1" });
   return {
     model: scripted ? (await import("./scripted-model")).createScriptedDemoModel() : undefined,
-    getTools: () => createTools(getToolDeps()),
+    getTools: (extra) => createTools({ ...getToolDeps(), ...extra }),
     limits: createGuardLimits(readGuardConfig(env)),
     isBot: async () => (await checkBotId()).isBot,
   };

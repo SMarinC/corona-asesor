@@ -1,6 +1,9 @@
 import { createAgentUIStreamResponse, InvalidToolInputError, type LanguageModel, NoSuchToolError, safeValidateUIMessages } from "ai";
 import { createCoronaAgent, type CoronaUIMessage } from "@/lib/agent/agent";
 import type { CoronaTools } from "@/lib/agent/tools";
+import type { ToolDeps } from "@/lib/agent/tools/deps";
+import { seedQuantityLedger } from "@/lib/agent/tools/quantity-history";
+import { createQuantityLedger } from "@/lib/domain/quantity-check";
 import { type ChatErrorCode, errorResponse, streamErrorCode } from "@/lib/guard/errors";
 import { parseChatRequest } from "@/lib/guard/input";
 import { clientIp, hashIp } from "@/lib/guard/ip";
@@ -11,8 +14,8 @@ import { createTurnLogger } from "./turn-log";
 export interface ChatDeps {
   /** Defaults to Gemini; tests inject a mock. */
   model?: LanguageModel;
-  /** Lazy, so rejected requests never load the catalog. */
-  getTools: () => CoronaTools;
+  /** Lazy, so rejected requests never load the catalog. `extra` carries this conversation's quantity ledger. */
+  getTools: (extra?: Pick<ToolDeps, "quantities">) => CoronaTools;
   limits: GuardLimits;
   isBot: () => Promise<boolean>;
   newRequestId?: () => string;
@@ -51,14 +54,17 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
 
   let tools: CoronaTools;
   let validated: Awaited<ReturnType<typeof safeValidateUIMessages<CoronaUIMessage>>>;
+  // buildQuote checks its quantities against the computeMaterials results of this conversation.
+  const quantities = createQuantityLedger();
   try {
-    tools = deps.getTools();
+    tools = deps.getTools({ quantities });
     validated = await safeValidateUIMessages<CoronaUIMessage>({ messages: parsed.messages, tools });
   } catch (error) {
     log("error", "chat_unhandled", { requestId, message: errorMessage(error) });
     return errorResponse("model_error");
   }
   if (!validated.success) return reject("invalid_input", "ui_message_validation");
+  seedQuantityLedger(quantities, validated.data);
 
   const turn = createTurnLogger({ requestId, ipHash });
   const agent = createCoronaAgent({

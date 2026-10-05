@@ -203,5 +203,10 @@ export const createComputeMaterialsTool = (deps: ToolDeps) =>
     description:
       "Calcula para un espacio rectangular: área con desperdicio, cajas de revestimiento, kg y bultos de pegante, y kg y unidades de boquilla. Usa datos del catálogo; si falta uno (m² por caja, rendimiento o peso del bulto) acepta un valor citado de una ficha técnica y lo verifica. Devuelve needs_review con lo que falte.",
     inputSchema: computeMaterialsInput,
-    execute: (input) => runTool("computeMaterials", () => executeComputeMaterials(deps, input)),
+    execute: (input) =>
+      runTool("computeMaterials", () => {
+        const result = executeComputeMaterials(deps, input);
+        if (result.status !== "error") deps.quantities?.recordCalculation(input.tileSku, result.data);
+        return result;
+      }),
   });

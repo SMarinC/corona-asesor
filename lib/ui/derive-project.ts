@@ -5,7 +5,9 @@ import type { QuoteData } from "@/lib/agent/tools/build-quote";
 import type { MissingField } from "@/lib/agent/tools/result";
 import { summarizeTile, type TileSummary } from "@/lib/agent/tools/summaries";
 import type { AreaResult } from "@/lib/domain/calculations";
+import { type CalcQuantities, checkQuoteQuantities, createQuantityLedger, type LineCheck } from "@/lib/domain/quantity-check";
 import { citationIdsIn } from "./citations";
+import { tileMismatch } from "./project-view";
 import { isToolPart, isToolPartOf, type ToolName } from "./tool-parts";
 
 export interface ProjectSpace extends AreaResult {
@@ -27,8 +29,7 @@ export interface ProjectMaterials {
   grout: GroutQuantity | null;
 }
 
-/** How a quote line's quantity relates to what computeMaterials returned for that SKU. */
-export type LineCheck = "computed" | "differs" | "not_computed";
+export type { LineCheck };
 
 export interface ProjectQuote {
   data: Partial<QuoteData>;
@@ -86,10 +87,9 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
   let quoteReview: ReviewItem[] = [];
   let toolCalls = 0;
   let compatibilityReview: ReviewItem[] = [];
-  // Calculations completed since the previous quote, and the set the latest quote is checked against.
-  // A later call for the same tile replaces the earlier one (last call wins); different tiles accumulate.
-  let pending: { tileSku: string; data: Partial<MaterialsData> }[] = [];
-  let quoteCalcs: Partial<MaterialsData>[] = [];
+  // The same ledger buildQuote's server-side guard uses, so the panel and the tool agree on every line.
+  const ledger = createQuantityLedger();
+  let quoteCalcs: CalcQuantities[] = [];
 
   for (const message of messages) {
     if (message.role !== "assistant") continue;
@@ -110,7 +110,7 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
         tileSku = part.input.tileSku;
         if (data.area) state = { ...state, space: { ...data.area, lengthM: part.input.lengthM, widthM: part.input.widthM } };
         state = { ...state, materials: { tile: data.tile ?? null, adhesive: data.adhesive ?? null, grout: data.grout ?? null } };
-        pending = [...pending.filter((call) => call.tileSku !== part.input.tileSku), { tileSku: part.input.tileSku, data }];
+        ledger.recordCalculation(part.input.tileSku, data);
         materialsReview = output.status === "needs_review" ? reviewFrom("computeMaterials", output.missing) : [];
       } else if (isToolPartOf(part, "checkCompatibility") && part.output.status === "ok") {
         const { data } = part.output;
@@ -132,21 +132,19 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
       } else if (isToolPartOf(part, "buildQuote") && part.output.status !== "error") {
         const output = part.output;
         state = { ...state, quote: { data: output.data, needsReview: output.status === "needs_review", stale: false, lineChecks: {} } };
-        // A quote is checked against the calculations since the previous quote; a re-quote with none keeps the previous set.
-        if (pending.length > 0) quoteCalcs = pending.map((call) => call.data);
-        pending = [];
-        quoteReview = output.status === "needs_review" ? reviewFrom("buildQuote", output.missing) : [];
+        quoteCalcs = ledger.takeForQuote();
+        // Quantity flags from the server guard are recomputed below as lineChecks (which also know about staleness).
+        quoteReview = output.status === "needs_review" ? reviewFrom("buildQuote", output.missing.filter((m) => !m.field.startsWith("quantity:"))) : [];
       }
     }
   }
 
-  const quote = state.quote ? { ...withLineChecks(state.quote, quoteCalcs), stale: pending.length > 0 } : null;
-  const materialsTile = state.materials?.tile?.sku;
-  const checkedTile = state.compatibility?.products.tile.sku;
-  const tileMismatchReview: ReviewItem[] =
-    materialsTile && checkedTile && materialsTile !== checkedTile
-      ? [{ tool: "checkCompatibility", field: "tile_mismatch", reason: "La compatibilidad se verificó con otro revestimiento; pide verificar el revestimiento cotizado." }]
-      : [];
+  const quote = state.quote
+    ? { ...state.quote, lineChecks: checkQuoteQuantities(quoteCalcs, state.quote.data.lines ?? []), stale: ledger.hasPendingCalculations() }
+    : null;
+  const tileMismatchReview: ReviewItem[] = tileMismatch(state)
+    ? [{ tool: "checkCompatibility", field: "tile_mismatch", reason: "La compatibilidad se verificó con otro revestimiento; pide verificar el revestimiento cotizado." }]
+    : [];
   const staleReview: ReviewItem[] = quote?.stale
     ? [{ tool: "buildQuote", field: "stale", reason: "La cotización es anterior al último cálculo de materiales; pide una nueva cotización." }]
     : [];
@@ -168,21 +166,4 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
     citations: [...citations],
     toolCalls,
   };
-}
-
-function withLineChecks(quote: ProjectQuote, calcs: Partial<MaterialsData>[]): ProjectQuote {
-  const computed = new Map<string, number[]>();
-  const add = (sku: string, value: number) => computed.set(sku, [...(computed.get(sku) ?? []), value]);
-  for (const calc of calcs) {
-    if (calc.tile) add(calc.tile.sku, calc.tile.boxes);
-    if (calc.adhesive) add(calc.adhesive.sku, calc.adhesive.bags);
-    if (calc.grout) add(calc.grout.sku, calc.grout.units);
-  }
-  const lineChecks: Record<string, LineCheck> = {};
-  for (const line of quote.data.lines ?? []) {
-    const values = computed.get(line.sku);
-    const sum = values?.reduce((a, b) => a + b, 0);
-    lineChecks[line.sku] = values === undefined ? "not_computed" : values.includes(line.quantity) || sum === line.quantity ? "computed" : "differs";
-  }
-  return { ...quote, lineChecks };
 }

@@ -1,8 +1,9 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { checkQuoteQuantities } from "@/lib/domain/quantity-check";
 import { buildQuote, type Quote, type QuoteLine, type QuoteLineInput } from "@/lib/domain/quote";
 import type { ToolDeps } from "./deps";
-import { needsReview, ok, runTool, type ToolResult, toolError } from "./result";
+import { type MissingField, needsReview, ok, runTool, type ToolResult, toolError } from "./result";
 import { PRICE_UNIT } from "./summaries";
 
 export const buildQuoteInput = z.object({
@@ -57,13 +58,22 @@ export function executeBuildQuote(deps: ToolDeps, input: BuildQuoteInput): ToolR
     mergedDuplicates: merged.duplicates,
     priceNote: PRICE_NOTE,
   };
-  if (quote.missingPrices.length > 0) {
-    return needsReview(
-      data,
-      quote.missingPrices.map((sku) => ({ field: `price:${sku}`, reason: `El catálogo no tiene precio para ${sku}; el total no lo incluye.` })),
-    );
-  }
-  return ok(data);
+  const missing: MissingField[] = quote.missingPrices.map((sku) => ({
+    field: `price:${sku}`,
+    reason: `El catálogo no tiene precio para ${sku}; el total no lo incluye.`,
+  }));
+  if (deps.quantities) missing.push(...quantityFlags(data.lines, checkQuoteQuantities(deps.quantities.takeForQuote(), merged.lines)));
+  return missing.length > 0 ? needsReview(data, missing) : ok(data);
+}
+
+/** Lines whose quantity no computeMaterials call produced: the quote is still priced, but the model must say so. */
+function quantityFlags(lines: QuoteLineData[], checks: ReturnType<typeof checkQuoteQuantities>): MissingField[] {
+  return lines.flatMap((line) => {
+    const check = checks[line.sku];
+    if (check === "computed") return [];
+    const why = check === "differs" ? "no coincide con el último cálculo de computeMaterials" : "no salió de computeMaterials";
+    return [{ field: `quantity:${line.sku}`, reason: `La cantidad de ${line.name} (${line.quantity}) ${why}: preséntala como "Requiere revisión" o calcula los materiales antes de cotizar.` }];
+  });
 }
 
 export const createBuildQuoteTool = (deps: ToolDeps) =>

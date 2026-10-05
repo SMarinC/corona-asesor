@@ -128,6 +128,18 @@ describe("deriveProject", () => {
     expect(wrong.quote?.lineChecks.G1).toBe("differs");
   });
 
+  it("lists a quantity once when buildQuote's guard already flagged it", () => {
+    const conversation = bathroomConversation({ quoteLines: [{ sku: "T1", quantity: 5 }, { sku: "A1", quantity: 2 }, { sku: "G1", quantity: 7 }] });
+    const quotePart = conversation[1].parts.find((p) => p.type === "tool-buildQuote") as { output: { status: string; missing?: unknown[] } };
+    quotePart.output = {
+      ...quotePart.output,
+      status: "needs_review",
+      missing: [{ field: "quantity:G1", reason: "La cantidad de Boquilla (7) no coincide con el último cálculo de computeMaterials." }],
+    };
+    const fields = deriveProject(conversation).review.map((item) => item.field);
+    expect(fields.filter((field) => field === "quantity:G1")).toHaveLength(1);
+  });
+
   it("marks every line not_computed when the quote has no calculation at all", () => {
     const deps = makeToolDeps();
     const input = { lines: [{ sku: "T1", quantity: 5 }, { sku: "A1", quantity: 2 }] };
