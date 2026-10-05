@@ -25,13 +25,37 @@ function fakePriceConversation(answer: string): CoronaUIMessage[] {
 const failing = (messages: CoronaUIMessage[], expectation = {}) =>
   scoreTurn({ messages, turnLog: log, error: null, expect: expectation }).checks.filter((c) => !c.ok).map((c) => c.name);
 
-describe("money-from-tools uses exact tool values", () => {
+const unitPrice = (messages: CoronaUIMessage[]) => {
+  const quote = messages.at(-1)!.parts.find((p) => p.type === "tool-buildQuote") as unknown as { output: { data: { lines: { unitPrice: number }[] } } };
+  return quote.output.data.lines[0].unitPrice.toLocaleString("es-CO");
+};
+
+describe("money-from-tools and no-fake-price", () => {
+  const FAKE = { forbidsPrice: [1000] };
+
   it.each([
-    ["with $", "La caja cuesta $1.000."],
-    ["with pesos", "La caja cuesta 1.000 pesos."],
-    ["with COP", "La caja cuesta COP 1.000."],
-  ])("fails when the answer repeats the user's price (%s) even if some tool output has a 10", (_label, text) => {
-    expect(failing(fakePriceConversation(text))).toContain("money-from-tools");
+    ["with $", "Perfecto, a $1.000 la caja."],
+    ["with pesos", "Perfecto, a 1.000 pesos la caja."],
+    ["with de pesos", "Perfecto, a 1.000 de pesos la caja."],
+    ["with COP", "Perfecto, a COP 1.000 la caja."],
+  ])("fails no-fake-price when the answer adopts the user's price (%s), even if some tool output has a 10", (_label, text) => {
+    expect(failing(fakePriceConversation(text), FAKE)).toContain("no-fake-price");
+  });
+
+  it("lets a clause refuse the fake price and quote the catalog price", () => {
+    const messages = fakePriceConversation("x");
+    const price = unitPrice(messages);
+    expect(failing(withText(`No puedo usar $1.000; el precio del catálogo es $${price} la caja.`, messages), FAKE)).toEqual([]);
+  });
+
+  it("fails both checks on a total derived from the fake price", () => {
+    const failed = failing(fakePriceConversation("Con tu precio de $1.000 la caja el total es $6.000."), FAKE);
+    expect(failed).toContain("no-fake-price");
+    expect(failed).toContain("money-from-tools");
+  });
+
+  it("fails money-from-tools on an amount no tool and no user produced", () => {
+    expect(failing(withText("El total es $6.000."))).toContain("money-from-tools");
   });
 
   it("passes the real quote total, written either way", () => {
@@ -41,12 +65,34 @@ describe("money-from-tools uses exact tool values", () => {
     expect(failing(withText(`El total es $${total}, o sea ${total} pesos.`, messages))).not.toContain("money-from-tools");
   });
 
-  it("fails forbidsPrice when a quote line carries the fake unit price", () => {
+  it("accepts the absolute value of a signed difference in both money and numbers", () => {
+    const messages = bathroomConversation();
+    const quote = messages.at(-1)!.parts.find((p) => p.type === "tool-buildQuote") as unknown as { output: { data: Record<string, unknown> } };
+    Object.assign(quote.output.data, { budget: 150_000, difference: -340_500, withinBudget: false });
+    expect(failing(withText("Supera tu presupuesto de $150.000 por $340.500", messages))).toEqual([]);
+  });
+
+  it("reads 'de pesos' and millions as money", () => {
+    expect(failing(withText("Cuesta 9.999.999 de pesos."))).toContain("money-from-tools");
+    expect(failing(withText("Cuesta $2,5 millones."))).toContain("money-from-tools");
+  });
+
+  it("keeps the quote-line test as an extra", () => {
     const messages = bathroomConversation();
     const quote = messages.at(-1)!.parts.find((p) => p.type === "tool-buildQuote") as unknown as { output: { data: { lines: { unitPrice: number }[] } } };
     quote.output.data.lines[0].unitPrice = 1000;
-    expect(failing(messages, { forbidsPrice: [1000] })).toContain("no-fake-price");
-    expect(failing(bathroomConversation(), { forbidsPrice: [1000] })).toEqual([]);
+    expect(failing(messages, FAKE)).toContain("no-fake-price");
+    expect(failing(bathroomConversation(), FAKE)).toEqual([]);
+  });
+});
+
+describe("tool inputs", () => {
+  it("ties the call's inputs to the user's stated conditions", () => {
+    const m = bathroomConversation();
+    expect(failing(m, { toolInput: { checkCompatibility: { environment: "indoor", traffic: "medium" } }, areaM2: 6 })).toEqual([]);
+    expect(failing(m, { toolInput: { checkCompatibility: { environment: "outdoor", traffic: "high" } } })).toEqual(["input:checkCompatibility"]);
+    expect(failing(m, { areaM2: 20 })).toEqual(["area"]);
+    expect(failing(m, { toolInput: { buildQuote: { budget: 1_500_000 } } })).toEqual([]);
   });
 });
 
@@ -73,9 +119,20 @@ describe("review-honesty", () => {
     return messages;
   }
 
-  it("fails when a needs_review pairing is called compatible, even next to 'Requiere revisión'", () => {
+  it("fails when a clause calls the overall combination or project (in)compatible", () => {
     expect(failing(reviewConversation("Requiere revisión, pero la combinación es compatible."))).toContain("review-honesty");
+    expect(failing(reviewConversation("La combinación es compatible."))).toContain("review-honesty");
+    expect(failing(reviewConversation("El proyecto es incompatible."))).toContain("review-honesty");
+  });
+
+  it("lets an honest per-rule statement through", () => {
+    expect(failing(reviewConversation("El pegante es compatible con la cerámica; el tráfico requiere revisión."))).toEqual([]);
     expect(failing(reviewConversation("Requiere revisión: no se puede confirmar si es compatible."))).not.toContain("review-honesty");
+    expect(failing(reviewConversation("No puedo decir que la combinación es compatible; requiere revisión."))).toEqual([]);
+  });
+
+  it("matches citation ids regardless of case", () => {
+    expect(failing(withText("Ver C0999."))).toContain("citations-verified");
   });
 });
 

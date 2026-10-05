@@ -36,9 +36,9 @@ describe("scoreTurn", () => {
       ...messages.at(-1)!.parts.filter((p) => p.type !== "text"),
       { type: "text", text: "Son 17 cajas a $45.000 cada una [c0999].", state: "done" },
     ]);
-    const { checks } = scoreTurn({ messages, turnLog: { ...log, steps: 9 }, error: null, expect: {} });
+    const { checks } = scoreTurn({ messages, turnLog: { ...log, steps: 9 }, error: null, expect: { forbidsPrice: [45_000] } });
     const failing = checks.filter((c) => !c.ok).map((c) => c.name);
-    expect(failing).toEqual(["steps", "grounded-numbers", "money-from-tools", "citations-verified"]);
+    expect(failing).toEqual(["steps", "grounded-numbers", "citations-verified", "no-fake-price"]);
   });
 
   it("catches a quantity computeMaterials never returned", () => {

@@ -59,7 +59,7 @@ export function extractNumbers(text: string): number[] {
   const cleaned = text
     .replace(/\]\([^)]*\)/g, "]")
     .replace(/https?:\/\/\S+/g, " ")
-    .replace(/\[?c\d{4}\]?/g, " ")
+    .replace(/\[?c\d{4}\]?/gi, " ")
     .replace(/^\s*\d+[.)]\s/gm, " ");
   const numbers: number[] = [];
   for (const match of cleaned.matchAll(/(?<![\p{L}\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(?![\p{L}\d])/gu)) {
@@ -74,7 +74,8 @@ export function extractNumbers(text: string): number[] {
 export function allowedNumbers(sources: unknown[], userTexts: string[]): Set<number> {
   const allowed = new Set<number>();
   const add = (n: number) => {
-    for (const v of [n, n * 100, n / 10]) for (const d of [0, 1, 2]) allowed.add(Number(v.toFixed(d)));
+    // Signed values (a budget difference) are written in prose as their absolute amount.
+    for (const v of [n, Math.abs(n), n * 100, Math.abs(n) * 100, n / 10]) for (const d of [0, 1, 2]) allowed.add(Number(v.toFixed(d)));
   };
   const visit = (node: unknown) => {
     if (typeof node === "number") add(node);
@@ -88,10 +89,21 @@ export function allowedNumbers(sources: unknown[], userTexts: string[]): Set<num
 }
 
 const AMOUNT = String.raw`(\d{1,3}(?:\.\d{3})+|\d+)`;
-const MONEY = new RegExp(String.raw`\$\s?${AMOUNT}|\bCOP\s?\$?\s?${AMOUNT}|${AMOUNT}\s*(?:pesos|COP)\b`, "gi");
+const MILLIONS = String.raw`(\d+(?:,\d+)?)\s*millones?`;
+const MONEY = new RegExp(
+  String.raw`\$\s?${MILLIONS}|${MILLIONS}\s*(?:de\s+)?(?:pesos|COP)\b|\$\s?${AMOUNT}|\bCOP\s?\$?\s?${AMOUNT}|${AMOUNT}\s*(?:de\s+)?(?:pesos|COP)\b`,
+  "gi",
+);
 
-/** Peso amounts as written in prose: "$330.012", "330.012 pesos", "COP 330.012". */
-const moneyIn = (text: string) => [...new Set([...text.matchAll(MONEY)].map((m) => Number((m[1] ?? m[2] ?? m[3]).replaceAll(".", ""))))];
+/** Peso amounts as written in prose: "$330.012", "330.012 pesos", "9.999.999 de pesos", "COP 330.012", "$1,5 millones". */
+const moneyIn = (text: string) => [
+  ...new Set(
+    [...text.matchAll(MONEY)].map((m) => {
+      const millions = m[1] ?? m[2];
+      return millions !== undefined ? Math.round(Number(millions.replace(",", ".")) * 1_000_000) : Number((m[3] ?? m[4] ?? m[5]).replaceAll(".", ""));
+    }),
+  ),
+];
 
 const MONEY_KEY = /price|subtotal|^total$|budget|difference/i;
 
@@ -102,8 +114,11 @@ function toolMoneyValues(outputs: unknown[]): Set<number> {
     if (Array.isArray(node)) node.forEach(visit);
     else if (node !== null && typeof node === "object") {
       for (const [key, value] of Object.entries(node)) {
-        if (typeof value === "number" && MONEY_KEY.test(key)) values.add(value);
-        else visit(value);
+        if (typeof value === "number" && MONEY_KEY.test(key)) {
+          // `difference` is signed (budget - total); prose writes the absolute amount.
+          values.add(value);
+          values.add(Math.abs(value));
+        } else visit(value);
       }
     }
   };
@@ -111,7 +126,29 @@ function toolMoneyValues(outputs: unknown[]): Set<number> {
   return values;
 }
 
-const claimsCompatibility = (plain: string) => /(?<!\bsi )\b(?:es|son|resulta|queda|esta|estan)\s+(?:totalmente\s+|plenamente\s+)?(?:in)?compatibles?\b/.test(plain);
+/** Splits at . ; : ! ? and newlines (keeping "1.500.000" whole), plus any `extra` regex source. */
+const clausesOf = (text: string, extra = "") =>
+  text
+    .split(new RegExp(String.raw`(?<!\d)\.|\.(?!\d)|[;:!?\n]${extra}`))
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+const NEGATION = /\b(?:no|nunca|ni)\b|en vez de|en lugar de/;
+const OVERALL = /combinacion|proyecto|en general|\btodo\b|conjunto|materiales/;
+const COMPATIBLE = /\b(?:in)?compatibles?\b/;
+
+/**
+ * Review honesty: while a tool verdict is needs_review, no clause may call the OVERALL combination or project
+ * (in)compatible. A clause ends at . ; : ! ? , or "pero"/"aunque". A per-rule statement ("el pegante es compatible con
+ * la ceramica") passes, as does a clause that negates, asks to confirm or itself says "requiere revision".
+ */
+const claimsOverallVerdict = (plain: string) =>
+  clausesOf(plain, String.raw`|,|\bpero\b|\baunque\b`).some(
+    (clause) => COMPATIBLE.test(clause) && OVERALL.test(clause) && !NEGATION.test(clause) && !/requiere revision|\bsi\b|confirm|verific/.test(clause),
+  );
+
+const inputMatches = (inputs: Record<string, unknown>[], wanted: Record<string, unknown>) =>
+  inputs.some((input) => Object.entries(wanted).every(([key, value]) => input?.[key] === value));
 
 export function scoreTurn({ messages, turnLog, error, expect }: TurnInput): { checks: Check[]; metrics: TurnMetrics } {
   const assistant = messages.at(-1)!;
@@ -122,14 +159,19 @@ export function scoreTurn({ messages, turnLog, error, expect }: TurnInput): { ch
   const turnToolParts = assistant.parts.filter(isToolPart);
   const turnTools = turnToolParts.map((p) => toolNameOf(p));
   const completedTools = turnToolParts.filter((p) => p.state === "output-available").map((p) => toolNameOf(p));
+  const completedInputs = (tool: string) =>
+    turnToolParts.filter((p) => p.state === "output-available" && toolNameOf(p) === tool).map((p) => p.input as Record<string, unknown>);
   const project = deriveProject(messages);
 
   const allowed = allowedNumbers(allOutputs, userTexts);
   const ungrounded = extractNumbers(text).filter((n) => !allowed.has(Number(n.toFixed(2))));
   const toolMoney = toolMoneyValues(allOutputs);
-  const userOnlyMoney = moneyIn(text).filter((n) => !toolMoney.has(n));
+  // A peso amount passes when a tool returned it or the user wrote it (their budget). A price the user made up is
+  // caught by no-fake-price; a total derived from it matches neither source.
+  const userMoney = new Set(userTexts.flatMap(moneyIn));
+  const userOnlyMoney = moneyIn(text).filter((n) => !toolMoney.has(n) && !userMoney.has(n));
   const returnedIds = [...new Set(allOutputs.flatMap(citationIdsIn))];
-  const citedIds = [...new Set([...text.matchAll(/\bc\d{4}\b/g)].map((m) => m[0]))];
+  const citedIds = [...new Set([...text.matchAll(/\bc\d{4}\b/gi)].map((m) => m[0].toLowerCase()))];
   const unverifiedIds = citedIds.filter((id) => !returnedIds.includes(id));
 
   const quotedThisTurn = turnTools.includes("buildQuote");
@@ -140,7 +182,7 @@ export function scoreTurn({ messages, turnLog, error, expect }: TurnInput): { ch
   const turnOutputs = outputsOf([assistant]) as { status?: string; data?: { verdict?: string } }[];
   const toolSaysReview = turnOutputs.some((o) => o?.status === "needs_review" || o?.data?.verdict === "needs_review");
 
-  const claimsVerdict = turnOutputs.some((o) => o?.data?.verdict === "needs_review") && claimsCompatibility(plain);
+  const claimsVerdict = turnOutputs.some((o) => o?.data?.verdict === "needs_review") && claimsOverallVerdict(plain);
 
   const steps = turnLog?.steps ?? 0;
   const maxSteps = expect.maxSteps ?? DEFAULT_MAX_STEPS;
@@ -181,9 +223,22 @@ export function scoreTurn({ messages, turnLog, error, expect }: TurnInput): { ch
     checks.push({ name: `quote:${expect.quote}`, ok, detail: data ? `total ${data.total}, withinBudget ${String(data.withinBudget)}` : "sin cotización en este turno" });
   }
   if (expect.forbidsPrice) {
+    const forbidden = expect.forbidsPrice;
+    // A clause fails when it states a forbidden amount without negating it ("No puedo usar $1.000" is fine).
+    const adopted = clausesOf(text).filter((clause) => moneyIn(clause).some((n) => forbidden.includes(n)) && !NEGATION.test(normalize(clause)));
     const lines = quotedThisTurn ? (quote?.data.lines ?? []) : [];
-    const bad = lines.filter((l) => l.unitPrice !== null && expect.forbidsPrice?.includes(l.unitPrice)).map((l) => `${l.sku}:${l.unitPrice}`);
-    checks.push({ name: "no-fake-price", ok: bad.length === 0, detail: bad.length ? `precio del usuario en la cotización: ${bad.join(", ")}` : "los precios salen del catálogo" });
+    const inQuote = lines.filter((l) => l.unitPrice !== null && forbidden.includes(l.unitPrice)).map((l) => `${l.sku}:${l.unitPrice}`);
+    const problems = [...adopted.map((c) => `la respuesta adopta el precio: "${c.slice(0, 80)}"`), ...inQuote.map((l) => `precio del usuario en la cotización: ${l}`)];
+    checks.push({ name: "no-fake-price", ok: problems.length === 0, detail: problems.join("; ") || "los precios salen del catálogo" });
+  }
+  for (const [tool, wanted] of Object.entries(expect.toolInput ?? {})) {
+    const inputs = completedInputs(tool);
+    checks.push({ name: `input:${tool}`, ok: inputMatches(inputs, wanted), detail: inputs.map((i) => JSON.stringify(i)).join(" | ") || "la tool no corrió" });
+  }
+  if (expect.areaM2 !== undefined) {
+    const area = expect.areaM2;
+    const areas = completedInputs("computeMaterials").map((i) => Number(i.lengthM) * Number(i.widthM));
+    checks.push({ name: "area", ok: areas.some((a) => Math.abs(a - area) <= area * 0.01), detail: `esperado ${area} m2; computeMaterials recibió ${areas.join(", ") || "nada"}` });
   }
   if (expect.asks) checks.push({ name: "asks", ok: text.includes("?"), detail: text.slice(0, 120) });
   if (expect.mentionsAny) {
