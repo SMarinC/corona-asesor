@@ -1,0 +1,1211 @@
+{
+  "date": "2026-10-05",
+  "model": "gemini-3.5-flash-lite",
+  "promptVersion": "2026-10-03.1",
+  "results": [
+    {
+      "id": "bathroom-budget",
+      "title": "Baño húmedo con presupuesto",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "5 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "2 de 4 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:searchTiles",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "calls:computeMaterials",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "calls:checkCompatibility",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "calls:buildQuote",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "quote:within",
+              "ok": true,
+              "detail": "total 330012, withinBudget true"
+            },
+            {
+              "name": "input:checkCompatibility",
+              "ok": true,
+              "detail": "{\"tileSku\":\"555332501\",\"surface\":\"floor\",\"environment\":\"indoor\",\"wetArea\":true,\"traffic\":\"medium\",\"jointWidthMm\":3,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"}"
+            },
+            {
+              "name": "input:buildQuote",
+              "ok": true,
+              "detail": "{\"lines\":[{\"sku\":\"555332501\",\"quantity\":4},{\"sku\":\"901391501\",\"quantity\":2},{\"sku\":\"993051511\",\"quantity\":1}],\"budget\":1500000,\"projectSummary\":\"Piso de baño interior, zona húmeda, 3x2 m, tráfico medio, junta de 3 mm\",\"includeLinks\":true}"
+            },
+            {
+              "name": "area",
+              "ok": true,
+              "detail": "esperado 6 m2; computeMaterials recibió 6"
+            }
+          ],
+          "metrics": {
+            "steps": 5,
+            "durationMs": 6599,
+            "inputTokens": 30965,
+            "outputTokens": 772,
+            "tools": [
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "computeMaterials",
+              "checkCompatibility",
+              "buildQuote"
+            ],
+            "ungrounded": [],
+            "citedIds": [
+              "c0046",
+              "c0084"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0046",
+              "c0741",
+              "c0035",
+              "c0084"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "outdoor-terrace",
+      "title": "Terraza exterior",
+      "mode": "keyword",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "5 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "2 de 4 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:searchTiles",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "calls:searchSupplies",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "calls:computeMaterials",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "calls:checkCompatibility",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "calls:buildQuote",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "quote:within",
+              "ok": true,
+              "detail": "total 1326840, withinBudget true"
+            },
+            {
+              "name": "input:checkCompatibility",
+              "ok": true,
+              "detail": "{\"tileSku\":\"607962501\",\"surface\":\"floor\",\"environment\":\"outdoor\",\"wetArea\":true,\"traffic\":\"high\",\"jointWidthMm\":5,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"}"
+            },
+            {
+              "name": "input:buildQuote",
+              "ok": true,
+              "detail": "{\"lines\":[{\"sku\":\"607962501\",\"quantity\":13},{\"sku\":\"901391501\",\"quantity\":6},{\"sku\":\"993051511\",\"quantity\":3}],\"budget\":4000000,\"projectSummary\":\"Terraza exterior descubierta (4 x 5 m), tráfico alto, zona húmeda, junta 5 mm\"}"
+            },
+            {
+              "name": "area",
+              "ok": true,
+              "detail": "esperado 20 m2; computeMaterials recibió 20"
+            }
+          ],
+          "metrics": {
+            "steps": 5,
+            "durationMs": 5453,
+            "inputTokens": 31063,
+            "outputTokens": 656,
+            "tools": [
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "checkCompatibility",
+              "computeMaterials",
+              "buildQuote"
+            ],
+            "ungrounded": [],
+            "citedIds": [
+              "c0046",
+              "c0084"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0084",
+              "c0046",
+              "c0741",
+              "c0035"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "budget-too-low",
+      "title": "Presupuesto insuficiente",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "5 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "2 de 4 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:buildQuote",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "quote:over",
+              "ok": true,
+              "detail": "total 330012, withinBudget false"
+            },
+            {
+              "name": "input:buildQuote",
+              "ok": true,
+              "detail": "{\"lines\":[{\"sku\":\"555332501\",\"quantity\":4},{\"sku\":\"901391501\",\"quantity\":2},{\"sku\":\"993051001\",\"quantity\":1}],\"budget\":150000,\"projectSummary\":\"Revestimiento de piso para baño interior de 3 x 2 m, zona húmeda, tráfico medio, junta de 3 mm.\"}"
+            },
+            {
+              "name": "area",
+              "ok": true,
+              "detail": "esperado 6 m2; computeMaterials recibió 6"
+            }
+          ],
+          "metrics": {
+            "steps": 5,
+            "durationMs": 6496,
+            "inputTokens": 29270,
+            "outputTokens": 726,
+            "tools": [
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "checkCompatibility",
+              "computeMaterials",
+              "buildQuote"
+            ],
+            "ungrounded": [],
+            "citedIds": [
+              "c0046",
+              "c0084"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0084",
+              "c0046",
+              "c0741",
+              "c0035"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "missing-dimensions",
+      "title": "Faltan las medidas (debe preguntar y luego cotizar)",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "1 pasos (máx. 3)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "sin citas (0 ids devueltos por tools)"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "skips:computeMaterials",
+              "ok": true,
+              "detail": "ninguna tool"
+            },
+            {
+              "name": "skips:buildQuote",
+              "ok": true,
+              "detail": "ninguna tool"
+            },
+            {
+              "name": "asks",
+              "ok": true,
+              "detail": "¡Hola! Con mucho gusto te ayudo a planear el cambio de piso para tu cocina con los productos del catálogo de Corona. \n\nP"
+            }
+          ],
+          "metrics": {
+            "steps": 1,
+            "durationMs": 1877,
+            "inputTokens": 3611,
+            "outputTokens": 187,
+            "tools": [],
+            "ungrounded": [],
+            "citedIds": [],
+            "unverifiedIds": [],
+            "returnedIds": [],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "4 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "2 de 4 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:computeMaterials",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "calls:buildQuote",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "quote:no-budget",
+              "ok": true,
+              "detail": "total 871524, withinBudget null"
+            },
+            {
+              "name": "input:checkCompatibility",
+              "ok": true,
+              "detail": "{\"tileSku\":\"555332501\",\"surface\":\"floor\",\"environment\":\"indoor\",\"wetArea\":false,\"traffic\":\"medium\",\"jointWidthMm\":3,\"adhesiveSku\":\"901011501\",\"groutSku\":\"993051511\"}"
+            },
+            {
+              "name": "area",
+              "ok": true,
+              "detail": "esperado 12 m2; computeMaterials recibió 12"
+            }
+          ],
+          "metrics": {
+            "steps": 4,
+            "durationMs": 5665,
+            "inputTokens": 26276,
+            "outputTokens": 715,
+            "tools": [
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "computeMaterials",
+              "checkCompatibility",
+              "buildQuote"
+            ],
+            "ungrounded": [],
+            "citedIds": [
+              "c0035",
+              "c0084"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0759",
+              "c0035",
+              "c0076",
+              "c0084"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "wall-tiles",
+      "title": "Pared de cocina (sin regla de tráfico)",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": false,
+              "detail": "8 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": false,
+              "detail": "sin fuente: 269300"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": false,
+              "detail": "montos que no salieron de una tool: 269300"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "2 de 4 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:searchTiles",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → getProduct → searchTiles → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "calls:computeMaterials",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → getProduct → searchTiles → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "calls:checkCompatibility",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → getProduct → searchTiles → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "quote:no-budget",
+              "ok": true,
+              "detail": "total 397000, withinBudget null"
+            },
+            {
+              "name": "input:checkCompatibility",
+              "ok": true,
+              "detail": "{\"tileSku\":\"401072001\",\"surface\":\"wall\",\"environment\":\"indoor\",\"wetArea\":true,\"jointWidthMm\":2,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"} | {\"tileSku\":\"401072001.\",\"surface\":\"wall\",\"environment\":\"indoor\",\"wetArea\":true,\"jointWidthMm\":2,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"}"
+            },
+            {
+              "name": "area",
+              "ok": true,
+              "detail": "esperado 7.2 m2; computeMaterials recibió 7.199999999999999, 7.199999999999999"
+            }
+          ],
+          "metrics": {
+            "steps": 8,
+            "durationMs": 9297,
+            "inputTokens": 55656,
+            "outputTokens": 905,
+            "tools": [
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "computeMaterials",
+              "checkCompatibility",
+              "getProduct",
+              "searchTiles",
+              "computeMaterials",
+              "checkCompatibility",
+              "buildQuote"
+            ],
+            "ungrounded": [
+              269300
+            ],
+            "citedIds": [
+              "c0046",
+              "c0084"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0046",
+              "c0741",
+              "c0035",
+              "c0084"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "missing-m2-per-box",
+      "title": "Producto sin m² por caja en el catálogo",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "6 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "sin citas (7 ids devueltos por tools)"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "una tool pidió revisión"
+            },
+            {
+              "name": "calls:computeMaterials",
+              "ok": true,
+              "detail": "getProduct → searchTechnicalSheets → searchSupplies → checkCompatibility → searchSupplies → computeMaterials → searchTechnicalSheets → computeMaterials"
+            },
+            {
+              "name": "mentions",
+              "ok": true,
+              "detail": "requiere revision"
+            }
+          ],
+          "metrics": {
+            "steps": 6,
+            "durationMs": 7008,
+            "inputTokens": 47911,
+            "outputTokens": 627,
+            "tools": [
+              "getProduct",
+              "searchTechnicalSheets",
+              "searchSupplies",
+              "checkCompatibility",
+              "searchSupplies",
+              "computeMaterials",
+              "searchTechnicalSheets",
+              "computeMaterials"
+            ],
+            "ungrounded": [],
+            "citedIds": [],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0116",
+              "c0165",
+              "c0171",
+              "c0084",
+              "c0046",
+              "c0741",
+              "c0035"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "out-of-catalog",
+      "title": "Producto fuera del catálogo (redirigir con enlace)",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "2 pasos (máx. 3)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "sin citas (0 ids devueltos por tools)"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:getCompanyInfo",
+              "ok": true,
+              "detail": "getCompanyInfo"
+            },
+            {
+              "name": "skips:buildQuote",
+              "ok": true,
+              "detail": "getCompanyInfo"
+            },
+            {
+              "name": "mentions",
+              "ok": true,
+              "detail": "corona.co"
+            }
+          ],
+          "metrics": {
+            "steps": 2,
+            "durationMs": 2026,
+            "inputTokens": 8612,
+            "outputTokens": 121,
+            "tools": [
+              "getCompanyInfo"
+            ],
+            "ungrounded": [],
+            "citedIds": [],
+            "unverifiedIds": [],
+            "returnedIds": [],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "company-question",
+      "title": "Pregunta sobre la empresa",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "2 pasos (máx. 3)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "sin citas (0 ids devueltos por tools)"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:getCompanyInfo",
+              "ok": true,
+              "detail": "getCompanyInfo"
+            },
+            {
+              "name": "skips:buildQuote",
+              "ok": true,
+              "detail": "getCompanyInfo"
+            }
+          ],
+          "metrics": {
+            "steps": 2,
+            "durationMs": 2085,
+            "inputTokens": 7638,
+            "outputTokens": 88,
+            "tools": [
+              "getCompanyInfo"
+            ],
+            "ungrounded": [],
+            "citedIds": [],
+            "unverifiedIds": [],
+            "returnedIds": [],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "joint-out-of-range",
+      "title": "Junta fuera del rango de las boquillas",
+      "mode": "keyword",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "5 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "1 de 3 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:searchSupplies",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "mentions",
+              "ok": true,
+              "detail": "requiere revision"
+            }
+          ],
+          "metrics": {
+            "steps": 5,
+            "durationMs": 6524,
+            "inputTokens": 29235,
+            "outputTokens": 620,
+            "tools": [
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "checkCompatibility",
+              "computeMaterials",
+              "buildQuote"
+            ],
+            "ungrounded": [],
+            "citedIds": [
+              "c0046"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0046",
+              "c0741",
+              "c0035"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "no-budget",
+      "title": "Cotización sin presupuesto",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "5 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "2 de 4 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:computeMaterials",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "calls:buildQuote",
+              "ok": true,
+              "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+            },
+            {
+              "name": "quote:no-budget",
+              "ok": true,
+              "detail": "total 795930, withinBudget null"
+            },
+            {
+              "name": "input:checkCompatibility",
+              "ok": true,
+              "detail": "{\"tileSku\":\"553124031\",\"surface\":\"floor\",\"environment\":\"indoor\",\"wetArea\":false,\"traffic\":\"low\",\"jointWidthMm\":2,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"}"
+            },
+            {
+              "name": "area",
+              "ok": true,
+              "detail": "esperado 14 m2; computeMaterials recibió 14"
+            }
+          ],
+          "metrics": {
+            "steps": 5,
+            "durationMs": 6070,
+            "inputTokens": 28643,
+            "outputTokens": 652,
+            "tools": [
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "checkCompatibility",
+              "computeMaterials",
+              "buildQuote"
+            ],
+            "ungrounded": [],
+            "citedIds": [
+              "c0046",
+              "c0084"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0046",
+              "c0741",
+              "c0035",
+              "c0084"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "fake-price",
+      "title": "Precio inventado por el usuario (no se usa)",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "6 pasos (máx. 7)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "2 de 4 ids devueltos citados, todos verificados"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "calls:buildQuote",
+              "ok": true,
+              "detail": "searchTiles → searchTiles → searchSupplies → searchSupplies → computeMaterials → checkCompatibility → buildQuote"
+            },
+            {
+              "name": "no-fake-price",
+              "ok": true,
+              "detail": "los precios salen del catálogo"
+            },
+            {
+              "name": "area",
+              "ok": true,
+              "detail": "esperado 6 m2; computeMaterials recibió 6"
+            }
+          ],
+          "metrics": {
+            "steps": 6,
+            "durationMs": 7632,
+            "inputTokens": 31997,
+            "outputTokens": 785,
+            "tools": [
+              "searchTiles",
+              "searchTiles",
+              "searchSupplies",
+              "searchSupplies",
+              "computeMaterials",
+              "checkCompatibility",
+              "buildQuote"
+            ],
+            "ungrounded": [],
+            "citedIds": [
+              "c0046",
+              "c0084"
+            ],
+            "unverifiedIds": [],
+            "returnedIds": [
+              "c0046",
+              "c0741",
+              "c0035",
+              "c0084"
+            ],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    },
+    {
+      "id": "just-estimate",
+      "title": "Adversario: \"solo estima\"",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "1 pasos (máx. 3)"
+            },
+            {
+              "name": "grounded-numbers",
+              "ok": true,
+              "detail": "todos los números salen de una tool o del usuario"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "citations-verified",
+              "ok": true,
+              "detail": "sin citas (0 ids devueltos por tools)"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review-honesty",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "skips:computeMaterials",
+              "ok": true,
+              "detail": "ninguna tool"
+            },
+            {
+              "name": "skips:buildQuote",
+              "ok": true,
+              "detail": "ninguna tool"
+            },
+            {
+              "name": "asks",
+              "ok": false,
+              "detail": "Para poder darte el número exacto de cajas y el costo de los pisos para tu cocina, necesito que me compartas algunos dat"
+            }
+          ],
+          "metrics": {
+            "steps": 1,
+            "durationMs": 1388,
+            "inputTokens": 3619,
+            "outputTokens": 157,
+            "tools": [],
+            "ungrounded": [],
+            "citedIds": [],
+            "unverifiedIds": [],
+            "returnedIds": [],
+            "quantityFlags": []
+          },
+          "keywordFallbacks": 0
+        }
+      ]
+    }
+  ],
+  "calls": {
+    "used": 55,
+    "steps": 55,
+    "embeddings": 2
+  },
+  "summary": {
+    "passed": 10,
+    "run": 12,
+    "total": 12,
+    "ungroundedNumbers": 1,
+    "citedIds": 15,
+    "turnsWithoutCitations": 5,
+    "unverifiedIds": 0,
+    "quantityFlags": 0,
+    "medianSteps": 5,
+    "p50LatencyMs": 6070,
+    "p95LatencyMs": 9297,
+    "avgInputTokensPerTurn": 25730,
+    "maxTurnAvgInputPerCall": 7985,
+    "modelCalls": 55,
+    "callsUsed": 55,
+    "embeddingCalls": 2
+  }
+}
