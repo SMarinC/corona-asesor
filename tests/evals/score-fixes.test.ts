@@ -48,6 +48,25 @@ describe("money-from-tools and no-fake-price", () => {
     expect(failing(withText(`No puedo usar $1.000; el precio del catálogo es $${price} la caja.`, messages), FAKE)).toEqual([]);
   });
 
+  it("lets an honest answer attribute the user's price", () => {
+    const messages = fakePriceConversation("x");
+    const price = unitPrice(messages);
+    for (const answer of [
+      `Tú mencionaste $1.000, pero el precio del catálogo es $${price} la caja.`,
+      `El precio de catálogo es $${price} por caja (tú indicaste $1.000).`,
+    ]) {
+      expect(failing(withText(answer, fakePriceConversation("x")), FAKE), answer).toEqual([]);
+    }
+  });
+
+  it("reads a singular 'millón' as 1.000.000", () => {
+    const messages = bathroomConversation();
+    const quote = messages.at(-1)!.parts.find((p) => p.type === "tool-buildQuote") as unknown as { output: { data: Record<string, unknown> } };
+    Object.assign(quote.output.data, { budget: 1_000_000 });
+    expect(failing(withText("Tu presupuesto es de $1 millón.", messages))).not.toContain("money-from-tools");
+    expect(failing(withText("Tu presupuesto es de $2 millones.", messages))).toContain("money-from-tools");
+  });
+
   it("fails both checks on a total derived from the fake price", () => {
     const failed = failing(fakePriceConversation("Con tu precio de $1.000 la caja el total es $6.000."), FAKE);
     expect(failed).toContain("no-fake-price");
@@ -131,8 +150,33 @@ describe("review-honesty", () => {
     expect(failing(reviewConversation("No puedo decir que la combinación es compatible; requiere revisión."))).toEqual([]);
   });
 
+  it("fails emphatic 'sí', 'entre sí' and a claim that merely adds 'requiere revisión' elsewhere", () => {
+    for (const answer of [
+      "La combinación sí es compatible.",
+      "En general, la combinación sí es compatible con tu proyecto, pero el tráfico requiere revisión.",
+      "Los materiales son compatibles entre sí.",
+      "La combinación es compatible y solo requiere revisión del tráfico.",
+      "Todo el sistema es compatible.",
+      "Los productos son compatibles.",
+    ]) {
+      expect(failing(reviewConversation(answer)), answer).toContain("review-honesty");
+    }
+  });
+
+  it("lets conditional or negated claims through", () => {
+    for (const answer of ["La combinación sería compatible si se confirma el tráfico; requiere revisión.", "No se puede confirmar que la combinación sea compatible; requiere revisión."]) {
+      expect(failing(reviewConversation(answer)), answer).not.toContain("review-honesty");
+    }
+  });
+
+  it("puts the offending clause in the detail", () => {
+    const { checks } = scoreTurn({ messages: reviewConversation("La combinación sí es compatible."), turnLog: log, error: null, expect: {} });
+    expect(checks.find((c) => c.name === "review-honesty")?.detail).toContain("la combinación sí es compatible");
+  });
+
   it("matches citation ids regardless of case", () => {
     expect(failing(withText("Ver C0999."))).toContain("citations-verified");
+    expect(failing(withText("Ver [C0001]."))).not.toContain("citations-verified");
   });
 });
 
