@@ -16,12 +16,19 @@ export interface TurnRecord {
   error: string | null;
   /** How many sheet searches fell back to keyword search in this turn. */
   keywordFallbacks: number;
+  /** Query-embedding calls attempted in this turn (0 in keyword or offline mode). */
+  embedCalls: number;
+}
+
+export interface RunTurnOptions {
+  /** Never reach the network: the query embedder always fails, whatever the mode. */
+  offline?: boolean;
 }
 
 /** The real tools and catalog; in "keyword" mode the query embedder always fails, as when the embedding quota is gone. */
-function toolDeps(mode: Scenario["mode"]): ToolDeps {
+function toolDeps(mode: Scenario["mode"], offline: boolean): ToolDeps {
   const base = getToolDeps();
-  if (mode === "semantic") return base;
+  if (mode === "semantic" && !offline) return base;
   const { chunks, index } = loadSheetArtifacts();
   const embedQuery = async (): Promise<number[]> => {
     throw new Error("eval: keyword mode");
@@ -30,8 +37,8 @@ function toolDeps(mode: Scenario["mode"]): ToolDeps {
 }
 
 /** Runs the handler with generous limits: the eval runner paces itself against the real free-tier quota. */
-function chatDeps(mode: Scenario["mode"], model: LanguageModel | undefined): ChatDeps {
-  const deps = toolDeps(mode);
+function chatDeps(mode: Scenario["mode"], model: LanguageModel | undefined, offline: boolean): ChatDeps {
+  const deps = toolDeps(mode, offline);
   const generous = { perIpPer10Min: 1_000, perIpPerDay: 1_000, globalDailyCap: 1_000, globalPerMinuteCap: 1_000 };
   return {
     model,
@@ -47,10 +54,16 @@ async function withCapturedLogs<T>(run: () => Promise<T>): Promise<{ result: T; 
   const original = { log: console.log, warn: console.warn, error: console.error };
   const capture = (...args: unknown[]) => {
     try {
-      lines.push(JSON.parse(String(args[0])) as Record<string, unknown>);
+      const parsed: unknown = JSON.parse(String(args[0]));
+      if (parsed !== null && typeof parsed === "object") {
+        lines.push(parsed as Record<string, unknown>);
+        return;
+      }
     } catch {
-      // Not one of our JSON lines (e.g. a library warning): ignore it.
+      // Not JSON: fall through.
     }
+    // Not one of our JSON log lines (e.g. a library warning): keep it visible.
+    original.warn(...args);
   };
   console.log = capture;
   console.warn = capture;
@@ -69,8 +82,9 @@ let ids = 0;
 const userMessage = (text: string): CoronaUIMessage => ({ id: `eval-u-${++ids}`, role: "user", parts: [{ type: "text", text }] });
 
 /** One user turn through the real route handler, read back exactly as useChat would. */
-export async function runTurn(history: CoronaUIMessage[], text: string, mode: Scenario["mode"], model?: LanguageModel): Promise<TurnRecord> {
-  const deps = chatDeps(mode, model);
+export async function runTurn(history: CoronaUIMessage[], text: string, mode: Scenario["mode"], model?: LanguageModel, options: RunTurnOptions = {}): Promise<TurnRecord> {
+  const offline = options.offline ?? false;
+  const deps = chatDeps(mode, model, offline);
   const messages = [...history, userMessage(text)];
   const transport = new DefaultChatTransport<CoronaUIMessage>({
     api: "http://localhost/api/chat",
@@ -99,7 +113,9 @@ export async function runTurn(history: CoronaUIMessage[], text: string, mode: Sc
       }
     : null;
   const assistant: CoronaUIMessage = result ?? { id: `eval-a-${++ids}`, role: "assistant", parts: [] };
+  const sheetSearches = assistant.parts.filter((part) => part.type === "tool-searchTechnicalSheets").length;
   return {
+    embedCalls: mode === "semantic" && !offline ? sheetSearches : 0,
     messages: [...messages, assistant],
     turnLog,
     error: streamError,

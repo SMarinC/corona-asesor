@@ -71,7 +71,7 @@ describe("report", () => {
       ],
     };
     expect(scenarioPassed(run.results[0])).toBe(true);
-    expect(summarize(run)).toMatchObject({ passed: 1, run: 1, total: 2, maxInputTokensPerCall: 4_000, modelCalls: 6 });
+    expect(summarize(run)).toMatchObject({ passed: 1, run: 1, total: 2, maxTurnAvgInputPerCall: 4_000, modelCalls: 6 });
     const markdown = renderReport(run);
     expect(markdown).toContain("| Scenarios passed | **1/2** (1 not run) |");
     expect(markdown).toContain("| Terraza | keyword | not run |");

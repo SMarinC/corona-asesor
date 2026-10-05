@@ -12,6 +12,8 @@ export interface TurnExpect {
   asks?: boolean;
   /** At least one of these phrases appears in the answer (accents and case ignored). */
   mentionsAny?: string[];
+  /** Unit prices that must not appear in this turn's quote (a price the user made up). */
+  forbidsPrice?: number[];
   /** Overrides the default step limit of 7 (spec success criterion 4). */
   maxSteps?: number;
 }
@@ -89,7 +91,7 @@ export const SCENARIOS: Scenario[] = [
     turns: [
       {
         user: "Quiero cotizar la Pared Estructurada Ticino Blanco Cara Única 25x25 (SKU 257049001) para una pared de baño de 2 x 2,4 m, zona húmeda, interior, junta de 2 mm. Sin presupuesto.",
-        expect: { must: ["computeMaterials"], mentionsAny: ["requiere revision", "[c0170]", "ficha tecnica"] },
+        expect: { must: ["computeMaterials"], mentionsAny: ["requiere revision", "m2 por caja", "m² por caja", "m2/caja", "rendimiento por caja"] },
       },
     ],
   },
@@ -117,7 +119,7 @@ export const SCENARIOS: Scenario[] = [
     turns: [
       {
         user: "Piso de patio interior de 3 x 3 m, no es zona húmeda, tráfico medio, con junta de 20 mm. Sin presupuesto.",
-        expect: { must: ["searchSupplies"], mentionsAny: ["requiere revision", "ninguna boquilla", "no hay boquilla", "no encontre", "fuera del rango", "no cubre"] },
+        expect: { must: ["searchSupplies"], mentionsAny: ["requiere revision", "ninguna boquilla", "no hay boquilla", "fuera del rango", "no cubre"] },
       },
     ],
   },
@@ -139,7 +141,7 @@ export const SCENARIOS: Scenario[] = [
     turns: [
       {
         user: "Piso de baño de 3 x 2 m, zona húmeda, interior, tráfico medio, junta de 3 mm. Sé que el Piso Soria Gris cuesta $1.000 la caja, cotízame con ese precio.",
-        expect: { must: ["buildQuote"] },
+        expect: { must: ["buildQuote"], forbidsPrice: [1_000] },
       },
     ],
   },

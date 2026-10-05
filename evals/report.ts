@@ -13,6 +13,8 @@ export interface EvalRun {
   date: string;
   model: string;
   promptVersion: string;
+  /** What the runner actually spent: model calls (failed ones and retries included), summed steps and embedding queries. */
+  calls?: { used: number; steps: number; embeddings: number };
   results: ScenarioResult[];
 }
 
@@ -22,15 +24,20 @@ export interface EvalSummary {
   total: number;
   ungroundedNumbers: number;
   citedIds: number;
+  turnsWithoutCitations: number;
   unverifiedIds: number;
   quantityFlags: number;
   medianSteps: number;
   p50LatencyMs: number;
   p95LatencyMs: number;
   avgInputTokensPerTurn: number;
-  /** The largest average input per model call in one turn: what a turn costs against the 250K tokens-per-minute limit. */
-  maxInputTokensPerCall: number;
+  /** The largest per-turn average of input tokens per model call: what a turn costs against the 250K tokens-per-minute limit. */
+  maxTurnAvgInputPerCall: number;
+  /** Steps summed over all turns. */
   modelCalls: number;
+  /** Real calls the runner spent, when known. */
+  callsUsed?: number;
+  embeddingCalls?: number;
 }
 
 export const scenarioPassed = (result: ScenarioResult) => result.turns !== null && result.turns.every((t) => t.checks.every((c) => c.ok));
@@ -50,14 +57,17 @@ export function summarize(run: EvalRun): EvalSummary {
     total: run.results.length,
     ungroundedNumbers: metrics.reduce((n, m) => n + m.ungrounded.length, 0),
     citedIds: metrics.reduce((n, m) => n + m.citedIds.length, 0),
+    turnsWithoutCitations: metrics.filter((m) => m.citedIds.length === 0).length,
     unverifiedIds: metrics.reduce((n, m) => n + m.unverifiedIds.length, 0),
     quantityFlags: metrics.reduce((n, m) => n + m.quantityFlags.length, 0),
     medianSteps: percentile(metrics.map((m) => m.steps), 50),
     p50LatencyMs: percentile(metrics.map((m) => m.durationMs), 50),
     p95LatencyMs: percentile(metrics.map((m) => m.durationMs), 95),
     avgInputTokensPerTurn: metrics.length ? Math.round(metrics.reduce((n, m) => n + m.inputTokens, 0) / metrics.length) : 0,
-    maxInputTokensPerCall: Math.max(0, ...metrics.map((m) => (m.steps ? Math.round(m.inputTokens / m.steps) : 0))),
+    maxTurnAvgInputPerCall: Math.max(0, ...metrics.map((m) => (m.steps ? Math.round(m.inputTokens / m.steps) : 0))),
     modelCalls: metrics.reduce((n, m) => n + m.steps, 0),
+    callsUsed: run.calls?.used,
+    embeddingCalls: run.calls?.embeddings,
   };
 }
 
@@ -75,27 +85,29 @@ export function renderReport(run: EvalRun): string {
     "|---|---|",
     `| Scenarios passed | **${s.passed}/${s.total}**${s.run < s.total ? ` (${s.total - s.run} not run)` : ""} |`,
     `| Numbers in answers with no tool or user source | ${s.ungroundedNumbers} |`,
-    `| Citations in answers that no tool returned | ${s.unverifiedIds} of ${s.citedIds} |`,
+    `| Citations in answers that no tool returned | ${s.unverifiedIds} of ${s.citedIds} (${s.turnsWithoutCitations} turns cite nothing) |`,
     `| Quote quantities not from computeMaterials | ${s.quantityFlags} |`,
     `| Median steps per turn | ${s.medianSteps} |`,
     `| Turn latency p50 / p95 | ${seconds(s.p50LatencyMs)} / ${seconds(s.p95LatencyMs)} |`,
-    `| Input tokens per turn (avg) · per model call (max) | ${s.avgInputTokensPerTurn} · ${s.maxInputTokensPerCall} |`,
-    `| Model calls spent | ${s.modelCalls} |`,
+    `| Input tokens per turn (avg) · largest per-turn average per model call | ${s.avgInputTokensPerTurn} · ${s.maxTurnAvgInputPerCall} |`,
+    `| Model calls spent | ${s.callsUsed !== undefined ? `${s.callsUsed} (${s.modelCalls} steps summed) · ${s.embeddingCalls ?? 0} embedding queries` : `${s.modelCalls} steps summed`} |`,
     "",
     "## Scenarios",
     "",
-    "| Scenario | Search | Result | Steps | Latency | Failing checks |",
-    "|---|---|---|---|---|---|",
+    "| Scenario | Search | Result | Steps | Tokens | Latency | Keyword fallbacks | Failing checks |",
+    "|---|---|---|---|---|---|---|---|",
   ];
   for (const r of run.results) {
     if (r.turns === null) {
-      lines.push(`| ${r.title} | ${r.mode} | not run | | | ${r.skippedReason ?? ""} |`);
+      lines.push(`| ${r.title} | ${r.mode} | not run | | | | | ${r.skippedReason ?? ""} |`);
       continue;
     }
     const failing = r.turns.flatMap((t, i) => t.checks.filter((c) => !c.ok).map((c) => `${r.turns!.length > 1 ? `T${i + 1} ` : ""}${c.name}: ${c.detail}`));
     const steps = r.turns.map((t) => t.metrics.steps).join(" + ");
+    const tokens = r.turns.map((t) => `${t.metrics.inputTokens} in / ${t.metrics.outputTokens} out`).join(" + ");
+    const fallbacks = r.turns.reduce((n, t) => n + t.keywordFallbacks, 0);
     const latency = r.turns.map((t) => seconds(t.metrics.durationMs)).join(" + ");
-    lines.push(`| ${r.title} | ${r.mode} | ${scenarioPassed(r) ? "pass" : "**fail**"} | ${steps} | ${latency} | ${failing.join("<br>").replaceAll("|", "\\|") || "—"} |`);
+    lines.push(`| ${r.title} | ${r.mode} | ${scenarioPassed(r) ? "pass" : "**fail**"} | ${steps} | ${tokens} | ${latency} | ${fallbacks} | ${failing.join("<br>").replaceAll("|", "\\|") || "—"} |`);
   }
   lines.push(
     "",
