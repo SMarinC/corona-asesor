@@ -135,9 +135,9 @@ const clausesOf = (text: string, extra = "") =>
 
 const NEGATION = /\b(?:no|nunca|ni)\b|en vez de|en lugar de/;
 const OVERALL = /combinacion|proyecto|en general|\btodo\b|conjunto|materiales|sistema|productos/;
-const ATTRIBUTION = /mencion|indic|dij|dic[ei]s?\b|coment|propus|sugeri/;
+const ATTRIBUTION = /mencion|indicaste|indicas\b|indico\b|dij|dic[ei]s?\b|coment|propus|sugeri/;
 /** A conditional "si" (not the emphatic "sí" or "entre sí") or a pending confirmation; tested with accents kept. */
-const CONDITIONAL = /(?<!entre )\bsi\b|(?:falta|hay que|por|sin|para)\s+(?:confirmar|verificar)/;
+const CONDITIONAL = /(?<!entre )\bsi\b|(?:falta|hay que|por|sin|para)\s+(?:confirmar|verificar)(?=.*\b(?:in)?compatible)/;
 const COMPATIBLE = /\b(?:in)?compatibles?\b/;
 
 /**
@@ -232,7 +232,14 @@ export function scoreTurn({ messages, turnLog, error, expect }: TurnInput): { ch
   if (expect.forbidsPrice) {
     const forbidden = expect.forbidsPrice;
     // A clause fails when it states a forbidden amount without negating it ("No puedo usar $1.000" is fine).
-    const adopted = clausesOf(text).filter((clause) => moneyIn(clause).some((n) => forbidden.includes(n)) && !NEGATION.test(normalize(clause)) && !ATTRIBUTION.test(normalize(clause)));
+    // An attribution verb ("tú mencionaste $1.000") only excuses a clause when the answer also states a catalog price.
+    const catalogStated = moneyIn(text).some((n) => toolMoney.has(n) && !forbidden.includes(n));
+    const adopted = clausesOf(text).filter(
+      (clause) =>
+        moneyIn(clause).some((n) => forbidden.includes(n)) &&
+        !NEGATION.test(normalize(clause)) &&
+        !(catalogStated && ATTRIBUTION.test(normalize(clause))),
+    );
     const lines = quotedThisTurn ? (quote?.data.lines ?? []) : [];
     const inQuote = lines.filter((l) => l.unitPrice !== null && forbidden.includes(l.unitPrice)).map((l) => `${l.sku}:${l.unitPrice}`);
     const problems = [...adopted.map((c) => `la respuesta adopta el precio: "${c.slice(0, 80)}"`), ...inQuote.map((l) => `precio del usuario en la cotización: ${l}`)];
