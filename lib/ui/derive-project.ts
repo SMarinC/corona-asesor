@@ -7,6 +7,7 @@ import { summarizeTile, type TileSummary } from "@/lib/agent/tools/summaries";
 import type { AreaResult } from "@/lib/domain/calculations";
 import { type CalcQuantities, checkQuoteQuantities, createQuantityLedger, type LineCheck } from "@/lib/domain/quantity-check";
 import { citationIdsIn } from "./citations";
+import { skuKey } from "@/lib/domain/sku";
 import { tileMismatch } from "./project-view";
 import { isToolPart, isToolPartOf, type ToolName } from "./tool-parts";
 
@@ -100,14 +101,14 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
       for (const id of citationIdsIn(part.output)) citations.add(id);
 
       if (isToolPartOf(part, "searchTiles") && part.output.status === "ok") {
-        for (const tile of part.output.data.results) tiles.set(tile.sku, tile);
+        for (const tile of part.output.data.results) tiles.set(skuKey(tile.sku), tile);
       } else if (isToolPartOf(part, "getProduct") && part.output.status === "ok") {
         const { product } = part.output.data;
-        if (product.kind === "tile") tiles.set(product.sku, summarizeTile(product));
+        if (product.kind === "tile") tiles.set(skuKey(product.sku), summarizeTile(product));
       } else if (isToolPartOf(part, "computeMaterials") && part.output.status !== "error") {
         const output = part.output;
         const data: Partial<MaterialsData> = output.data;
-        tileSku = part.input.tileSku;
+        tileSku = data.tile?.sku ?? part.input.tileSku;
         if (data.area) state = { ...state, space: { ...data.area, lengthM: part.input.lengthM, widthM: part.input.widthM } };
         state = { ...state, materials: { tile: data.tile ?? null, adhesive: data.adhesive ?? null, grout: data.grout ?? null } };
         ledger.recordCalculation(part.input.tileSku, data);
@@ -165,7 +166,7 @@ export function deriveProject(messages: CoronaUIMessage[]): ProjectState {
   return {
     ...state,
     quote,
-    tile: tileSku ? (tiles.get(tileSku) ?? null) : null,
+    tile: tileSku ? (tiles.get(skuKey(tileSku)) ?? null) : null,
     review: [...materialsReview, ...compatibilityReview, ...tileMismatchReview, ...quoteReview, ...staleReview, ...lineReview],
     citations: [...citations],
     toolCalls,

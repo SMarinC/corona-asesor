@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { skuKey } from "@/lib/domain/sku";
 import { createCatalog, getCatalog } from "@/lib/data/catalog";
 import { normalizeText, parseKg } from "@/lib/domain/parse";
 import { makeTile } from "@/tests/fixtures/products";
@@ -73,5 +74,12 @@ describe("catalog.get with a trailing period", () => {
 
   it("resolves a real trailing-dot SKU from data/catalog.json", () => {
     expect(getCatalog().get("401072001")?.sku).toBe("401072001.");
+  });
+});
+
+describe("skuKey on the real catalog", () => {
+  it("produces no collisions between products", () => {
+    const { all } = getCatalog();
+    expect(new Set(all.map((p) => skuKey(p.sku))).size).toBe(all.length);
   });
 });

@@ -23,7 +23,10 @@ function compact(value: unknown, depth = 0): unknown {
   }
   if (value === null || typeof value !== "object") return value;
   if (depth >= MAX_DEPTH) return "…";
-  if (Array.isArray(value)) return value.slice(0, MAX_ITEMS).map((item) => compact(item, depth + 1));
+  if (Array.isArray(value)) {
+    const items = value.slice(0, MAX_ITEMS).map((item) => compact(item, depth + 1));
+    return value.length > MAX_ITEMS ? [...items, "…"] : items;
+  }
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, compact(item, depth + 1)]));
 }
 

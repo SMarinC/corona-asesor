@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { executeGetProduct } from "@/lib/agent/tools/get-product";
+import { getCatalog } from "@/lib/data/catalog";
 import { executeBuildQuote } from "@/lib/agent/tools/build-quote";
 import { executeCheckCompatibility } from "@/lib/agent/tools/check-compatibility";
 import { executeComputeMaterials } from "@/lib/agent/tools/compute-materials";
@@ -287,5 +289,21 @@ describe("deriveProject", () => {
     const project = deriveProject([user, first, userMessage("Agrega reparador"), again]);
     expect(project.quote?.lineChecks).toEqual({ T1: "computed", A1: "differs", G2: "not_computed" });
     expect(project.review.map((r) => r.field)).toEqual(["quantity:A1", "quantity:G2"]);
+  });
+});
+
+describe("deriveProject with a trailing-period SKU", () => {
+  it("keeps the tile when computeMaterials ran last with the dot-less spelling", () => {
+    const deps = { ...makeToolDeps(), catalog: getCatalog() };
+    const materialsInput = { lengthM: 3, widthM: 2, tileSku: "401072001" };
+    const project = deriveProject([
+      userMessage("Pared de 3 x 2"),
+      assistantMessage([
+        toolPart("getProduct", { sku: "401072001." }, executeGetProduct(deps, { sku: "401072001." })),
+        toolPart("computeMaterials", materialsInput, executeComputeMaterials(deps, materialsInput)),
+      ]),
+    ]);
+    expect(project.tile?.sku).toBe("401072001.");
+    expect(project.materials?.tile?.sku).toBe("401072001.");
   });
 });

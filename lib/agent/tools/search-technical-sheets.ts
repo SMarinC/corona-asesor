@@ -51,10 +51,11 @@ export async function executeSearchTechnicalSheets(
   deps: ToolDeps,
   input: SearchTechnicalSheetsInput,
 ): Promise<ToolResult<SearchTechnicalSheetsData>> {
-  if (input.sku !== undefined && !deps.catalog.get(input.sku)) {
+  const product = input.sku === undefined ? undefined : deps.catalog.get(input.sku);
+  if (input.sku !== undefined && !product) {
     return toolError("unknown_sku", `El SKU ${input.sku} no existe en el catálogo.`);
   }
-  const sku = input.sku === undefined ? undefined : deps.catalog.get(input.sku)?.sku;
+  const sku = product?.sku;
   const { mode, hits } = await deps.sheets.search(input.query, { sku, k: input.k ?? 3 });
   return ok({
     mode,

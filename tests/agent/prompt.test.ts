@@ -27,10 +27,16 @@ describe("system prompt", () => {
   });
 
   it("copies amounts exactly, leaves line subtotals to the cards and states the total and the budget result", () => {
-    const line = "- Copia los montos exactamente como los devuelven las herramientas. No repitas en el texto el subtotal de cada línea (las tarjetas ya lo muestran): di el total y el resultado frente al presupuesto.";
-    expect(SYSTEM_PROMPT).toContain(line);
-    expect(SYSTEM_PROMPT.split(line)).toHaveLength(2);
-    expect(PROMPT_VERSION).toBe("2026-10-06.1");
+    const copy = "- Copia los montos con los mismos dígitos que devuelven las herramientas.";
+    const closing = "- Al cerrar una cotización, di el total, si está dentro del presupuesto (cuando lo hay) y qué puntos requieren revisión; no repitas el subtotal de cada línea (las tarjetas ya lo muestran).";
+    for (const line of [copy, closing]) {
+      expect(SYSTEM_PROMPT).toContain(line);
+      expect(SYSTEM_PROMPT.split(line)).toHaveLength(2);
+    }
+    expect(SYSTEM_PROMPT.match(/Al cerrar una cotización/g)).toHaveLength(1);
+    expect(SYSTEM_PROMPT).not.toContain("exactamente como los devuelven");
+    expect(SYSTEM_PROMPT).toMatch(/citas que devolvieron checkCompatibility, searchSupplies, searchTechnicalSheets y computeMaterials/);
+    expect(PROMPT_VERSION).toBe("2026-10-06.2");
   });
 
   it("cites values taken from the technical sheets, in the existing citation rule", () => {

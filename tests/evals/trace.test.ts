@@ -35,6 +35,13 @@ describe("traceOf and answerOf", () => {
     ]);
   });
 
+  it("marks a truncated array so an auditor can tell", () => {
+    const lines = Array.from({ length: 15 }, (_, i) => ({ sku: `S${i}`, quantity: 1 }));
+    const input = traceOf(assistantMessage([toolPart("buildQuote", { lines }, { status: "ok", data: {} })]))[0].input as { lines: unknown[] };
+    expect(input.lines).toHaveLength(13);
+    expect(input.lines.at(-1)).toBe("…");
+  });
+
   it("keeps the trace compact and free of IP addresses", () => {
     const message = assistantMessage([
       toolPart("searchTechnicalSheets", { query: `${"x".repeat(500)} desde 203.0.113.7`, sku: "S" }, { status: "ok", data: {} }),
