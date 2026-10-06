@@ -14,9 +14,12 @@ const rejection = {
 };
 
 describe("a tile without m² per box in the company data", () => {
-  it("is never offered by searchTiles", () => {
+  it("is never offered by searchTiles, while a tile with the data is", () => {
     const result = executeSearchTiles(deps, { surface: "floor", limit: 10 });
-    expect(result.status === "ok" && result.data.results.map((r) => r.sku)).not.toContain("T5");
+    if (result.status !== "ok") throw new Error(`expected ok, got ${result.status}`);
+    const skus = result.data.results.map((r) => r.sku);
+    expect(skus).toContain("T1");
+    expect(skus).not.toContain("T5");
   });
 
   it("is rejected with the reason by getProduct, computeMaterials and buildQuote", () => {
@@ -34,12 +37,15 @@ describe("supplies without the data their quantity needs", () => {
   });
   const room = { lengthM: 3, widthM: 2, tileSku: "T1", jointWidthMm: 3 };
 
-  it("are never offered by searchSupplies", () => {
+  it("are never offered by searchSupplies, while supplies with the data are", () => {
     const skus = (kind: "adhesive" | "grout") => {
       const result = executeSearchSupplies(deps, { kind, limit: 10 });
-      return result.status === "ok" ? result.data.results.map((r) => r.sku) : [];
+      if (result.status !== "ok") throw new Error(`expected ok, got ${result.status}`);
+      return result.data.results.map((r) => r.sku);
     };
+    expect(skus("adhesive")).toContain("A1");
     expect(skus("adhesive")).not.toContain("A3");
+    expect(skus("grout")).toContain("G1");
     expect(skus("grout")).not.toContain("G3");
   });
 
