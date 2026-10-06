@@ -73,3 +73,8 @@ export async function runScenarios({ scenarios, run, maxCalls, pacer, onTurn }: 
   }
   return { results, callsUsed, stepsSummed, embeddingCalls, stopReason };
 }
+
+/** An early stop (budget or quota) leaves a partial report, so the process must not exit green. Failed scenarios still exit 0. */
+export function exitCodeFor(stopReason: string | null): 0 | 2 {
+  return stopReason ? 2 : 0;
+}

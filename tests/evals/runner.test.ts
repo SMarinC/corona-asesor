@@ -76,3 +76,11 @@ describe("pacer", () => {
     await pacer.waitForTurn();
   });
 });
+
+describe("exitCodeFor", () => {
+  it("is 0 for a complete run and 2 for an early stop", async () => {
+    const { exitCodeFor } = await import("@/evals/runner");
+    expect(exitCodeFor(null)).toBe(0);
+    expect(exitCodeFor("call budget reached (100/110; x)")).toBe(2);
+  });
+});

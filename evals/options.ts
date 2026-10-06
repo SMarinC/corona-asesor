@@ -22,10 +22,12 @@ function numberFlag(args: string[], name: string, fallback: number): number {
 }
 
 /** Parses the runner's flags, failing loudly on a malformed one instead of silently running unpaced or unbudgeted. */
-export function parseOptions(args: string[]): EvalOptions {
+export function parseOptions(args: string[], validIds?: readonly string[]): EvalOptions {
   const onlyIndex = args.indexOf("--only");
   const only = onlyIndex >= 0 ? args[onlyIndex + 1]?.split(",") : undefined;
   if (onlyIndex >= 0 && !only) throw new Error("--only needs a comma-separated list of scenario ids.");
+  const unknown = validIds && only ? only.filter((id) => !validIds.includes(id)) : [];
+  if (unknown.length) throw new Error(`--only has unknown scenario ids: ${unknown.join(", ")}. Valid ids: ${validIds?.join(", ")}.`);
   const rpm = Math.min(numberFlag(args, "rpm", 10), FREE_TIER_RPM);
   if (rpm < WORST_CASE_TURN_CALLS) throw new Error(`--rpm must be at least ${WORST_CASE_TURN_CALLS}: one worst-case turn needs that many calls in a minute.`);
   return { scripted: args.includes("--scripted"), only, maxCalls: Math.floor(numberFlag(args, "max-calls", 110)), rpm };

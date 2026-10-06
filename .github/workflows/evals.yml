@@ -41,7 +41,9 @@ jobs:
           MAX_CALLS: ${{ inputs.max-calls }}
           ONLY: ${{ inputs.only }}
         run: npm run evals -- --max-calls "$((10#$MAX_CALLS))" ${ONLY:+--only "$ONLY"}
+      # Keep the partial report of an early-stopped run (the run step exits 2) for diagnosis.
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
         with:
           name: eval-report
           path: |

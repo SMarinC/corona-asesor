@@ -15,12 +15,12 @@ import { runTurn } from "./harness";
 import { parseOptions, WORST_CASE_TURN_CALLS } from "./options";
 import { createPacer } from "./pacer";
 import { type EvalRun, renderReport, summarize } from "./report";
-import { runScenarios } from "./runner";
+import { exitCodeFor, runScenarios } from "./runner";
 import { SCENARIOS } from "./scenarios";
 
 let options: ReturnType<typeof parseOptions>;
 try {
-  options = parseOptions(process.argv.slice(2));
+  options = parseOptions(process.argv.slice(2), SCENARIOS.map((s) => s.id));
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
@@ -58,3 +58,4 @@ console.log(
   `\n${summary.passed}/${summary.total} scenarios passed · ${out.callsUsed} model calls (${out.stepsSummed} steps summed) · ${out.embeddingCalls} embedding queries · report in ${outDir}/report.md`,
 );
 if (out.stopReason) console.log(`Stopped early: ${out.stopReason}`);
+process.exitCode = exitCodeFor(out.stopReason);
