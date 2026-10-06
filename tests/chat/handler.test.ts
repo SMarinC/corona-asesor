@@ -1,9 +1,9 @@
-import { APICallError } from "ai";
+import { APICallError, type UIMessageChunk } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bathroomConversation } from "@/tests/fixtures/ui-messages";
 import { createTools } from "@/lib/agent/tools";
-import { type ChatDeps, handleChat } from "@/lib/chat/handler";
+import { type ChatDeps, endOnTimeout, handleChat } from "@/lib/chat/handler";
 import { createMemoryGuardLimits, DEFAULT_GUARD_CONFIG, type GuardConfig } from "@/lib/guard/rate-limit";
 import { makeToolDeps } from "@/tests/fixtures/tool-deps";
 import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
@@ -300,6 +300,16 @@ describe("handleChat", () => {
       });
     }
 
+    async function readUntilReader(reader: ReadableStreamDefaultReader<Uint8Array>, marker: string) {
+      const decoder = new TextDecoder();
+      let text = "";
+      while (!text.includes(marker)) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("stream ended before " + marker);
+        text += decoder.decode(value, { stream: true });
+      }
+    }
+
     /** Reads the body until `marker` shows up, so the test aborts at a known point; returns a function that reads the rest. */
     async function readUntil(res: Response, marker: string) {
       const reader = res.body!.getReader();
@@ -410,6 +420,35 @@ describe("handleChat", () => {
       expect(body).toContain("model_error");
       expect(turnLines()).toHaveLength(1);
       expect(turnLines()[0]).toMatchObject({ outcome: "timeout" });
+      expect(deps.model).toBeDefined();
+      expect((deps.model as MockLanguageModelV4).doStreamCalls).toHaveLength(0);
+    });
+
+    it("survives a timeout that fires after the client cancelled the body", async () => {
+      const timeout = new AbortController();
+      const { deps } = makeDeps({ model: hangingModel({ honorAbort: false }), turnTimeoutSignal: () => timeout.signal });
+      const res = await handleChat(chatRequest([user("Piso para baño")]), deps);
+      const reader = res.body!.getReader();
+      await readUntilReader(reader, "Un momento");
+      await reader.cancel();
+      timeout.abort(timeoutReason());
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(turnLines().length).toBeLessThanOrEqual(1);
+    });
+
+    it("survives a timeout that fires after the stream failed upstream", async () => {
+      const timeout = new AbortController();
+      const model = new MockLanguageModelV4({
+        doStream: async () => {
+          throw new Error("provider exploded");
+        },
+      });
+      const { deps } = makeDeps({ model, turnTimeoutSignal: () => timeout.signal });
+      await (await handleChat(chatRequest([user("Piso para baño")]), deps)).text();
+      timeout.abort(timeoutReason());
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(turnLines()).toHaveLength(1);
+      expect(turnLines()[0]).toMatchObject({ outcome: "model_error" });
     });
   });
 
@@ -442,5 +481,44 @@ describe("handleChat", () => {
     expect(body).toContain("Listo.");
     expect(body).not.toContain("quantity:");
     expect(body).toContain("\"status\":\"ok\"");
+  });
+});
+
+describe("endOnTimeout", () => {
+  /** AbortSignal listeners that throw are rethrown as uncaught exceptions, which would kill the process. */
+  async function uncaughtAfter(act: () => Promise<void>) {
+    const seen: unknown[] = [];
+    const record = (error: unknown) => seen.push(error);
+    process.on("uncaughtException", record);
+    try {
+      await act();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    } finally {
+      process.off("uncaughtException", record);
+    }
+    return seen;
+  }
+
+  it("does not throw when the timeout fires after the consumer cancelled the stream", async () => {
+    const timeout = new AbortController();
+    const source = new ReadableStream<UIMessageChunk>({ start: (c) => c.enqueue({ type: "start" }) });
+    const reader = source.pipeThrough(endOnTimeout(timeout.signal, () => true)).getReader();
+    await reader.read();
+    const seen = await uncaughtAfter(async () => {
+      await reader.cancel();
+      timeout.abort(new DOMException("timed out", "TimeoutError"));
+    });
+    expect(seen).toEqual([]);
+  });
+
+  it("does not throw when the timeout fires after the source failed", async () => {
+    const timeout = new AbortController();
+    let fail: (e: unknown) => void = () => {};
+    const source = new ReadableStream<UIMessageChunk>({ start: (c) => (fail = (e) => c.error(e)) });
+    const reader = source.pipeThrough(endOnTimeout(timeout.signal, () => true)).getReader();
+    fail(new Error("upstream failed"));
+    await expect(reader.read()).rejects.toThrow("upstream failed");
+    const seen = await uncaughtAfter(async () => timeout.abort(new DOMException("timed out", "TimeoutError")));
+    expect(seen).toEqual([]);
   });
 });

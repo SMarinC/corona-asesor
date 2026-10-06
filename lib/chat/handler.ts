@@ -101,6 +101,18 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
   if (signal.aborted) ended();
   else signal.addEventListener("abort", ended, { once: true });
 
+  // The budget ran out before the agent started (a slow admission): answer with the timeout, spend no model call.
+  if (timedOut()) {
+    return createUIMessageStreamResponse({
+      stream: new ReadableStream<UIMessageChunk>({
+        start(controller) {
+          controller.enqueue({ type: "error", errorText: "model_error" });
+          controller.close();
+        },
+      }),
+    });
+  }
+
   try {
     const stream = await createAgentUIStream({
       agent,
@@ -129,20 +141,30 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
  * out of time would look like a finished answer. On a timeout, end the stream ourselves with the error chunk the
  * client already knows, and close it, so a provider that ignores the abort signal cannot hold the body open.
  */
-function endOnTimeout(timeout: AbortSignal, timedOut: () => boolean): TransformStream<UIMessageChunk, UIMessageChunk> {
+export function endOnTimeout(timeout: AbortSignal, timedOut: () => boolean): TransformStream<UIMessageChunk, UIMessageChunk> {
   let onAbort = () => {};
-  return new TransformStream<UIMessageChunk, UIMessageChunk>({
+  // `cancel` is in the Streams spec and Node, but not yet in the TypeScript DOM typings.
+  const transformer: Transformer<UIMessageChunk, UIMessageChunk> & { cancel: () => void } = {
     start(controller) {
       onAbort = () => {
         if (!timedOut()) return;
-        controller.enqueue({ type: "error", errorText: "model_error" });
-        controller.terminate();
+        // The stream may already be closed, cancelled or failed. A throw inside an AbortSignal listener becomes an
+        // uncaught exception, which would take the process down.
+        try {
+          controller.enqueue({ type: "error", errorText: "model_error" });
+          controller.terminate();
+        } catch {}
       };
       if (timeout.aborted) onAbort();
       else timeout.addEventListener("abort", onAbort, { once: true });
     },
+    // flush: the source ended; cancel: the consumer went away or the source failed. Either way, stop listening.
     flush() {
       timeout.removeEventListener("abort", onAbort);
     },
-  });
+    cancel() {
+      timeout.removeEventListener("abort", onAbort);
+    },
+  };
+  return new TransformStream<UIMessageChunk, UIMessageChunk>(transformer);
 }
