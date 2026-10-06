@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   checkLimits,
   createGuardLimits,
@@ -123,6 +123,8 @@ describe("createGuardLimits", () => {
 });
 
 describe("hardening", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("logs the memory fallback as an error in production, where per-instance caps are not real caps", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -130,7 +132,6 @@ describe("hardening", () => {
     expect(error).toHaveBeenCalledWith(expect.stringContaining('"event":"rate_limit_memory_fallback"'));
     createGuardLimits(DEFAULT_GUARD_CONFIG, {});
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('"event":"rate_limit_memory_fallback"'));
-    vi.restoreAllMocks();
   });
 
   it("fails open, and logs it, when Redis does not answer within the timeout", async () => {
@@ -142,6 +143,5 @@ describe("hardening", () => {
     expect(await limiter.limit("k")).toMatchObject({ success: true });
     expect(Date.now() - started).toBeLessThan(1_000);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('"event":"rate_limit_timeout"'));
-    vi.restoreAllMocks();
   });
 });

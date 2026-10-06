@@ -4,9 +4,13 @@ import { createProductionChatDeps } from "@/lib/chat/production";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-let deps: ChatDeps | null = null;
+// Memoised as a promise so concurrent cold-start requests share one set of limiters.
+let depsPromise: Promise<ChatDeps> | null = null;
 
 export async function POST(req: Request): Promise<Response> {
-  deps ??= await createProductionChatDeps();
-  return handleChat(req, deps);
+  depsPromise ??= createProductionChatDeps().catch((error) => {
+    depsPromise = null; // do not cache a failed start
+    throw error;
+  });
+  return handleChat(req, await depsPromise);
 }

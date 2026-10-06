@@ -1,4 +1,4 @@
-import { createAgentUIStreamResponse, InvalidToolInputError, type LanguageModel, NoSuchToolError, safeValidateUIMessages } from "ai";
+import { createAgentUIStream, createUIMessageStreamResponse, InvalidToolInputError, type LanguageModel, NoSuchToolError, type UIMessageChunk, safeValidateUIMessages } from "ai";
 import { createCoronaAgent, type CoronaUIMessage } from "@/lib/agent/agent";
 import type { CoronaTools } from "@/lib/agent/tools";
 import type { ToolDeps } from "@/lib/agent/tools/deps";
@@ -22,12 +22,14 @@ export interface ChatDeps {
   limits: GuardLimits;
   isBot: () => Promise<boolean>;
   newRequestId?: () => string;
-  /** Defaults to TURN_TIMEOUT_MS; tests shorten it. */
-  turnTimeoutMs?: number;
+  /** Starts the turn's time budget; called at handler entry. Defaults to TURN_TIMEOUT_MS. Tests drive it by hand. */
+  turnTimeoutSignal?: () => AbortSignal;
 }
 
 /** Guards in spec order (BotID → rate limits → input), then streams one agent turn. */
 export async function handleChat(req: Request, deps: ChatDeps): Promise<Response> {
+  // The budget starts here, so BotID and the admission checks count against it.
+  const timeout = deps.turnTimeoutSignal?.() ?? AbortSignal.timeout(TURN_TIMEOUT_MS);
   const requestId = deps.newRequestId?.() ?? crypto.randomUUID();
   const ipHash = hashIp(clientIp(req.headers));
   const reject = (code: ChatErrorCode, reason: string, retryAfter?: number) => {
@@ -93,7 +95,6 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
   // On an abort the SDK skips onEnd (and its onAbort only fires if someone still reads the stream), so this signal
   // is what tells the turn logger: the client leaving, or the turn running out of time. After a normal end or a
   // failure, aborted() is a no-op.
-  const timeout = AbortSignal.timeout(deps.turnTimeoutMs ?? TURN_TIMEOUT_MS);
   const signal = AbortSignal.any([req.signal, timeout]);
   const timedOut = () => timeout.aborted && !req.signal.aborted;
   const ended = () => turn.aborted(timedOut() ? "timeout" : "aborted");
@@ -101,7 +102,7 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
   else signal.addEventListener("abort", ended, { once: true });
 
   try {
-    const response = await createAgentUIStreamResponse({
+    const stream = await createAgentUIStream({
       agent,
       uiMessages: validated.data,
       abortSignal: signal,
@@ -116,7 +117,7 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
         return code;
       },
     });
-    return response.body ? new Response(response.body.pipeThrough(timeoutAsError(timedOut)), response) : response;
+    return createUIMessageStreamResponse({ stream: stream.pipeThrough(endOnTimeout(timeout, timedOut)) });
   } catch (error) {
     turn.failed("model_error", error);
     return errorResponse("model_error");
@@ -125,15 +126,23 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
 
 /**
  * The SDK ends an aborted stream with an "abort" chunk, which the client reads as a deliberate stop: a turn that ran
- * out of time would look like a finished answer. Rewrite it into the stream error the client already knows.
+ * out of time would look like a finished answer. On a timeout, end the stream ourselves with the error chunk the
+ * client already knows, and close it, so a provider that ignores the abort signal cannot hold the body open.
  */
-function timeoutAsError(timedOut: () => boolean): TransformStream<Uint8Array, Uint8Array> {
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  return new TransformStream({
-    transform(chunk, controller) {
-      const text = decoder.decode(chunk, { stream: true });
-      controller.enqueue(timedOut() ? encoder.encode(text.replace(/"type":"abort"(?:,"reason":"[^"]*")?/, `"type":"error","errorText":"model_error"`)) : chunk);
+function endOnTimeout(timeout: AbortSignal, timedOut: () => boolean): TransformStream<UIMessageChunk, UIMessageChunk> {
+  let onAbort = () => {};
+  return new TransformStream<UIMessageChunk, UIMessageChunk>({
+    start(controller) {
+      onAbort = () => {
+        if (!timedOut()) return;
+        controller.enqueue({ type: "error", errorText: "model_error" });
+        controller.terminate();
+      };
+      if (timeout.aborted) onAbort();
+      else timeout.addEventListener("abort", onAbort, { once: true });
+    },
+    flush() {
+      timeout.removeEventListener("abort", onAbort);
     },
   });
 }

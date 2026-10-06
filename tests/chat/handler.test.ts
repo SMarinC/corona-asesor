@@ -277,30 +277,140 @@ describe("handleChat", () => {
     });
   });
 
-  it("ends a turn that runs past its time budget and logs it as a timeout", async () => {
-    const model = new MockLanguageModelV4({
-      doStream: async (options) => ({
-        // A model stream that never finishes on its own.
-        stream: new ReadableStream({
-          start(controller) {
-            controller.enqueue({ type: "stream-start", warnings: [] });
-            options.abortSignal?.addEventListener("abort", () => controller.error(new DOMException("The operation timed out.", "TimeoutError")), {
-              once: true,
-            });
-          },
-        }),
-      }),
-    });
-    const { deps } = makeDeps({ model, turnTimeoutMs: 50 });
-    const started = Date.now();
-    const body = await (await handleChat(chatRequest([user("Piso para baño")]), deps)).text();
-    expect(Date.now() - started).toBeLessThan(5_000);
-    expect(body).toContain("model_error");
+  describe("turn time budget", () => {
+    const timeoutReason = () => new DOMException("The operation timed out.", "TimeoutError");
     const turnLines = () => [...jsonLines(logSpy), ...jsonLines(warnSpy), ...jsonLines(errorSpy)].filter((l) => l.event === "chat_turn");
-    await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(turnLines()).toHaveLength(1);
-    expect(turnLines()[0]).toMatchObject({ level: "warn", outcome: "timeout" });
+
+    /** Streams one text delta, then hangs. It errors on abort, like a provider honoring the signal, unless told to ignore it. */
+    function hangingModel({ delta = "Un momento", honorAbort = true }: { delta?: string; honorAbort?: boolean } = {}) {
+      return new MockLanguageModelV4({
+        doStream: async (options) => ({
+          stream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({ type: "stream-start", warnings: [] });
+              controller.enqueue({ type: "text-start", id: "t" });
+              controller.enqueue({ type: "text-delta", id: "t", delta });
+              if (!honorAbort) return;
+              const fail = () => controller.error(options.abortSignal?.reason);
+              if (options.abortSignal?.aborted) fail();
+              else options.abortSignal?.addEventListener("abort", fail, { once: true });
+            },
+          }),
+        }),
+      });
+    }
+
+    /** Reads the body until `marker` shows up, so the test aborts at a known point; returns a function that reads the rest. */
+    async function readUntil(res: Response, marker: string) {
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+      while (!text.includes(marker)) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("stream ended before " + marker);
+        text += decoder.decode(value, { stream: true });
+      }
+      return async () => {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) return text;
+          text += decoder.decode(value, { stream: true });
+        }
+      };
+    }
+
+    it("ends a timed-out turn with a model_error chunk, closes the body and logs one timeout", async () => {
+      const timeout = new AbortController();
+      const { deps } = makeDeps({ model: hangingModel(), turnTimeoutSignal: () => timeout.signal });
+      const res = await handleChat(chatRequest([user("Piso para baño")]), deps);
+      const rest = await readUntil(res, "Un momento");
+      timeout.abort(timeoutReason());
+      const body = await rest();
+      expect(body.trimEnd().split("\n\n").slice(-2)).toEqual(['data: {"type":"error","errorText":"model_error"}', "data: [DONE]"]);
+      expect(body).not.toContain('"type":"abort"');
+      await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(turnLines()).toHaveLength(1);
+      expect(turnLines()[0]).toMatchObject({ level: "warn", outcome: "timeout" });
+    });
+
+    it("closes the body on a timeout even when the provider ignores the abort signal", async () => {
+      const timeout = new AbortController();
+      const { deps } = makeDeps({ model: hangingModel({ honorAbort: false }), turnTimeoutSignal: () => timeout.signal });
+      const res = await handleChat(chatRequest([user("Piso para baño")]), deps);
+      const rest = await readUntil(res, "Un momento");
+      timeout.abort(timeoutReason());
+      expect(await rest()).toContain('"errorText":"model_error"');
+      expect(turnLines()).toHaveLength(1);
+    });
+
+    it("passes content that merely contains an abort chunk through unchanged", async () => {
+      const timeout = new AbortController();
+      const { deps } = makeDeps({ model: hangingModel({ delta: '{"type":"abort"}' }), turnTimeoutSignal: () => timeout.signal });
+      const res = await handleChat(chatRequest([user("Piso para baño")]), deps);
+      const rest = await readUntil(res, "abort");
+      timeout.abort(timeoutReason());
+      const body = await rest();
+      expect(body).toContain(String.raw`"delta":"{\"type\":\"abort\"}"`);
+      expect(body.match(/"type":"error"/g)).toHaveLength(1);
+    });
+
+    it("still ends a client abort with a plain abort chunk", async () => {
+      const client = new AbortController();
+      const timeout = new AbortController();
+      const { deps } = makeDeps({ model: hangingModel(), turnTimeoutSignal: () => timeout.signal });
+      const res = await handleChat(chatRequest([user("Piso para baño")], "203.0.113.7", client.signal), deps);
+      const rest = await readUntil(res, "Un momento");
+      client.abort();
+      const body = await rest();
+      expect(body).toContain('"type":"abort"');
+      expect(body).not.toContain("model_error");
+    });
+
+    it("logs one timeout when the client aborts after the timeout fired", async () => {
+      const client = new AbortController();
+      const timeout = new AbortController();
+      const { deps } = makeDeps({ model: hangingModel(), turnTimeoutSignal: () => timeout.signal });
+      const res = await handleChat(chatRequest([user("Piso para baño")], "203.0.113.7", client.signal), deps);
+      const rest = await readUntil(res, "Un momento");
+      timeout.abort(timeoutReason());
+      client.abort();
+      await rest();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(turnLines()).toHaveLength(1);
+      expect(turnLines()[0]).toMatchObject({ outcome: "timeout" });
+    });
+
+    it("logs one aborted turn when the timeout fires after the client aborted", async () => {
+      const client = new AbortController();
+      const timeout = new AbortController();
+      const { deps } = makeDeps({ model: hangingModel(), turnTimeoutSignal: () => timeout.signal });
+      const res = await handleChat(chatRequest([user("Piso para baño")], "203.0.113.7", client.signal), deps);
+      const rest = await readUntil(res, "Un momento");
+      client.abort();
+      timeout.abort(timeoutReason());
+      const body = await rest();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(body).not.toContain("model_error");
+      expect(turnLines()).toHaveLength(1);
+      expect(turnLines()[0]).toMatchObject({ outcome: "aborted" });
+    });
+
+    it("starts the budget at handler entry, so admission time counts against it", async () => {
+      const timeout = new AbortController();
+      const { deps } = makeDeps({
+        isBot: async () => {
+          timeout.abort(timeoutReason());
+          return false;
+        },
+        turnTimeoutSignal: () => timeout.signal,
+      });
+      const res = await handleChat(chatRequest([user("Piso para baño")]), deps);
+      const body = await res.text();
+      expect(body).toContain("model_error");
+      expect(turnLines()).toHaveLength(1);
+      expect(turnLines()[0]).toMatchObject({ outcome: "timeout" });
+    });
   });
 
   it("keeps streaming and logs a warning when charging a model call fails", async () => {
