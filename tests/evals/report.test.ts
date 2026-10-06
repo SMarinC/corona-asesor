@@ -23,11 +23,12 @@ const scenario = (id: string, turns: TurnResult[] | null, checks: Check[] = [], 
   ...(skippedReason ? { skippedReason } : {}),
 });
 
-const runOf = (results: ScenarioResult[]): EvalRun => ({
+const runOf = (results: ScenarioResult[], subset = false): EvalRun => ({
   date: "2026-10-06",
   model: "gemini-3.5-flash-lite",
   promptVersion: "2026-10-06.4",
   calls: { used: 14, steps: 12, embeddings: 1 },
+  subset,
   results,
 });
 
@@ -64,13 +65,21 @@ describe("summarize", () => {
     });
   });
 
-  it("meets the bar with at most one failed scenario, no money outside the tools and no invented quantity", () => {
+  it("meets the bar when every scenario ran, at most one failed, and no money or quantity was invented", () => {
     const passing = scenario("a", [turn()]);
     const failing = scenario("b", [turn()], [bad("link", "sin el enlace")]);
+    const notRun = scenario("c", null, [], "call budget reached");
     expect(summarize(runOf([passing, passing, failing])).meetsBar).toBe(true);
     expect(summarize(runOf([passing, failing, failing])).meetsBar).toBe(false);
+    // One scenario short of the full run is not a pass, even with every other scenario passing.
+    expect(summarize(runOf([passing, passing, notRun])).meetsBar).toBe(false);
     expect(summarize(runOf([passing, scenario("c", [turn({ moneyNotFromTools: [1] })])])).meetsBar).toBe(false);
     expect(summarize(runOf([passing, scenario("c", [turn({ inventedQuantities: ["T1:differs"] })])])).meetsBar).toBe(false);
+  });
+
+  it("does not judge the bar on an --only subset", () => {
+    expect(summarize(runOf([scenario("a", [turn()])], true)).meetsBar).toBeNull();
+    expect(renderReport(runOf([scenario("a", [turn()])], true))).toContain("| Success bar (all scenarios ran, passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | n/a (--only subset) |");
   });
 });
 
@@ -107,7 +116,7 @@ describe("renderReport", () => {
     expect(markdown).toContain("| Timeouts | 0 |");
     expect(markdown).toContain("| Model calls spent | 14 (12 steps summed) · 1 embedding queries |");
     expect(markdown).toContain("| Prompt version | `2026-10-06.4` |");
-    expect(markdown).toContain("| Success bar (passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | **not met** |");
+    expect(markdown).toContain("| Success bar (all scenarios ran, passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | **not met** |");
   });
 
   it("shows each scenario's result, its failing checks and, per turn, steps, outcome, latency, tokens, tools and an answer excerpt", () => {

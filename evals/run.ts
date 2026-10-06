@@ -15,7 +15,7 @@ import { getCatalog } from "@/lib/data/catalog";
 import { runTurn } from "./harness";
 import { parseOptions, WORST_CASE_TURN_CALLS } from "./options";
 import { createPacer } from "./pacer";
-import { type EvalRun, renderReport, summarize } from "./report";
+import { barLabel, type EvalRun, renderReport, summarize } from "./report";
 import { exitCodeFor, runScenarios } from "./runner";
 import { SCENARIOS } from "./scenarios";
 
@@ -34,8 +34,9 @@ if (!scripted && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
   process.exit(1);
 }
 
+const scenarios = SCENARIOS.filter((s) => !only || only.includes(s.id));
 const out = await runScenarios({
-  scenarios: SCENARIOS.filter((s) => !only || only.includes(s.id)),
+  scenarios,
   // Scripted runs force the throwing embedder, so they cannot reach the network even if a scenario searches the sheets.
   run: (history, text, mode) => runTurn(history, text, mode, model, { offline: scripted }),
   maxCalls,
@@ -50,6 +51,7 @@ const run: EvalRun = {
   promptVersion: PROMPT_VERSION,
   results: out.results,
   calls: { used: out.callsUsed, steps: out.stepsSummed, embeddings: out.embeddingCalls },
+  subset: scenarios.length < SCENARIOS.length,
 };
 const outDir = scripted ? "evals/out" : "evals";
 mkdirSync(outDir, { recursive: true });
@@ -58,7 +60,7 @@ writeFileSync(`${outDir}/report.md`, renderReport(run));
 writeFileSync(`${outDir}/results.json`, `${JSON.stringify({ ...run, summary }, null, 2)}\n`);
 console.log(
   [
-    `\n${summary.passed}/${summary.total} scenarios passed · success bar ${summary.meetsBar ? "met" : "not met"} · prompt ${summary.promptVersion}`,
+    `\n${summary.passed}/${summary.total} scenarios passed · success bar ${barLabel(summary.meetsBar)} · prompt ${summary.promptVersion}`,
     `money not from tools: ${summary.moneyNotFromTools} · invented quantities: ${summary.inventedQuantities} · median ${summary.medianSteps} steps per completed turn · p95 ${(summary.p95LatencyMs / 1000).toFixed(1)} s · ${summary.timeouts} timeouts`,
     `${out.callsUsed} model calls (${out.stepsSummed} steps summed) · ${out.embeddingCalls} embedding queries · report in ${outDir}/report.md`,
   ].join("\n"),

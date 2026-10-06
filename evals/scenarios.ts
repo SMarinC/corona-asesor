@@ -41,7 +41,8 @@ export interface Scenario {
 // Generic replies: they move any proposal forward, whatever the model proposed. The joint width is in the first
 // message, because the catalog has no recommended joint and the prompt asks the customer for it.
 const PICK = { user: "El primero que propones." };
-const AGREE = { user: "Sí, de acuerdo." };
+// Confirms the adhesive and grout: "lo que recomiendas" stays unambiguous when the model lists several options.
+const AGREE = { user: "Sí, de acuerdo con lo que recomiendas." };
 const CONFIRM = { user: "Confirmo." };
 
 /** The link the prompt gives for an out-of-catalog product, read from the same company data. */

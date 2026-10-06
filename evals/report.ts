@@ -27,6 +27,8 @@ export interface EvalRun {
   promptVersion: string;
   /** What the runner spent: model calls (failed ones and retries included), summed steps and embedding queries. */
   calls: { used: number; steps: number; embeddings: number };
+  /** True when --only ran part of the scenarios: the success bar is then not judged. */
+  subset: boolean;
   results: ScenarioResult[];
 }
 
@@ -44,8 +46,8 @@ export interface EvalSummary {
   timeouts: number;
   calls: EvalRun["calls"];
   promptVersion: string;
-  /** Passed ≥ total − 1, no money outside the tools and no invented quantity. */
-  meetsBar: boolean;
+  /** Every scenario ran, passed ≥ total − 1, no money outside the tools and no invented quantity; null on an --only subset. */
+  meetsBar: boolean | null;
 }
 
 export const scenarioPassed = (result: ScenarioResult) =>
@@ -64,9 +66,10 @@ export function summarize(run: EvalRun): EvalSummary {
   const total = run.results.length;
   const moneyNotFromTools = metrics.reduce((n, m) => n + m.moneyNotFromTools.length, 0);
   const inventedQuantities = metrics.reduce((n, m) => n + m.inventedQuantities.length, 0);
+  const ran = run.results.filter((r) => r.turns !== null).length;
   return {
     passed,
-    run: run.results.filter((r) => r.turns !== null).length,
+    run: ran,
     total,
     moneyNotFromTools,
     inventedQuantities,
@@ -75,12 +78,15 @@ export function summarize(run: EvalRun): EvalSummary {
     timeouts: metrics.filter((m) => m.outcome === "timeout").length,
     calls: run.calls,
     promptVersion: run.promptVersion,
-    meetsBar: passed >= total - 1 && moneyNotFromTools === 0 && inventedQuantities === 0,
+    meetsBar: run.subset ? null : ran === total && passed >= total - 1 && moneyNotFromTools === 0 && inventedQuantities === 0,
   };
 }
 
+/** "met", "not met", or "n/a (--only subset)" when the run did not cover every scenario on purpose. */
+export const barLabel = (meetsBar: boolean | null) => (meetsBar === null ? "n/a (--only subset)" : meetsBar ? "met" : "not met");
+
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
-const cell = (text: string) => text.replace(/\s+/g, " ").trim().replaceAll("|", "\\|");
+const cell =(text: string) => text.replace(/\s+/g, " ").trim().replaceAll("|", "\\|");
 const EXCERPT = 160;
 const excerpt = (text: string) => {
   const flat = cell(text);
@@ -128,7 +134,7 @@ export function renderReport(run: EvalRun): string {
     `| Timeouts | ${s.timeouts} |`,
     `| Model calls spent | ${s.calls.used} (${s.calls.steps} steps summed) · ${s.calls.embeddings} embedding queries |`,
     `| Prompt version | \`${s.promptVersion}\` |`,
-    `| Success bar (passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | **${s.meetsBar ? "met" : "not met"}** |`,
+    `| Success bar (all scenarios ran, passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | ${s.meetsBar === null ? barLabel(null) : `**${barLabel(s.meetsBar)}**`} |`,
     "",
     "Every turn: it completed, at most 7 steps, every peso amount comes from a tool or the customer, quote quantities come from `computeMaterials`, quote prices match the catalog, and a tool's `needs_review` is shown as \"Requiere revisión\". Each scenario adds its own checks over the whole conversation: the tools and the customer's conditions they received, the budget verdict, the dotted SKU or the out-of-catalog link.",
     "",

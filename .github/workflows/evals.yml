@@ -1,6 +1,6 @@
 name: Grounding evals
 
-# Manual only: each run spends free-tier Gemini quota (about 60-90 model calls).
+# Manual only: each run spends free-tier Gemini quota (about 50-65 model calls).
 on:
   workflow_dispatch:
     inputs:
