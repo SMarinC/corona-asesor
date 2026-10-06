@@ -1,0 +1,50 @@
+name: Grounding evals
+
+# Manual only: each run spends free-tier Gemini quota (about 60-90 model calls).
+on:
+  workflow_dispatch:
+    inputs:
+      max-calls:
+        description: Model call budget for the run (1-110)
+        default: "110"
+      only:
+        description: Comma-separated scenario ids (empty runs all 12)
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Inputs reach the shell only through env vars, and are validated before use.
+      - name: Validate inputs
+        env:
+          MAX_CALLS: ${{ inputs.max-calls }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          [[ "$MAX_CALLS" =~ ^[0-9]+$ ]] && (( 10#$MAX_CALLS >= 1 && 10#$MAX_CALLS <= 110 )) \
+            || { echo "max-calls must be an integer from 1 to 110"; exit 1; }
+          [[ -z "$ONLY" || "$ONLY" =~ ^[a-z0-9,_-]+$ ]] \
+            || { echo "only must be comma-separated scenario ids"; exit 1; }
+      - name: Run the evals
+        env:
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          MAX_CALLS: ${{ inputs.max-calls }}
+          ONLY: ${{ inputs.only }}
+        run: npm run evals -- --max-calls "$((10#$MAX_CALLS))" ${ONLY:+--only "$ONLY"}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: eval-report
+          path: |
+            evals/report.md
+            evals/results.json
+          if-no-files-found: error
