@@ -49,7 +49,7 @@ export interface TurnInput {
 }
 
 /** The spec's step budget for one turn; the agent's hard cap (MAX_STEPS) is higher. */
-export const MAX_TURN_STEPS = 7;
+const MAX_TURN_STEPS = 7;
 
 const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -70,7 +70,7 @@ const outcomeOf = (turnLog: TurnLog | null, error: string | null): Outcome => {
 };
 
 /** Numbers stated in prose ("1.500.000", "6,6", "3 x 2"), outside URLs and list markers; digits glued to letters ("m2", "60x120") are labels. */
-export function numbersIn(text: string): string[] {
+function numbersIn(text: string): string[] {
   const prose = text.replace(/https?:\/\/\S+/g, " ").replace(/^\s*\d+[.)]\s/gm, " ");
   return [...prose.matchAll(/(?<![\p{L}\d.,])\d+(?:[.,]\d+)*(?![\p{L}\d])/gu)].map((m) => m[0]);
 }
@@ -117,7 +117,7 @@ function toolMoneyValues(outputs: unknown[]): Set<number> {
 const DATA_REQUEST = /\bnecesito (?:que me|saber|conocer)\b|\b(?:compart|indic|conf[ií]rm|cu[eé]nt)(?:ame|eme)\b|\bdime\b|\bpor favor (?:comparte|indica|dime|confirma)\b/;
 
 /** The answer asks the customer for something: a question (? or ¿) or an explicit data request. */
-export const asksForData = (text: string): boolean => /[?¿]/.test(text) || DATA_REQUEST.test(normalize(text));
+const asksForData = (text: string): boolean => /[?¿]/.test(text) || DATA_REQUEST.test(normalize(text));
 
 /** The checks every turn gets, plus `asks` when the scenario expects a question back. */
 export function scoreTurn({ messages, turnLog, error, asks, catalog }: TurnInput): { checks: Check[]; metrics: TurnMetrics } {
