@@ -1,19 +1,20 @@
 import { tool } from "ai";
 import { z } from "zod";
-import type { Product } from "@/lib/domain/types";
+import type { QuotableProduct } from "@/lib/domain/quotable";
 import type { ToolDeps } from "./deps";
-import { ok, runTool, toModelOutput, toolError, type ToolResult } from "./result";
+import { notOffered } from "./lookup";
+import { ok, runTool, toModelOutput, type ToolResult } from "./result";
 
 export const getProductInput = z.object({ sku: z.string().min(1).max(20) });
 export type GetProductInput = z.infer<typeof getProductInput>;
 
 export interface GetProductData {
-  product: Product;
+  product: QuotableProduct;
 }
 
 export function executeGetProduct(deps: ToolDeps, input: GetProductInput): ToolResult<GetProductData> {
   const product = deps.catalog.get(input.sku);
-  if (!product) return toolError("unknown_sku", `El SKU ${input.sku} no existe en el catálogo.`);
+  if (!product) return notOffered(deps, input.sku);
   return ok({ product });
 }
 

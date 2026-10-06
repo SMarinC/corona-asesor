@@ -9,12 +9,11 @@ describe("searchTiles", () => {
     makeTile({ sku: "dry-only", price: 20000, wetArea: false }),
     makeTile({ sku: "wall", surface: "wall" }),
     makeTile({ sku: "gone", inStock: false }),
-    makeTile({ sku: "no-box", price: 85000, m2PerBox: null }),
   ];
 
   it("ranks by filter fit, not by lowest price", () => {
     const result = searchTiles(tiles, { surface: "floor", environment: "indoor", wetArea: true });
-    expect(result.map((r) => r.product.sku)).toEqual(["match", "no-box", "cheap-unknown"]);
+    expect(result.map((r) => r.product.sku)).toEqual(["match", "cheap-unknown"]);
   });
 
   it("keeps unknown products but reports what is unknown", () => {

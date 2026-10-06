@@ -20,10 +20,10 @@ const fixtureIndex = decodeIndex(encodeIndex(fixtureChunks.map((_, i) => oneHot(
 export const fixtureProducts: Product[] = [
   // T1: floor, indoor, wet, ceramic, 1.44 m²/box, $80.000 per box.
   makeTile({ imageUrls: ["https://corona.co/medias/T1.jpg"] }),
-  // T2: wall tile with no m²/box in the catalog (c0003 states 1,62).
+  // T2: wall tile, 1.62 m²/box (its sheet c0003 states it too).
   makeTile({
     sku: "T2", name: "Pared Prueba Gris 30x60", surface: "wall", formatMm: { length: 300, width: 600 },
-    m2PerBox: null, piecesPerBox: 9, price: 45000, finish: "Mate", design: "Neutras", traffic: null, trafficLabel: "Paredes",
+    m2PerBox: 1.62, piecesPerBox: 9, price: 45000, finish: "Mate", design: "Neutras", traffic: null, trafficLabel: "Paredes",
   }),
   // T3: outdoor porcelain floor tile.
   makeTile({
@@ -36,6 +36,8 @@ export const fixtureProducts: Product[] = [
     sku: "T4", name: "Piso Sin Ficha Beige 50x50", formatMm: { length: 500, width: 500 }, thicknessMm: null, price: null,
     design: null, usageAreas: [], indoor: null, outdoor: null, wetArea: null,
   }),
+  // T5: floor tile with no m²/box in the company data: kept out of the catalog the agent offers.
+  makeTile({ sku: "T5", name: "Piso Sin Caja Gris 60x60", m2PerBox: null }),
   // A1: ceramic-only adhesive that excludes porcelain, 4–5 kg/m², 25 kg bag.
   makeAdhesive(),
   // A2: adhesive with nothing verified in the catalog (c0004 states 5.0-6.0 kg/m2 and 25 kg).

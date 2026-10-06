@@ -11,6 +11,15 @@ describe("createCatalog", () => {
     expect(catalog.get("T9")?.kind).toBe("tile");
     expect(catalog.get("missing")).toBeUndefined();
   });
+
+  it("keeps a tile without m² per box out of what the agent can offer, and says why", () => {
+    const catalog = createCatalog([makeTile({ sku: "T9" }), makeTile({ sku: "T8", name: "Piso Sin Caja", m2PerBox: null })]);
+    expect(catalog.all.map((p) => p.sku)).toEqual(["T9"]);
+    expect(catalog.tiles.map((p) => p.sku)).toEqual(["T9"]);
+    expect(catalog.get("T8")).toBeUndefined();
+    expect(catalog.notQuotable("T8")).toBe("El producto Piso Sin Caja (SKU T8) no tiene en el catálogo los m² por caja; no se puede cotizar con este asesor.");
+    expect(catalog.notQuotable("T9")).toBeUndefined();
+  });
 });
 
 describe("getCatalog (data/catalog.json)", () => {
@@ -24,19 +33,18 @@ describe("getCatalog (data/catalog.json)", () => {
     expect(wrong.map((t) => t.sku)).toEqual([]);
   });
 
-  it("contains only the 341 purchasable products", () => {
-    expect(catalog.all).toHaveLength(341);
-    expect(catalog.tiles).toHaveLength(298);
+  it("offers the 339 purchasable products whose data has every value a quote needs", () => {
+    expect(catalog.all).toHaveLength(339);
+    expect(catalog.tiles).toHaveLength(296);
     expect(catalog.adhesives).toHaveLength(12);
     expect(catalog.grouts).toHaveLength(31);
   });
 
   it("takes m² per box from the tile's own sheet when the structured specs lack it", () => {
     // Both Ticino sheets say "M2 POR CAJA ... 2" (32 pieces of 25x25 cm); the other two sheets state no value.
-    const box = (sku: string) => catalog.all.find((p) => p.sku === sku);
-    expect(box("257049001")).toMatchObject({ m2PerBox: 2 });
-    expect(box("257059181")).toMatchObject({ m2PerBox: 2 });
-    expect(catalog.tiles.filter((t) => t.m2PerBox === null).map((t) => t.sku).sort()).toEqual(["19108871", "8027909"]);
+    expect(catalog.get("257049001")).toMatchObject({ m2PerBox: 2 });
+    expect(catalog.get("257059181")).toMatchObject({ m2PerBox: 2 });
+    for (const sku of ["19108871", "8027909"]) expect(catalog.notQuotable(sku), sku).toContain("no tiene en el catálogo los m² por caja");
   });
 
   it("backs every adhesive compatibility with a citation", () => {

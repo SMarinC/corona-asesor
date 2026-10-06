@@ -78,13 +78,8 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
   const area = computeArea(input.lengthM, input.widthM, input.wastePct ?? DEFAULT_WASTE_PCT);
   const missing: MissingField[] = [];
 
-  let tileQuantity: TileQuantity | undefined;
-  if (tile.m2PerBox !== null) {
-    const { boxes, coveredM2 } = computeBoxes(area.areaWithWasteM2, tile.m2PerBox);
-    tileQuantity = { sku: tile.sku, name: tile.name, m2PerBox: tile.m2PerBox, boxes, coveredM2 };
-  } else {
-    missing.push({ field: "m2PerBox", reason: `El catálogo no indica los m² por caja de ${tile.name}; sin ese dato no se pueden calcular las cajas.` });
-  }
+  const { boxes, coveredM2 } = computeBoxes(area.areaWithWasteM2, tile.m2PerBox);
+  const tileQuantity: TileQuantity = { sku: tile.sku, name: tile.name, m2PerBox: tile.m2PerBox, boxes, coveredM2 };
 
   let adhesiveQuantity: AdhesiveQuantity | undefined;
   if (adhesive) {
@@ -114,7 +109,7 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
     }
   }
 
-  if (missing.length === 0 && tileQuantity) {
+  if (missing.length === 0) {
     return ok({ area, tile: tileQuantity, adhesive: adhesiveQuantity ?? null, grout: groutQuantity ?? null });
   }
   return needsReview<MaterialsData>({ area, tile: tileQuantity, adhesive: adhesive ? adhesiveQuantity : null, grout: grout ? groutQuantity : null }, missing);

@@ -6,7 +6,8 @@ import { Citation } from "@/components/chat/citations-context";
 import type { SearchSuppliesData, SupplyResult } from "@/lib/agent/tools/search-supplies";
 import type { TileResult } from "@/lib/agent/tools/search-tiles";
 import { PRICE_UNIT, type TileSummary } from "@/lib/agent/tools/summaries";
-import type { Product, TileMaterial } from "@/lib/domain/types";
+import type { QuotableProduct } from "@/lib/domain/quotable";
+import type { TileMaterial } from "@/lib/domain/types";
 import { formatCOP, formatFormat, formatNumber } from "@/lib/ui/format";
 
 const VISIBLE = 3;
@@ -130,7 +131,7 @@ export function SupplyResults({ data }: { data: SearchSuppliesData }) {
   );
 }
 
-export function ProductDetail({ product }: { product: Product }) {
+export function ProductDetail({ product }: { product: QuotableProduct }) {
   const unit = PRICE_UNIT[product.kind];
   return (
     <div className="flex gap-3">
@@ -145,7 +146,7 @@ export function ProductDetail({ product }: { product: Product }) {
             {[
               product.formatMm ? formatFormat(product.formatMm) : null,
               product.thicknessMm ? `${formatNumber(product.thicknessMm)} mm de espesor` : "espesor sin dato",
-              product.m2PerBox ? `${formatNumber(product.m2PerBox)} m² por caja` : "m² por caja sin dato",
+              `${formatNumber(product.m2PerBox)} m² por caja`,
             ]
               .filter(Boolean)
               .join(", ")}

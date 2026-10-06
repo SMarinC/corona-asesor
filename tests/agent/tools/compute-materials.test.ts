@@ -30,19 +30,9 @@ describe("computeMaterials tool", () => {
 
   it("takes data values only from the catalog: the model cannot pass its own", () => {
     expect(Object.keys(computeMaterialsInput.shape)).not.toContain("overrides");
-    const sneaked = { ...room, tileSku: "T2", overrides: { m2PerBox: { value: 1.62, citationId: "c0003" } } };
+    const sneaked = { ...room, tileSku: "T1", overrides: { m2PerBox: { value: 2, citationId: "c0003" } } };
     const result = executeComputeMaterials(deps, computeMaterialsInput.parse(sneaked));
-    expect(result).toMatchObject({ status: "needs_review", missing: [{ field: "m2PerBox" }] });
-  });
-
-  it("flags a missing m² per box as needs_review", () => {
-    const result = executeComputeMaterials(deps, { ...room, tileSku: "T2" });
-    expect(result.status).toBe("needs_review");
-    if (result.status !== "needs_review") return;
-    expect(result.missing.map((m) => m.field)).toEqual(["m2PerBox"]);
-    expect(result.missing[0].reason).not.toContain("searchTechnicalSheets");
-    expect(result.data.area).toEqual({ areaM2: 6, wastePct: 0.1, areaWithWasteM2: 6.6 });
-    expect(result.data.tile).toBeUndefined();
+    expect(result).toMatchObject({ status: "ok", data: { tile: { m2PerBox: 1.44, boxes: 5 } } });
   });
 
   it("flags missing adhesive data as needs_review", () => {

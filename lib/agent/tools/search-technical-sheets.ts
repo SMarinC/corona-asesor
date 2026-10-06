@@ -2,7 +2,8 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { SheetHit } from "@/lib/data/sheets";
 import type { ToolDeps } from "./deps";
-import { ok, runTool, toolError, type ToolResult } from "./result";
+import { notOffered } from "./lookup";
+import { ok, runTool, type ToolResult } from "./result";
 
 export const MAX_HIT_CHARS = 4_000;
 export const MAX_HIT_SKUS = 10;
@@ -52,9 +53,7 @@ export async function executeSearchTechnicalSheets(
   input: SearchTechnicalSheetsInput,
 ): Promise<ToolResult<SearchTechnicalSheetsData>> {
   const product = input.sku === undefined ? undefined : deps.catalog.get(input.sku);
-  if (input.sku !== undefined && !product) {
-    return toolError("unknown_sku", `El SKU ${input.sku} no existe en el catálogo.`);
-  }
+  if (input.sku !== undefined && !product) return notOffered(deps, input.sku);
   const sku = product?.sku;
   const { mode, hits } = await deps.sheets.search(input.query, { sku, k: input.k ?? 3 });
   return ok({

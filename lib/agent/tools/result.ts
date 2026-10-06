@@ -7,7 +7,7 @@ export interface MissingField {
   reason: string;
 }
 
-export type ToolErrorCode = "unknown_sku" | "wrong_kind" | "invalid_input" | "internal";
+export type ToolErrorCode = "unknown_sku" | "not_quotable" | "wrong_kind" | "invalid_input" | "internal";
 
 export interface ToolError {
   status: "error";

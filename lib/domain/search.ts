@@ -67,7 +67,6 @@ export function searchTiles(tiles: Tile[], filters: TileFilters, limit = 6): Ran
       else if (!includesText(tile.design, filters.design)) continue;
       else score += 1;
     }
-    if (tile.m2PerBox !== null) score += 0.5;
     ranked.push({ product: tile, score, unknown });
   }
   return ranked.sort(byRank).slice(0, limit);
