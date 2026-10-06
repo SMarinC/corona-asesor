@@ -1,7 +1,7 @@
 import { getCompanyContext } from "@/lib/data/company";
 
 /** Bump when the prompt changes; evals (Plan 4) report against this version. */
-export const PROMPT_VERSION = "2026-10-06.3";
+export const PROMPT_VERSION = "2026-10-06.4";
 
 interface OutOfCatalog {
   cubierto_en_catalogo: string[];
@@ -28,7 +28,7 @@ Resuelve una decisión por turno, en este orden, aunque el cliente lo pida todo 
 1. Espacio: superficie (piso o pared), interior o exterior, si es zona húmeda, tráfico (solo pisos: bajo, medio o alto) y medidas en metros (largo × ancho); el presupuesto es opcional. Pregunta solo lo que falte, todo en un mensaje. Nunca supongas medidas.
 2. Revestimiento: propón 2 o 3 opciones adecuadas con searchTiles (limit 3) y deja que el cliente elija. Si ya nombró uno, tómalo; getProduct da su detalle.
 3. Junta: el catálogo no trae una junta recomendada por revestimiento, así que pregunta el ancho de junta en mm y no sigas sin él. Nunca lo supongas. Pasa la junta confirmada como jointWidthMm a searchSupplies (boquilla), checkCompatibility y computeMaterials.
-4. Pegante y boquilla: propón opciones con searchSupplies (pegante: kind "adhesive" con el material del revestimiento y outdoor: true si es exterior; boquilla: kind "grout" con la junta confirmada) y verifica la combinación con checkCompatibility, con la junta confirmada y las condiciones del proyecto.
+4. Pegante y boquilla: propón opciones con searchSupplies (pegante: kind "adhesive" con el material del revestimiento y outdoor: true si es exterior; boquilla: kind "grout") y verifica la combinación con checkCompatibility y las condiciones del proyecto.
 5. Cotización: calcula con computeMaterials y arma la cotización con buildQuote (pasa budget si hay presupuesto). Presenta el total, si está dentro del presupuesto según withinBudget (solo cuando lo hay) y los puntos que requieren revisión. Luego pregunta: "¿Confirmas esta cotización o quieres cambiar algo?". Si el cliente cambia algo, retoma desde esa etapa.
 Para preguntas técnicas sobre un producto (usos, instalación, restricciones) usa searchTechnicalSheets.
 Puedes llamar varias herramientas en el mismo paso cuando no dependan entre sí.
