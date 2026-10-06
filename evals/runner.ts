@@ -1,3 +1,4 @@
+import { answerOf, traceOf } from "./trace";
 import type { TurnRecord } from "./harness";
 import { WORST_CASE_TURN_CALLS } from "./options";
 import type { ScenarioResult } from "./report";
@@ -52,7 +53,13 @@ export async function runScenarios({ scenarios, run, maxCalls, pacer, onTurn }: 
       await pacer?.waitForTurn();
       const record = await run(history, turn.user, scenario.mode);
       const { checks, metrics } = scoreTurn({ messages: record.messages, turnLog: record.turnLog, error: record.error, expect: turn.expect });
-      turns.push({ checks, metrics, keywordFallbacks: record.keywordFallbacks });
+      const assistant = record.messages.at(-1);
+      turns.push({
+        checks,
+        metrics,
+        keywordFallbacks: record.keywordFallbacks,
+        ...(assistant?.role === "assistant" ? { answer: answerOf(assistant), trace: traceOf(assistant) } : {}),
+      });
       history = record.messages;
       const spent = Math.max(1, metrics.steps) + (record.error ? FAILED_CALL_COST : 0);
       callsUsed += spent;

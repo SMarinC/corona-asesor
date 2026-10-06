@@ -1,11 +1,16 @@
 import type { Check, TurnMetrics } from "./score";
+import type { TraceStep } from "./trace";
 
 export interface ScenarioResult {
   id: string;
   title: string;
   mode: "semantic" | "keyword";
   /** null when the run stopped before this scenario (quota or call budget). */
-  turns: { checks: Check[]; metrics: TurnMetrics; keywordFallbacks: number }[] | null;
+  turns: { checks: Check[]; metrics: TurnMetrics; keywordFallbacks: number;
+    /** The assistant's final text and its tool calls, so a run can be audited by hand. */
+    answer?: string;
+    trace?: TraceStep[];
+  }[] | null;
   skippedReason?: string;
 }
 
