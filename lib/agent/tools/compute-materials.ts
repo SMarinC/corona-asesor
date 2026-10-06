@@ -9,6 +9,7 @@ import {
   DEFAULT_WASTE_PCT,
   GROUT_DENSITY_G_CM3,
 } from "@/lib/domain/calculations";
+import { displayName } from "@/lib/domain/display-name";
 import type { ToolDeps } from "./deps";
 import { isToolError, lookup } from "./lookup";
 import { type MissingField, needsReview, ok, runTool, type ToolResult, toolError } from "./result";
@@ -72,20 +73,20 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
   const grout = input.groutSku === undefined ? null : lookup(deps, input.groutSku, "grout");
   if (isToolError(grout)) return grout;
   if (grout?.groutType === "repair") {
-    return toolError("invalid_input", `${grout.name} es un producto de reparación, no de emboquillado.`);
+    return toolError("invalid_input", `${displayName(grout)} es un producto de reparación, no de emboquillado.`);
   }
 
   const area = computeArea(input.lengthM, input.widthM, input.wastePct ?? DEFAULT_WASTE_PCT);
   const missing: MissingField[] = [];
 
   const { boxes, coveredM2 } = computeBoxes(area.areaWithWasteM2, tile.m2PerBox);
-  const tileQuantity: TileQuantity = { sku: tile.sku, name: tile.name, m2PerBox: tile.m2PerBox, boxes, coveredM2 };
+  const tileQuantity: TileQuantity = { sku: tile.sku, name: displayName(tile), m2PerBox: tile.m2PerBox, boxes, coveredM2 };
 
   let adhesiveQuantity: AdhesiveQuantity | null = null;
   if (adhesive) {
     const coverage = adhesive.coverageKgM2.max;
     const { kg, bags } = computeAdhesive(area.areaM2, coverage, adhesive.bagKg);
-    adhesiveQuantity = { sku: adhesive.sku, name: adhesive.name, coverageKgM2: coverage, bagKg: adhesive.bagKg, kg, bags, note: ADHESIVE_NOTE };
+    adhesiveQuantity = { sku: adhesive.sku, name: displayName(adhesive), coverageKgM2: coverage, bagKg: adhesive.bagKg, kg, bags, note: ADHESIVE_NOTE };
   }
 
   let groutQuantity: GroutQuantity | undefined;
@@ -95,11 +96,11 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
     const thickness = tile.thicknessMm;
     const { packageKg } = grout;
     if (joint === undefined) missing.push({ field: "jointWidthMm", reason: "Falta el ancho de junta del proyecto (mm); sin ese dato no se puede calcular la boquilla." });
-    if (format === null) missing.push({ field: "formatMm", reason: `El catálogo no indica el formato de ${tile.name}; sin el formato no se puede calcular la boquilla.` });
-    if (thickness === null) missing.push({ field: "thicknessMm", reason: `El catálogo no indica el espesor de ${tile.name}; sin el espesor no se puede calcular la boquilla.` });
+    if (format === null) missing.push({ field: "formatMm", reason: `El catálogo no indica el formato de ${displayName(tile)}; sin el formato no se puede calcular la boquilla.` });
+    if (thickness === null) missing.push({ field: "thicknessMm", reason: `El catálogo no indica el espesor de ${displayName(tile)}; sin el espesor no se puede calcular la boquilla.` });
     if (joint !== undefined && format !== null && thickness !== null) {
       const { consumptionKgM2, kg, units } = computeGrout(area.areaM2, format, thickness, joint, packageKg);
-      groutQuantity = { sku: grout.sku, name: grout.name, jointWidthMm: joint, consumptionKgM2, kg, packageKg, units, note: GROUT_NOTE };
+      groutQuantity = { sku: grout.sku, name: displayName(grout), jointWidthMm: joint, consumptionKgM2, kg, packageKg, units, note: GROUT_NOTE };
     }
   }
 

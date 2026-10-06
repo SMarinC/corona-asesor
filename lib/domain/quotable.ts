@@ -1,3 +1,4 @@
+import { displayName } from "./display-name";
 import type { Adhesive, Grout, Product, Range, Tile } from "./types";
 
 /**
@@ -28,5 +29,5 @@ export const isQuotable = (product: Product): product is QuotableProduct => miss
 /** Why the agent cannot offer this product (Spanish, read by the model), or null when it can. */
 export function notQuotableMessage(product: Product): string | null {
   const missing = missingQuoteValue(product);
-  return missing === null ? null : `El producto ${product.name} (SKU ${product.sku}) no tiene en el catálogo ${missing}; no se puede cotizar con este asesor.`;
+  return missing === null ? null : `El producto ${displayName(product)} (SKU ${product.sku}) no tiene en el catálogo ${missing}; no se puede cotizar con este asesor.`;
 }

@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { displayName } from "@/lib/domain/display-name";
 import type { QuotableProduct } from "@/lib/domain/quotable";
 import type { ToolDeps } from "./deps";
 import { notOffered } from "./lookup";
@@ -15,7 +16,7 @@ export interface GetProductData {
 export function executeGetProduct(deps: ToolDeps, input: GetProductInput): ToolResult<GetProductData> {
   const product = deps.catalog.get(input.sku);
   if (!product) return notOffered(deps, input.sku);
-  return ok({ product });
+  return ok({ product: { ...product, name: displayName(product) } });
 }
 
 export const createGetProductTool = (deps: ToolDeps) =>

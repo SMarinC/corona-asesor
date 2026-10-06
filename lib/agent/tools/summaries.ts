@@ -1,5 +1,5 @@
 import { round } from "@/lib/domain/calculations";
-import { parseKg } from "@/lib/domain/parse";
+import { displayName } from "@/lib/domain/display-name";
 import type { Adhesive, Grout, Product, Tile } from "@/lib/domain/types";
 
 /** What one unit of `price` buys, per product kind. */
@@ -31,7 +31,7 @@ export interface TileSummary {
 export function summarizeTile(t: Tile): TileSummary {
   return {
     sku: t.sku,
-    name: t.name,
+    name: displayName(t),
     price: t.price,
     priceUnit: PRICE_UNIT.tile,
     pricePerM2: t.price !== null && t.m2PerBox !== null ? round(t.price / t.m2PerBox, 0) : null,
@@ -69,16 +69,10 @@ export interface AdhesiveSummary {
   imageUrl: string | null;
 }
 
-/** The catalog name plus its bag size when the name does not state one: some SKUs share a name across bag sizes. */
-function adhesiveDisplayName(a: Adhesive): string {
-  if (a.bagKg === null || parseKg(a.name) !== null) return a.name;
-  return `${a.name} · ${String(a.bagKg).replace(".", ",")} kg`;
-}
-
 export function summarizeAdhesive(a: Adhesive): AdhesiveSummary {
   return {
     sku: a.sku,
-    name: adhesiveDisplayName(a),
+    name: displayName(a),
     price: a.price,
     priceUnit: PRICE_UNIT.adhesive,
     bagKg: a.bagKg,
@@ -111,7 +105,7 @@ export interface GroutSummary {
 export function summarizeGrout(g: Grout): GroutSummary {
   return {
     sku: g.sku,
-    name: g.name,
+    name: displayName(g),
     price: g.price,
     priceUnit: PRICE_UNIT.grout,
     packageKg: g.packageKg,

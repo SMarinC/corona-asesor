@@ -18,7 +18,7 @@ describe("buildQuote", () => {
       quote: {
         lines: [
           { sku: "T1", name: "Piso Prueba Blanco 60x60", kind: "tile", quantity: 10, unitPrice: 89900, subtotal: 899000, url: "https://corona.co/p/T1" },
-          { sku: "A1", name: "PEGACOR® Cerámico Gris", kind: "adhesive", quantity: 3, unitPrice: 42900, subtotal: 128700, url: null },
+          { sku: "A1", name: "PEGACOR® Cerámico Gris · 25 kg", kind: "adhesive", quantity: 3, unitPrice: 42900, subtotal: 128700, url: null },
         ],
         total: 1_027_700,
         missingPrices: [],

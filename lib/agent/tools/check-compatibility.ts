@@ -1,7 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { type Check, evaluateCompatibility, type ProjectConditions, type Verdict } from "@/lib/domain/compatibility";
-import type { Traffic } from "@/lib/domain/types";
+import { displayName } from "@/lib/domain/display-name";
+import type { Product, Traffic } from "@/lib/domain/types";
 import type { ToolDeps } from "./deps";
 import { isToolError, lookup } from "./lookup";
 import { ok, runTool, type ToolResult, toolError } from "./result";
@@ -40,7 +41,7 @@ export interface CompatibilityData {
   products: { tile: ProductRef; adhesive: ProductRef | null; grout: ProductRef | null };
 }
 
-const ref = (p: ProductRef): ProductRef => ({ sku: p.sku, name: p.name });
+const ref = (p: Product): ProductRef => ({ sku: p.sku, name: displayName(p) });
 
 export function executeCheckCompatibility(deps: ToolDeps, input: CheckCompatibilityInput): ToolResult<CompatibilityData> {
   if (input.surface === "floor" && input.traffic === undefined) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildQuoteInput, executeBuildQuote, mergeDuplicateLines } from "@/lib/agent/tools/build-quote";
+import { getToolDeps } from "@/lib/agent/tools";
 import { makeToolDeps } from "@/tests/fixtures/tool-deps";
 
 const deps = makeToolDeps();
@@ -62,5 +63,14 @@ describe("buildQuote tool", () => {
     expect(buildQuoteInput.safeParse({ lines: [{ sku: "T1", quantity: 1 }], budget: -5 }).success).toBe(false);
     expect(buildQuoteInput.safeParse({ lines: [{ sku: "T1", quantity: 1.5 }] }).success).toBe(false);
     expect(buildQuoteInput.safeParse({ lines: [] }).success).toBe(false);
+  });
+});
+
+describe("buildQuote on the real catalog", () => {
+  it("names a quote line with its bag size, so the customer can tell same-name adhesives apart", () => {
+    const result = executeBuildQuote(getToolDeps(), { lines: [{ sku: "901061501", quantity: 1 }, { sku: "901021501", quantity: 1 }] });
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.data.lines.map((line) => line.name)).toEqual(["PEGACOR® Interiores Gris · 10 kg", "PEGACOR® Interiores Gris · 25 kg"]);
   });
 });

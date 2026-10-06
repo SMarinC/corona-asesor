@@ -1,5 +1,6 @@
+import { displayName } from "./display-name";
 import { normalizeText } from "./parse";
-import type { Adhesive, Environment, Grout, Surface, Tile, TileMaterial, Traffic } from "./types";
+import type { Adhesive, Environment, Grout, Product, Surface, Tile, TileMaterial, Traffic } from "./types";
 
 export type Verdict = "compatible" | "incompatible" | "needs_review";
 
@@ -91,11 +92,11 @@ function checkTraffic(tile: Tile, project: ProjectConditions): Check {
   return { rule, verdict: "incompatible", message: `Tráfico de la ficha: ${label}; insuficiente para tráfico ${TRAFFIC_ES[project.traffic]}.` };
 }
 
-function checkAvailability(label: string, product: { name: string; inStock: boolean }): Check {
+function checkAvailability(label: string, product: Product): Check {
   const rule = `Disponibilidad (${label})`;
   return product.inStock
-    ? { rule, verdict: "compatible", message: `${product.name}: disponible.` }
-    : { rule, verdict: "incompatible", message: `${product.name}: sin disponibilidad.` };
+    ? { rule, verdict: "compatible", message: `${displayName(product)}: disponible.` }
+    : { rule, verdict: "incompatible", message: `${displayName(product)}: sin disponibilidad.` };
 }
 
 function checkAdhesive(tile: Tile, adhesive: Adhesive, project: ProjectConditions): Check[] {

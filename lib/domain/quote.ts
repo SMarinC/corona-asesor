@@ -1,4 +1,5 @@
 import { round } from "./calculations";
+import { displayName } from "./display-name";
 import type { Product } from "./types";
 
 export interface QuoteLineInput {
@@ -47,7 +48,7 @@ export function buildQuote(
     const product = findProduct(input.sku)!;
     return {
       sku: product.sku,
-      name: product.name,
+      name: displayName(product),
       kind: product.kind,
       quantity: input.quantity,
       unitPrice: product.price,
