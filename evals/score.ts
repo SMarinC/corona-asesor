@@ -126,6 +126,12 @@ function toolMoneyValues(outputs: unknown[]): Set<number> {
   return values;
 }
 
+// A request for data worded without a question mark: "necesito que me compartas…", "compárteme…", "indícame…".
+const DATA_REQUEST = /\bnecesito (?:que me|saber|conocer)\b|\b(?:compart|indic|conf[ií]rm|cu[eé]nt)(?:ame|eme)\b|\bdime\b|\bpor favor (?:comparte|indica|dime|confirma)\b/;
+
+/** The answer asks the user for something: a question (? or ¿) or an explicit data request. */
+export const asksForData = (text: string): boolean => /[?¿]/.test(text) || DATA_REQUEST.test(normalize(text));
+
 /** Splits at . ; : ! ? and newlines (keeping "1.500.000" whole), plus any `extra` regex source. */
 const clausesOf = (text: string, extra = "") =>
   text
@@ -254,7 +260,7 @@ export function scoreTurn({ messages, turnLog, error, expect }: TurnInput): { ch
     const areas = completedInputs("computeMaterials").map((i) => Number(i.lengthM) * Number(i.widthM));
     checks.push({ name: "area", ok: areas.some((a) => Math.abs(a - area) <= area * 0.01), detail: `esperado ${area} m2; computeMaterials recibió ${areas.join(", ") || "nada"}` });
   }
-  if (expect.asks) checks.push({ name: "asks", ok: text.includes("?"), detail: text.slice(0, 120) });
+  if (expect.asks) checks.push({ name: "asks", ok: asksForData(text), detail: text.slice(0, 120) });
   if (expect.mentionsAny) {
     const hit = expect.mentionsAny.find((phrase) => plain.includes(normalize(phrase)));
     checks.push({ name: "mentions", ok: hit !== undefined, detail: hit ?? `ninguna de: ${expect.mentionsAny.join(" | ")}` });

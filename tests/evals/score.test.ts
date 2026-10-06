@@ -53,6 +53,34 @@ describe("scoreTurn", () => {
   });
 });
 
+describe("scoreTurn asks", () => {
+  const log = { outcome: "ok", steps: 1, durationMs: 1_000, inputTokens: 3_000, outputTokens: 150 };
+  const asksCheck = (answer: string) =>
+    scoreTurn({
+      messages: [userMessage("Solo estima cuántas cajas necesito para mi cocina."), assistantMessage([{ type: "text", text: answer, state: "done" }])],
+      turnLog: log,
+      error: null,
+      expect: { asks: true },
+    }).checks.find((c) => c.name === "asks");
+
+  it("accepts the baseline data request that has no question mark", () => {
+    const answer = "Para poder darte el número exacto de cajas y el costo de los pisos para tu cocina, necesito que me compartas algunos datos.";
+    expect(asksCheck(answer)?.ok).toBe(true);
+  });
+
+  it("accepts other ways of asking for data, with or without a question mark", () => {
+    for (const answer of ["Compárteme las medidas del espacio.", "Indícame el ancho de junta.", "¿Podrías decirme las medidas", "¿Cuál es el largo?", "Cuál es el largo?"]) {
+      expect(asksCheck(answer)?.ok, answer).toBe(true);
+    }
+  });
+
+  it("still fails a statement that requests nothing", () => {
+    for (const answer of ["Los pisos de cocina suelen ser de gres porcelánico.", "Estimé 20 cajas para tu cocina."]) {
+      expect(asksCheck(answer)?.ok, answer).toBe(false);
+    }
+  });
+});
+
 describe("report", () => {
   it("summarizes and renders a run, marking scenarios that did not run", () => {
     const { checks, metrics } = scoreTurn({
