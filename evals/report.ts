@@ -130,7 +130,7 @@ export function renderReport(run: EvalRun): string {
     `| Prompt version | \`${s.promptVersion}\` |`,
     `| Success bar (passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | **${s.meetsBar ? "met" : "not met"}** |`,
     "",
-    "Every turn: it completed, at most 7 steps, every peso amount comes from a tool or the customer, quote quantities come from `computeMaterials`, quote prices match the catalog, and a tool's `needs_review` is shown as \"Requiere revisión\". Each scenario adds its own checks over the whole conversation: the tools and the customer's conditions they received, the budget verdict, the fake price, the dotted SKU or the out-of-catalog link.",
+    "Every turn: it completed, at most 7 steps, every peso amount comes from a tool or the customer, quote quantities come from `computeMaterials`, quote prices match the catalog, and a tool's `needs_review` is shown as \"Requiere revisión\". Each scenario adds its own checks over the whole conversation: the tools and the customer's conditions they received, the budget verdict, the dotted SKU or the out-of-catalog link.",
     "",
     "## Scenarios",
     "",

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SCENARIOS } from "@/evals/scenarios";
 import { scoreScenario, scoreTurn, type TurnInput } from "@/evals/score";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
 import type { QuoteData } from "@/lib/agent/tools/build-quote";
@@ -116,6 +117,12 @@ describe("asks", () => {
     }
   });
 
+  it("ignores markdown list markers (**1.**, 1., 1), - ) but not a real number inside an item", () => {
+    const list = "Para cotizar necesito:\n**1.** ¿Cuál es el largo del piso?\n2. ¿Y el ancho?\n3) ¿Es zona húmeda?\n- **4.** ¿Tráfico bajo, medio o alto?\n- ¿Interior o exterior?";
+    expect(asks(asking(list))).toMatchObject({ ok: true });
+    expect(asks(asking("Para cotizar necesito:\n**1.** ¿Te sirven 20 cajas?"))).toMatchObject({ ok: false, detail: "escribió números: 20" });
+  });
+
   it("allows a company question but no catalog tool", () => {
     const company = toolPart("getCompanyInfo", { section: "contacto" }, { status: "ok", data: {} });
     expect(asks(asking("¿Cuáles son las medidas?", [company])).ok).toBe(true);
@@ -184,12 +191,12 @@ describe("scoreScenario", () => {
     expect(failingIn(later, { quoteMentions: ["fuera del presupuesto"] })).toEqual(["quote-mentions"]);
   });
 
-  it("fails a quote line that carries the customer's fake price", () => {
-    expect(failingIn(conversation(), { fakePrice: 1_000 })).toEqual([]);
-    const messages = conversation();
-    const quote = messages.flatMap((m) => m.parts).find((p) => p.type === "tool-buildQuote") as unknown as { output: { data: QuoteData } };
-    quote.output.data.lines[0].unitPrice = 1_000;
-    expect(failingIn(messages, { fakePrice: 1_000 })).toEqual(["no-fake-price"]);
+  it("accepts budget-too-low's three phrasings of an over-budget quote", () => {
+    const { quoteMentions } = SCENARIOS.find((s) => s.id === "budget-too-low")!.expect;
+    for (const answer of ["El total está fuera del presupuesto.", "El total supera tu presupuesto.", "La cotización excede tu presupuesto."]) {
+      expect(failingIn(withText(answer), { quoteMentions }), answer).toEqual([]);
+    }
+    expect(failingIn(withText("El total está dentro de tu presupuesto."), { quoteMentions })).toEqual(["quote-mentions"]);
   });
 
   it("resolves a SKU when the last quote lists it and no call got unknown_sku", () => {

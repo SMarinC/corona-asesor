@@ -17,8 +17,6 @@ export interface ScenarioExpect {
   quote?: "within" | "over";
   /** The answer that presented the last quote says one of these (accents and case ignored). */
   quoteMentions?: string[];
-  /** A unit price the customer made up: no buildQuote line may carry it. */
-  fakePrice?: number;
   /** A SKU, as the catalog stores it, that the last quote must list, with no unknown_sku error on the way. */
   resolvesSku?: string;
   /** The out-of-catalog link the answer must share, with no catalog tool call. */
@@ -141,7 +139,8 @@ export const SCENARIOS: Scenario[] = [
       AGREE,
       CONFIRM,
     ],
-    expect: { calls: ["buildQuote"], fakePrice: 1_000 },
+    // A quote must be built; the per-turn catalog-prices and money-from-tools checks then catch the fake price.
+    expect: { calls: ["buildQuote"] },
   },
   {
     id: "missing-dimensions",

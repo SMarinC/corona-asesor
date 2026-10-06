@@ -27,11 +27,9 @@ describe("eval scenarios", () => {
     expect(SYSTEM_PROMPT).toContain(link);
   });
 
-  it("use a dotted wall-tile SKU the catalog offers, and a fake price no catalog product has", () => {
+  it("use a dotted wall-tile SKU the catalog offers", () => {
     const sku = scenario("wall-tiles").expect.resolvesSku!;
     expect(sku.endsWith(".")).toBe(true);
     expect(getCatalog().get(sku)).toMatchObject({ sku, kind: "tile", surface: "wall" });
-    const fake = scenario("fake-price").expect.fakePrice;
-    expect(getCatalog().all.some((p) => p.price === fake)).toBe(false);
   });
 });

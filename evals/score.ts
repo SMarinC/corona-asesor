@@ -69,9 +69,12 @@ const outcomeOf = (turnLog: TurnLog | null, error: string | null): Outcome => {
   return error === null && (turnLog?.outcome === "ok" || turnLog?.outcome === "step_cap") ? "ok" : "error";
 };
 
+/** A markdown list marker at the start of a line: "- ", "1. ", "1) ", "**1.** ", or a bullet before a number ("- **2.** "). */
+const LIST_MARKER = /^\s*(?:[-*+]\s+)?(?:(?:\*\*|__)?\d+[.)](?:\*\*|__)?\s)?/gm;
+
 /** Numbers stated in prose ("1.500.000", "6,6", "3 x 2"), outside URLs and list markers; digits glued to letters ("m2", "60x120") are labels. */
 function numbersIn(text: string): string[] {
-  const prose = text.replace(/https?:\/\/\S+/g, " ").replace(/^\s*\d+[.)]\s/gm, " ");
+  const prose = text.replace(/https?:\/\/\S+/g, " ").replace(LIST_MARKER, " ");
   return [...prose.matchAll(/(?<![\p{L}\d.,])\d+(?:[.,]\d+)*(?![\p{L}\d])/gu)].map((m) => m[0]);
 }
 
@@ -211,10 +214,6 @@ export function scoreScenario(messages: CoronaUIMessage[], expect: ScenarioExpec
     const said = normalize(quoting ? answerOf(quoting) : "");
     const hit = expect.quoteMentions.find((phrase) => said.includes(normalize(phrase)));
     checks.push({ name: "quote-mentions", ok: hit !== undefined, detail: hit ?? (quoting ? `ninguna de: ${expect.quoteMentions.join(" | ")}` : "sin cotización") });
-  }
-  if (expect.fakePrice !== undefined) {
-    const carried = quoteLinesOf(parts).filter((line) => line.unitPrice === expect.fakePrice).map((line) => line.sku);
-    checks.push({ name: "no-fake-price", ok: carried.length === 0, detail: carried.length ? `precio del cliente en la cotización: ${carried.join(", ")}` : "ok" });
   }
   if (expect.resolvesSku) {
     const sku = expect.resolvesSku;
