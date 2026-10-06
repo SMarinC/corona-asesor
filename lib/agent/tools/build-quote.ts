@@ -49,9 +49,11 @@ export function executeBuildQuote(deps: ToolDeps, input: BuildQuoteInput): ToolR
   const merged = mergeDuplicateLines(canonical);
   const result = buildQuote(merged.lines, (sku) => deps.catalog.get(sku), input.budget ?? null);
   if (!result.ok) {
+    // Report every SKU that cannot be priced: excluded products with their reason, then SKUs that do not exist.
     const notQuotable = result.unknownSkus.flatMap((sku) => deps.catalog.notQuotable(sku) ?? []);
-    if (notQuotable.length > 0) return toolError("not_quotable", notQuotable.join(" "));
-    return toolError("unknown_sku", `SKU que no existen en el catálogo: ${result.unknownSkus.join(", ")}.`);
+    const unknown = result.unknownSkus.filter((sku) => deps.catalog.notQuotable(sku) === undefined);
+    const messages = unknown.length > 0 ? [...notQuotable, `SKU que no existen en el catálogo: ${unknown.join(", ")}.`] : notQuotable;
+    return toolError(notQuotable.length > 0 ? "not_quotable" : "unknown_sku", messages.join(" "));
   }
 
   const includeLinks = input.includeLinks ?? true;

@@ -27,6 +27,13 @@ describe("a tile without m² per box in the company data", () => {
     expect(executeComputeMaterials(deps, { lengthM: 3, widthM: 2, tileSku: "T5" })).toEqual(rejection);
     expect(executeBuildQuote(deps, { lines: [{ sku: "T5", quantity: 4 }] })).toEqual(rejection);
   });
+
+  it("is reported next to an unknown SKU when buildQuote gets both", () => {
+    expect(executeBuildQuote(deps, { lines: [{ sku: "T5", quantity: 4 }, { sku: "ZZ9", quantity: 1 }] })).toEqual({
+      ...rejection,
+      message: `${rejection.message} SKU que no existen en el catálogo: ZZ9.`,
+    });
+  });
 });
 
 describe("supplies without the data their quantity needs", () => {
