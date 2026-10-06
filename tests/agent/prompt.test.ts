@@ -30,6 +30,11 @@ describe("system prompt", () => {
     for (const tool of ["searchSupplies", "checkCompatibility", "computeMaterials"]) expect(joint[0], tool).toContain(tool);
   });
 
+  it("summarizes the decisions only once there are some, not in every answer", () => {
+    expect(SYSTEM_PROMPT).toContain("Cuando ya haya decisiones, resúmelas en una línea corta");
+    expect(SYSTEM_PROMPT).not.toContain("En cada respuesta");
+  });
+
   it("gives no concrete joint width in its examples, so nothing anchors the model before it asks", () => {
     expect(SYSTEM_PROMPT).not.toMatch(/\d+ ?mm/);
     expect(SYSTEM_PROMPT).toContain("Junta: N mm");
