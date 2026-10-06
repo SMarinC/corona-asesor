@@ -80,18 +80,23 @@ export function createMemoryGuardLimits(config: GuardConfig, now: () => number =
   };
 }
 
+/** A slow Redis must not eat the turn's time budget: past this, a check passes (fails open) and is logged. */
+export const UPSTASH_TIMEOUT_MS = 1_000;
+
 export function createUpstashLimiter(
   redis: Redis,
-  options: { limit: number; window: Duration; prefix: string; sliding: boolean },
+  options: { limit: number; window: Duration; prefix: string; sliding: boolean; timeoutMs?: number },
 ): RateLimiter {
   const ratelimit = new Ratelimit({
     redis,
     prefix: options.prefix,
     limiter: options.sliding ? Ratelimit.slidingWindow(options.limit, options.window) : Ratelimit.fixedWindow(options.limit, options.window),
+    timeout: options.timeoutMs ?? UPSTASH_TIMEOUT_MS,
   });
   return {
     async limit(key, cost = 1) {
-      const { success, reset, remaining } = await ratelimit.limit(key, { rate: cost });
+      const { success, reset, remaining, reason } = await ratelimit.limit(key, { rate: cost });
+      if (reason === "timeout") log("warn", "rate_limit_timeout", { prefix: options.prefix });
       return { success, reset, remaining };
     },
   };
@@ -102,10 +107,14 @@ export function createGuardLimits(config: GuardConfig, env: Env = process.env): 
   const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
   if (!url || !token) {
-    log("warn", "rate_limit_memory_fallback", { reason: "Upstash env vars missing; limits apply per server instance only." });
+    // In production this means the global caps multiply with the number of instances: make it loud.
+    log(env.VERCEL_ENV === "production" ? "error" : "warn", "rate_limit_memory_fallback", {
+      reason: "Upstash env vars missing; limits apply per server instance only.",
+    });
     return createMemoryGuardLimits(config);
   }
-  const redis = new Redis({ url, token });
+  // One quick retry instead of the client's default five with exponential backoff (about 4 s when Redis is down).
+  const redis = new Redis({ url, token, retry: { retries: 1, backoff: () => 100 } });
   return {
     perIpShort: createUpstashLimiter(redis, { limit: config.perIpPer10Min, window: "10 m", prefix: "corona:ip:10m", sliding: true }),
     perIpDaily: createUpstashLimiter(redis, { limit: config.perIpPerDay, window: "1 d", prefix: "corona:ip:1d", sliding: true }),

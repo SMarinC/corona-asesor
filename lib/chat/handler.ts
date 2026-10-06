@@ -11,6 +11,9 @@ import { checkLimits, type GuardLimits, type LimitCheck, recordModelCall } from 
 import { errorMessage, log } from "@/lib/log";
 import { createTurnLogger } from "./turn-log";
 
+/** Below the route's maxDuration (60 s), so a hung model stream ends with a logged turn instead of a platform 504. */
+export const TURN_TIMEOUT_MS = 50_000;
+
 export interface ChatDeps {
   /** Defaults to Gemini; tests inject a mock. */
   model?: LanguageModel;
@@ -19,6 +22,8 @@ export interface ChatDeps {
   limits: GuardLimits;
   isBot: () => Promise<boolean>;
   newRequestId?: () => string;
+  /** Defaults to TURN_TIMEOUT_MS; tests shorten it. */
+  turnTimeoutMs?: number;
 }
 
 /** Guards in spec order (BotID → rate limits → input), then streams one agent turn. */
@@ -85,16 +90,21 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
     },
   });
 
-  // On a client abort the SDK skips onEnd (and its onAbort only fires if someone still reads the stream), so the
-  // request signal is what tells the turn logger. After a normal end or a failure, aborted() is a no-op.
-  if (req.signal.aborted) turn.aborted();
-  else req.signal.addEventListener("abort", () => turn.aborted(), { once: true });
+  // On an abort the SDK skips onEnd (and its onAbort only fires if someone still reads the stream), so this signal
+  // is what tells the turn logger: the client leaving, or the turn running out of time. After a normal end or a
+  // failure, aborted() is a no-op.
+  const timeout = AbortSignal.timeout(deps.turnTimeoutMs ?? TURN_TIMEOUT_MS);
+  const signal = AbortSignal.any([req.signal, timeout]);
+  const timedOut = () => timeout.aborted && !req.signal.aborted;
+  const ended = () => turn.aborted(timedOut() ? "timeout" : "aborted");
+  if (signal.aborted) ended();
+  else signal.addEventListener("abort", ended, { once: true });
 
   try {
-    return await createAgentUIStreamResponse({
+    const response = await createAgentUIStreamResponse({
       agent,
       uiMessages: validated.data,
-      abortSignal: req.signal,
+      abortSignal: signal,
       onError: (error) => {
         const code = streamErrorCode(error);
         // The SDK routes tool-error parts through this same callback: first with the NoSuchToolError /
@@ -106,8 +116,24 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
         return code;
       },
     });
+    return response.body ? new Response(response.body.pipeThrough(timeoutAsError(timedOut)), response) : response;
   } catch (error) {
     turn.failed("model_error", error);
     return errorResponse("model_error");
   }
+}
+
+/**
+ * The SDK ends an aborted stream with an "abort" chunk, which the client reads as a deliberate stop: a turn that ran
+ * out of time would look like a finished answer. Rewrite it into the stream error the client already knows.
+ */
+function timeoutAsError(timedOut: () => boolean): TransformStream<Uint8Array, Uint8Array> {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  return new TransformStream({
+    transform(chunk, controller) {
+      const text = decoder.decode(chunk, { stream: true });
+      controller.enqueue(timedOut() ? encoder.encode(text.replace(/"type":"abort"(?:,"reason":"[^"]*")?/, `"type":"error","errorText":"model_error"`)) : chunk);
+    },
+  });
 }

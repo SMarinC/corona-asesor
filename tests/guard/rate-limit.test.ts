@@ -4,6 +4,7 @@ import {
   createGuardLimits,
   createMemoryGuardLimits,
   createMemoryLimiter,
+  createUpstashLimiter,
   DEFAULT_GUARD_CONFIG,
   GLOBAL_KEY,
   readGuardConfig,
@@ -118,5 +119,29 @@ describe("createGuardLimits", () => {
     expect(typeof limits.globalPerMinute.limit).toBe("function");
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+});
+
+describe("hardening", () => {
+  it("logs the memory fallback as an error in production, where per-instance caps are not real caps", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    createGuardLimits(DEFAULT_GUARD_CONFIG, { VERCEL_ENV: "production" });
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('"event":"rate_limit_memory_fallback"'));
+    createGuardLimits(DEFAULT_GUARD_CONFIG, {});
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"event":"rate_limit_memory_fallback"'));
+    vi.restoreAllMocks();
+  });
+
+  it("fails open, and logs it, when Redis does not answer within the timeout", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const never = () => new Promise<never>(() => {});
+    const hangingRedis = { evalsha: never, eval: never } as unknown as Parameters<typeof createUpstashLimiter>[0];
+    const limiter = createUpstashLimiter(hangingRedis, { limit: 1, window: "1 m", prefix: "test", sliding: false, timeoutMs: 20 });
+    const started = Date.now();
+    expect(await limiter.limit("k")).toMatchObject({ success: true });
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"event":"rate_limit_timeout"'));
+    vi.restoreAllMocks();
   });
 });

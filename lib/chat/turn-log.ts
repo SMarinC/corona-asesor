@@ -44,12 +44,15 @@ export function createTurnLogger(base: { requestId: string; ipHash: string }, no
       if (!finish()) return;
       log("error", "chat_turn", { ...base, outcome: code, message: errorMessage(error), durationMs: now() - startedAt, steps: steps.length, tools });
     },
-    /** The client went away mid-turn; the SDK then skips onEnd, so this is the turn's line. */
-    aborted: () => {
+    /**
+     * The turn ended early: the client went away ("aborted") or the turn hit its time budget ("timeout"). The SDK
+     * then skips onEnd, so this is the turn's line.
+     */
+    aborted: (outcome: "aborted" | "timeout" = "aborted") => {
       if (!finish()) return;
       log("warn", "chat_turn", {
         ...base,
-        outcome: "aborted",
+        outcome,
         durationMs: now() - startedAt,
         steps: steps.length,
         stepLatenciesMs: steps.map((s) => s.ms),

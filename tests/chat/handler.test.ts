@@ -277,6 +277,32 @@ describe("handleChat", () => {
     });
   });
 
+  it("ends a turn that runs past its time budget and logs it as a timeout", async () => {
+    const model = new MockLanguageModelV4({
+      doStream: async (options) => ({
+        // A model stream that never finishes on its own.
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "stream-start", warnings: [] });
+            options.abortSignal?.addEventListener("abort", () => controller.error(new DOMException("The operation timed out.", "TimeoutError")), {
+              once: true,
+            });
+          },
+        }),
+      }),
+    });
+    const { deps } = makeDeps({ model, turnTimeoutMs: 50 });
+    const started = Date.now();
+    const body = await (await handleChat(chatRequest([user("Piso para baño")]), deps)).text();
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(body).toContain("model_error");
+    const turnLines = () => [...jsonLines(logSpy), ...jsonLines(warnSpy), ...jsonLines(errorSpy)].filter((l) => l.event === "chat_turn");
+    await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(turnLines()).toHaveLength(1);
+    expect(turnLines()[0]).toMatchObject({ level: "warn", outcome: "timeout" });
+  });
+
   it("keeps streaming and logs a warning when charging a model call fails", async () => {
     const model = scriptedModel([toolTurn([{ toolName: "searchTiles", input: { surface: "floor" } }]), textTurn("Listo.")]);
     const { deps } = makeDeps({ model });
