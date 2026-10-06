@@ -11,7 +11,7 @@ describe("tool registry", () => {
 
   it("loads the real artifacts without calling the network", () => {
     const deps = getToolDeps();
-    expect(deps.catalog.all).toHaveLength(339);
+    expect(deps.catalog.all).toHaveLength(336);
     expect(deps.sheets.getChunk("c0001")).toBeDefined();
     expect(deps.company.empresa).toBeDefined();
   });

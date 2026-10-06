@@ -1,8 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { isQuotable, notQuotableMessage, type QuotableProduct, type QuotableTile } from "@/lib/domain/quotable";
+import {
+  isQuotable,
+  notQuotableMessage,
+  type QuotableAdhesive,
+  type QuotableGrout,
+  type QuotableProduct,
+  type QuotableTile,
+} from "@/lib/domain/quotable";
 import { skuKey } from "@/lib/domain/sku";
-import type { Adhesive, Grout, Product } from "@/lib/domain/types";
+import type { Product } from "@/lib/domain/types";
 
 export const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -10,8 +17,8 @@ export const DATA_DIR = path.join(process.cwd(), "data");
 export interface Catalog {
   all: QuotableProduct[];
   tiles: QuotableTile[];
-  adhesives: Adhesive[];
-  grouts: Grout[];
+  adhesives: QuotableAdhesive[];
+  grouts: QuotableGrout[];
   get(sku: string): QuotableProduct | undefined;
   /** Why a product that is in the data is not offered (Spanish, for the model); undefined when it is offered or unknown. */
   notQuotable(sku: string): string | undefined;
@@ -28,8 +35,8 @@ export function createCatalog(products: Product[]): Catalog {
   return {
     all: offered,
     tiles: offered.filter((p): p is QuotableTile => p.kind === "tile"),
-    adhesives: offered.filter((p): p is Adhesive => p.kind === "adhesive"),
-    grouts: offered.filter((p): p is Grout => p.kind === "grout"),
+    adhesives: offered.filter((p): p is QuotableAdhesive => p.kind === "adhesive"),
+    grouts: offered.filter((p): p is QuotableGrout => p.kind === "grout"),
     get: (sku) => bySku.get(skuKey(sku)),
     notQuotable: (sku) => excluded.get(skuKey(sku)),
   };

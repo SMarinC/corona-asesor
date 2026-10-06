@@ -1,12 +1,11 @@
-import type { QuotableTile } from "@/lib/domain/quotable";
-import type { Adhesive, Grout } from "@/lib/domain/types";
+import type { QuotableAdhesive, QuotableGrout, QuotableTile } from "@/lib/domain/quotable";
 import type { ToolDeps } from "./deps";
 import { type ToolError, toolError } from "./result";
 
 interface KindMap {
   tile: QuotableTile;
-  adhesive: Adhesive;
-  grout: Grout;
+  adhesive: QuotableAdhesive;
+  grout: QuotableGrout;
 }
 
 const KIND_ES: Record<keyof KindMap, string> = { tile: "un revestimiento", adhesive: "un pegante", grout: "una boquilla" };

@@ -88,7 +88,6 @@ export function searchAdhesives(adhesives: Adhesive[], filters: AdhesiveFilters,
       if (adhesive.outdoor === null) unknown.push("outdoor");
       else score += 1;
     }
-    if (adhesive.coverageKgM2 !== null && adhesive.bagKg !== null) score += 0.5;
     ranked.push({ product: adhesive, score, unknown });
   }
   return ranked.sort(byRank).slice(0, limit);
@@ -106,7 +105,6 @@ export function searchGrouts(grouts: Grout[], filters: GroutFilters, limit = 5):
       else if (filters.jointWidthMm < grout.jointMm.min || filters.jointWidthMm > grout.jointMm.max) continue;
       else score += 1;
     }
-    if (grout.packageKg !== null) score += 0.5;
     ranked.push({ product: grout, score, unknown });
   }
   return ranked.sort(byRank).slice(0, limit);

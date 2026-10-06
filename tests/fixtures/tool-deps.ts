@@ -40,15 +40,19 @@ export const fixtureProducts: Product[] = [
   makeTile({ sku: "T5", name: "Piso Sin Caja Gris 60x60", m2PerBox: null }),
   // A1: ceramic-only adhesive that excludes porcelain, 4–5 kg/m², 25 kg bag.
   makeAdhesive(),
-  // A2: adhesive with nothing verified in the catalog (c0004 states 5.0-6.0 kg/m2 and 25 kg).
+  // A2: adhesive whose compatibility nothing verifies; 5.0-6.0 kg/m², 25 kg bag (c0004 states both).
   makeAdhesive({
     sku: "A2", name: "PEGACOR® Flex Gris", price: 148900, compatibleMaterials: null, excludedMaterials: [], outdoor: null,
-    compatibilityCitationId: null, coverageKgM2: null, coverageText: null, bagKg: null, standard: null,
+    compatibilityCitationId: null, coverageKgM2: { min: 5, max: 6 }, coverageText: "5.0-6.0 kg/m2 según formato", bagKg: 25, standard: null,
   }),
+  // A3: adhesive with no bag weight in the company data: kept out of the catalog the agent offers.
+  makeAdhesive({ sku: "A3", name: "PEGACOR® Sin Bulto Gris", bagKg: null }),
   // G1: cementitious grout for 1–5 mm joints, 2 kg units.
   makeGrout(),
   // G2: repair product, never offered for grouting.
-  makeGrout({ sku: "G2", name: "Reparador de Juntas Blanco", groutType: "repair", jointMm: null, jointCitationId: null, price: 21000 }),
+  makeGrout({ sku: "G2", name: "Reparador de Juntas Blanco", groutType: "repair", jointCitationId: null, price: 21000 }),
+  // G3: grout with no package weight in the company data: kept out of the catalog the agent offers.
+  makeGrout({ sku: "G3", name: "Boquilla Sin Peso Gris", packageKg: null }),
 ];
 
 /** Fixture deps; the default embedder always points at c0001 (semantic mode, no network). */

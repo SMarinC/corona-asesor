@@ -33,11 +33,19 @@ describe("getCatalog (data/catalog.json)", () => {
     expect(wrong.map((t) => t.sku)).toEqual([]);
   });
 
-  it("offers the 339 purchasable products whose data has every value a quote needs", () => {
-    expect(catalog.all).toHaveLength(339);
+  it("offers the 336 purchasable products whose data has every value a quote needs", () => {
+    expect(catalog.all).toHaveLength(336);
     expect(catalog.tiles).toHaveLength(296);
-    expect(catalog.adhesives).toHaveLength(12);
-    expect(catalog.grouts).toHaveLength(31);
+    expect(catalog.adhesives).toHaveLength(11);
+    expect(catalog.grouts).toHaveLength(29);
+  });
+
+  it("keeps out the supplies whose data cannot size a quantity", () => {
+    // Capa Gruesa states coverage per cm of thickness, not per m²; the Spectralock mini units state neither weight nor joint range.
+    expect(catalog.notQuotable("901091501")).toContain("el rendimiento en kg/m²");
+    for (const sku of ["95400100S", "95400151S"]) expect(catalog.notQuotable(sku), sku).toContain("el peso por unidad");
+    // The 10 kg bag keeps its own size, not the 25 kg of the family sheet it shares.
+    expect(catalog.get("901061501")).toMatchObject({ bagKg: 10 });
   });
 
   it("takes m² per box from the tile's own sheet when the structured specs lack it", () => {
@@ -64,8 +72,8 @@ describe("getCatalog (data/catalog.json)", () => {
     }
   });
 
-  it("keeps the 12 adhesives with a compatibility citation", () => {
-    expect(catalog.adhesives.filter((a) => a.compatibilityCitationId !== null).length).toBe(12);
+  it("keeps a compatibility citation on every offered adhesive", () => {
+    expect(catalog.adhesives.filter((a) => a.compatibilityCitationId !== null).length).toBe(11);
   });
 
   it("never labels a porcelain-named tile as stoneware", () => {

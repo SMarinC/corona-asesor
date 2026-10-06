@@ -172,6 +172,12 @@ describe("normalizeProduct", () => {
     });
   });
 
+  it("takes the bag size from the SKU's own product content when the name and the sheet fields lack it", () => {
+    const specifications = JSON.stringify({ Presentación: ["Bolsa"], "Contenido del producto": ["10 Kg"] });
+    const adhesive = normalizeProduct(raw({ category: "Pegantes", name: "PEGACOR® Interiores Gris", specifications }));
+    expect(adhesive).toMatchObject({ kind: "adhesive", bagKg: 10 });
+  });
+
   it.each([
     ["CONCOLOR® Junta Estrecha 2 Kg Blanco", "cementitious", 2],
     ["Mini Unit SPECTRALOCK® PRO Gris", "epoxy", null],

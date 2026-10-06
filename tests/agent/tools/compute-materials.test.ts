@@ -35,14 +35,6 @@ describe("computeMaterials tool", () => {
     expect(result).toMatchObject({ status: "ok", data: { tile: { m2PerBox: 1.44, boxes: 5 } } });
   });
 
-  it("flags missing adhesive data as needs_review", () => {
-    const result = executeComputeMaterials(deps, { ...room, tileSku: "T1", adhesiveSku: "A2" });
-    expect(result.status).toBe("needs_review");
-    if (result.status !== "needs_review") return;
-    expect(result.missing.map((m) => m.field)).toEqual(["adhesiveCoverageKgM2", "bagKg"]);
-    for (const { field, reason } of result.missing) expect(reason, field).toContain("PEGACOR® Flex Gris");
-  });
-
   it("asks for the joint width and other grout inputs instead of assuming them", () => {
     const noJoint = executeComputeMaterials(deps, { ...room, tileSku: "T1", groutSku: "G1" });
     expect(noJoint).toMatchObject({ status: "needs_review", missing: [{ field: "jointWidthMm" }], data: { tile: { boxes: 5 } } });
