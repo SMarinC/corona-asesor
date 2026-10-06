@@ -32,8 +32,11 @@ describe("system prompt", () => {
     }
     const tile = lineStarting("2. Revestimiento:");
     for (const part of ["2 o 3", "searchTiles", "deja que el cliente elija", "Si ya nombró uno, tómalo"]) expect(tile, part).toContain(part);
+    // The joint is its own step: asked (the catalog has no per-tile joint), confirmed, then passed to every tool that uses it.
     const joint = lineStarting("3. Junta:");
-    for (const part of ["ancho de junta en mm", "Nunca lo supongas"]) expect(joint, part).toContain(part);
+    for (const part of ["ancho de junta en mm", "no sigas sin él", "Nunca lo supongas", "jointWidthMm", "searchSupplies", "checkCompatibility", "computeMaterials"]) {
+      expect(joint, part).toContain(part);
+    }
     const supplies = lineStarting("4. Pegante y boquilla:");
     for (const part of ["searchSupplies", "outdoor: true", "checkCompatibility", "junta confirmada", "condiciones del proyecto"]) {
       expect(supplies, part).toContain(part);
