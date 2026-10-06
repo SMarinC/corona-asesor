@@ -30,6 +30,6 @@ describe("parseOptions --only validation", () => {
     expect(parseOptions(["--only", "fake-price"], ids).only).toEqual(["fake-price"]);
   });
   it("rejects unknown ids and lists the valid ones", () => {
-    expect(() => parseOptions(["--only", "fake-price,nope"], ids)).toThrow(/nope[sS]*bathroom-budget, fake-price/);
+    expect(() => parseOptions(["--only", "fake-price,nope"], ids)).toThrow(/nope[^]*bathroom-budget, fake-price/);
   });
 });
