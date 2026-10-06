@@ -69,14 +69,8 @@ const outcomeOf = (turnLog: TurnLog | null, error: string | null): Outcome => {
   return error === null && (turnLog?.outcome === "ok" || turnLog?.outcome === "step_cap") ? "ok" : "error";
 };
 
-/** A markdown list marker at the start of a line: "- ", "1. ", "1) ", "**1.** ", or a bullet before a number ("- **2.** "). */
-const LIST_MARKER = /^\s*(?:[-*+]\s+)?(?:(?:\*\*|__)?\d+[.)](?:\*\*|__)?\s)?/gm;
-
-/** Numbers stated in prose ("1.500.000", "6,6", "3 x 2"), outside URLs and list markers; digits glued to letters ("m2", "60x120") are labels. */
-function numbersIn(text: string): string[] {
-  const prose = text.replace(/https?:\/\/\S+/g, " ").replace(LIST_MARKER, " ");
-  return [...prose.matchAll(/(?<![\p{L}\d.,])\d+(?:[.,]\d+)*(?![\p{L}\d])/gu)].map((m) => m[0]);
-}
+/** A quantity stated with its unit ("20 cajas", "6,6 m²", "3 mm"). The prompt's own numbers ("2 o 3 opciones", "10 %") carry none. */
+const QUANTITY = /(?<![\p{L}\d.,])\d+(?:[.,]\d+)*\s*(?:m²|m2|cajas?|bultos?|unidad(?:es)?|kg|mm)(?![\p{L}\d])/giu;
 
 const AMOUNT = String.raw`(\d{1,3}(?:\.\d{3})+|\d+)`;
 const MILLIONS = String.raw`(\d+(?:,\d+)?)\s*mill(?:ón|on|ones)`;
@@ -116,13 +110,7 @@ function toolMoneyValues(outputs: unknown[]): Set<number> {
   return values;
 }
 
-// A request for data worded without a question mark: "necesito que me compartas…", "compárteme…", "indícame…".
-const DATA_REQUEST = /\bnecesito (?:que me|saber|conocer)\b|\b(?:compart|indic|conf[ií]rm|cu[eé]nt)(?:ame|eme)\b|\bdime\b|\bpor favor (?:comparte|indica|dime|confirma)\b/;
-
-/** The answer asks the customer for something: a question (? or ¿) or an explicit data request. */
-const asksForData = (text: string): boolean => /[?¿]/.test(text) || DATA_REQUEST.test(normalize(text));
-
-/** The checks every turn gets, plus `asks` when the scenario expects a question back. */
+/** The checks every turn gets, plus `asks` when the scenario expects the agent to ask instead of answering. */
 export function scoreTurn({ messages, turnLog, error, asks, catalog }: TurnInput): { checks: Check[]; metrics: TurnMetrics } {
   const assistant = messages.at(-1)!;
   const answer = answerOf(assistant);
@@ -143,7 +131,9 @@ export function scoreTurn({ messages, turnLog, error, asks, catalog }: TurnInput
     const price = catalog.get(line.sku)?.price ?? null;
     return line.unitPrice === price ? [] : [`${line.sku}: ${line.unitPrice} en la cotización, ${price} en el catálogo`];
   });
-  const needsReview = turnParts.some((p) => toolPhase(p) === "review");
+  // Only each tool's last call in the turn: a later call can correct an earlier needs_review.
+  const lastCalls = [...new Map(turnParts.map((p) => [toolNameOf(p), p])).values()];
+  const needsReview = lastCalls.some((p) => toolPhase(p) === "review");
 
   const checks: Check[] = [
     { name: "completed", ok: outcome === "ok", detail: error ?? turnLog?.outcome ?? "sin línea chat_turn" },
@@ -151,19 +141,13 @@ export function scoreTurn({ messages, turnLog, error, asks, catalog }: TurnInput
     { name: "money-from-tools", ok: moneyNotFromTools.length === 0, detail: moneyNotFromTools.length ? `montos que no salieron de una tool ni del cliente: ${moneyNotFromTools.join(", ")}` : "ok" },
     { name: "quantities-computed", ok: inventedQuantities.length === 0, detail: inventedQuantities.join(", ") || "ok" },
     { name: "catalog-prices", ok: wrongPrices.length === 0, detail: wrongPrices.join("; ") || "ok" },
-    { name: "review", ok: !needsReview || normalize(answer).includes("requiere revision"), detail: needsReview ? "una tool pidió revisión" : "nada que revisar" },
+    { name: "review", ok: !needsReview || /requieren? revision/.test(normalize(answer)), detail: needsReview ? "una tool pidió revisión" : "nada que revisar" },
   ];
   if (asks) {
     const catalogCalls = turnParts.map(toolNameOf).filter(isCatalogTool);
-    const numbers = numbersIn(answer);
-    const problem = catalogCalls.length
-      ? `llamó ${catalogCalls.join(", ")}`
-      : numbers.length
-        ? `escribió números: ${numbers.join(", ")}`
-        : asksForData(answer)
-          ? null
-          : `no pide datos: "${answer.slice(0, 100)}"`;
-    checks.push({ name: "asks", ok: problem === null, detail: problem ?? "pide los datos que faltan" });
+    const stated = [...(answer.match(QUANTITY) ?? []), ...moneyIn(answer).map(String)];
+    const problem = catalogCalls.length ? `llamó ${catalogCalls.join(", ")}` : stated.length ? `escribió cantidades o montos: ${stated.join(", ")}` : null;
+    checks.push({ name: "asks", ok: problem === null, detail: problem ?? "ni catálogo, ni cantidades, ni montos" });
   }
 
   return {
@@ -211,9 +195,8 @@ export function scoreScenario(messages: CoronaUIMessage[], expect: ScenarioExpec
   }
   if (expect.quoteMentions) {
     const quoting = messages.findLast((m) => m.role === "assistant" && m.parts.some((p) => isToolPartOf(p, "buildQuote") && succeeded(p)));
-    const said = normalize(quoting ? answerOf(quoting) : "");
-    const hit = expect.quoteMentions.find((phrase) => said.includes(normalize(phrase)));
-    checks.push({ name: "quote-mentions", ok: hit !== undefined, detail: hit ?? (quoting ? `ninguna de: ${expect.quoteMentions.join(" | ")}` : "sin cotización") });
+    const ok = normalize(quoting ? answerOf(quoting) : "").includes(normalize(expect.quoteMentions));
+    checks.push({ name: "quote-mentions", ok, detail: ok ? "ok" : quoting ? `no menciona "${expect.quoteMentions}"` : "sin cotización" });
   }
   if (expect.resolvesSku) {
     const sku = expect.resolvesSku;

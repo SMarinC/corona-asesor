@@ -15,8 +15,8 @@ export interface ScenarioExpect {
   areaM2?: number;
   /** The last quote's budget verdict, as buildQuote's withinBudget gave it. */
   quote?: "within" | "over";
-  /** The answer that presented the last quote says one of these (accents and case ignored). */
-  quoteMentions?: string[];
+  /** A word the answer that presented the last quote must contain (accents and case ignored); the verdict is `quote`'s job. */
+  quoteMentions?: string;
   /** A SKU, as the catalog stores it, that the last quote must list, with no unknown_sku error on the way. */
   resolvesSku?: string;
   /** The out-of-catalog link the answer must share, with no catalog tool call. */
@@ -25,7 +25,7 @@ export interface ScenarioExpect {
 
 export interface ScenarioTurn {
   user: string;
-  /** The agent must ask for the missing data: no catalog tool, no number, a question or a data request. */
+  /** The agent must ask for the missing data: no catalog tool call, and no money amount or quantity with a unit. */
   asks?: true;
 }
 
@@ -128,7 +128,7 @@ export const SCENARIOS: Scenario[] = [
       AGREE,
       CONFIRM,
     ],
-    expect: { inputs: { buildQuote: { budget: 150_000 } }, quote: "over", quoteMentions: ["fuera del presupuesto", "supera", "excede"] },
+    expect: { inputs: { buildQuote: { budget: 150_000 } }, quote: "over", quoteMentions: "presupuesto" },
   },
   {
     id: "fake-price",

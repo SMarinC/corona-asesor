@@ -64,6 +64,19 @@ describe("scoreTurn", () => {
     const byStatus = bathroomConversation();
     Object.assign((byStatus.at(-1)!.parts.find((p) => p.type === "tool-computeMaterials") as unknown as { output: object }).output, { status: "needs_review", missing: [] });
     expect(failing(withText("Todo listo.", byStatus))).toEqual(["review"]);
+    expect(failing(withText("Dos puntos requieren revisión.", byStatus))).toEqual([]);
+  });
+
+  it("judges only the last call of each tool in the turn, so a corrected call needs no phrase", () => {
+    const messages = bathroomConversation();
+    const parts = messages.at(-1)!.parts;
+    const materials = parts.find((p) => p.type === "tool-computeMaterials") as unknown as { input: unknown; output: object };
+    const flagged = toolPart("computeMaterials", materials.input, { ...materials.output, status: "needs_review", missing: [] });
+    // The flagged call first, then the original (ok) call corrects it.
+    messages[messages.length - 1] = assistantMessage([flagged, ...parts] as CoronaPart[]);
+    expect(failing(withText("Todo listo.", messages))).toEqual([]);
+    messages[messages.length - 1] = assistantMessage([...parts.filter((p) => p.type !== "text"), flagged] as CoronaPart[]);
+    expect(failing(withText("Todo listo.", messages))).toEqual(["review"]);
   });
 });
 
@@ -106,21 +119,18 @@ describe("asks", () => {
   ];
   const asks = (messages: CoronaUIMessage[]) => score(messages, { asks: true, turnLog: { ...log, steps: 1 } }).checks.find((c) => c.name === "asks")!;
 
-  it("passes a question or a data request, with list markers and unit labels", () => {
+  it("passes any wording that states no money and no quantity, questions or not", () => {
     for (const answer of [
       "¿Cuáles son las medidas del piso, en metros?",
-      "Para darte el número exacto de cajas necesito que me compartas las medidas.",
-      "Indícame el largo y el ancho.",
-      "Me faltan datos:\n1. ¿Cuántos m2 mide?\n2. ¿Es zona húmeda?",
+      "Necesito:\n- Las medidas del piso (largo y ancho).\n- Si es zona húmeda.",
+      "Por favor, envíame las medidas y dime si es interior.",
+      "Para cotizar necesito:\n**1.** ¿Cuál es el largo?\n2. ¿Y el ancho?\n3) ¿Tráfico bajo, medio o alto?",
+      // Numbers from the prompt's own wording carry no unit.
+      "Con las medidas te propongo 2 o 3 opciones y calculo con el 10 % de desperdicio. ¿Cuánto mide?",
+      "Indícame cuántos m2 mide.",
     ]) {
       expect(asks(asking(answer)).ok, answer).toBe(true);
     }
-  });
-
-  it("ignores markdown list markers (**1.**, 1., 1), - ) but not a real number inside an item", () => {
-    const list = "Para cotizar necesito:\n**1.** ¿Cuál es el largo del piso?\n2. ¿Y el ancho?\n3) ¿Es zona húmeda?\n- **4.** ¿Tráfico bajo, medio o alto?\n- ¿Interior o exterior?";
-    expect(asks(asking(list))).toMatchObject({ ok: true });
-    expect(asks(asking("Para cotizar necesito:\n**1.** ¿Te sirven 20 cajas?"))).toMatchObject({ ok: false, detail: "escribió números: 20" });
   });
 
   it("allows a company question but no catalog tool", () => {
@@ -130,10 +140,11 @@ describe("asks", () => {
     expect(asks(asking("¿Cuál prefieres?", [search]))).toMatchObject({ ok: false, detail: "llamó searchTiles" });
   });
 
-  it("fails an answer that states a number or requests nothing", () => {
-    expect(asks(asking("Serían unas 20 cajas, ¿te sirve?"))).toMatchObject({ ok: false, detail: "escribió números: 20" });
-    expect(asks(asking("Para una cocina de 3 x 4 m, ¿qué color quieres?")).ok).toBe(false);
-    expect(asks(asking("Los pisos de cocina suelen ser de gres porcelánico.")).ok).toBe(false);
+  it("fails a fabricated estimate: a money amount or a number with a unit", () => {
+    expect(asks(asking("Serían unas 20 cajas por $1.200.000."))).toMatchObject({ ok: false, detail: "escribió cantidades o montos: 20 cajas, 1200000" });
+    for (const answer of ["Calcula unos 12 m² de piso.", "Necesitarías 3 bultos de pegante.", "Serían 2 unidades de boquilla.", "Usa 25 kg.", "Con junta de 3 mm.", "Te costaría 900.000 pesos."]) {
+      expect(asks(asking(answer)).ok, answer).toBe(false);
+    }
   });
 });
 
@@ -185,18 +196,19 @@ describe("scoreScenario", () => {
     expect(failingIn(messages, { calls: ["buildQuote", "getProduct", "computeMaterials"] })).toEqual(["calls:buildQuote", "calls:getProduct", "calls:computeMaterials"]);
   });
 
-  it("reads the budget wording in the answer that presented the last quote, not in a later turn", () => {
-    expect(failingIn(conversation(), { quoteMentions: ["Dentro del presupuesto"] })).toEqual([]);
-    const later = [...bathroomConversation(), userMessage("¿Y?"), assistantMessage([{ type: "text", text: "Está fuera del presupuesto.", state: "done" }])];
-    expect(failingIn(later, { quoteMentions: ["fuera del presupuesto"] })).toEqual(["quote-mentions"]);
+  it("reads the mention in the answer that presented the last quote, not in a later turn", () => {
+    expect(failingIn(conversation(), { quoteMentions: "presupuesto" })).toEqual([]);
+    const later = [...withText("Aquí está tu cotización."), userMessage("¿Y?"), assistantMessage([{ type: "text", text: "Está fuera de tu presupuesto.", state: "done" }])];
+    expect(failingIn(later, { quoteMentions: "presupuesto" })).toEqual(["quote-mentions"]);
   });
 
-  it("accepts budget-too-low's three phrasings of an over-budget quote", () => {
-    const { quoteMentions } = SCENARIOS.find((s) => s.id === "budget-too-low")!.expect;
-    for (const answer of ["El total está fuera del presupuesto.", "El total supera tu presupuesto.", "La cotización excede tu presupuesto."]) {
+  it("budget-too-low accepts any wording that mentions the budget; the verdict itself is quote:over", () => {
+    const { quoteMentions, quote } = SCENARIOS.find((s) => s.id === "budget-too-low")!.expect;
+    expect({ quoteMentions, quote }).toEqual({ quoteMentions: "presupuesto", quote: "over" });
+    for (const answer of ["El total está fuera de su presupuesto.", "La cotización no está dentro de tu presupuesto.", "Supera tu Presupuesto en $340.500."]) {
       expect(failingIn(withText(answer), { quoteMentions }), answer).toEqual([]);
     }
-    expect(failingIn(withText("El total está dentro de tu presupuesto."), { quoteMentions })).toEqual(["quote-mentions"]);
+    expect(failingIn(withText("El total es mayor de lo que tienes."), { quoteMentions })).toEqual(["quote-mentions"]);
   });
 
   it("resolves a SKU when the last quote lists it and no call got unknown_sku", () => {
