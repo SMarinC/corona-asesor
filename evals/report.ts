@@ -1,16 +1,21 @@
 import type { Check, TurnMetrics } from "./score";
 import type { TraceStep } from "./trace";
 
+export interface TurnResult {
+  checks: Check[];
+  metrics: TurnMetrics;
+  keywordFallbacks: number;
+  /** The assistant's final text and its tool calls, so a run can be audited by hand. */
+  answer?: string;
+  trace?: TraceStep[];
+}
+
 export interface ScenarioResult {
   id: string;
   title: string;
   mode: "semantic" | "keyword";
   /** null when the run stopped before this scenario (quota or call budget). */
-  turns: { checks: Check[]; metrics: TurnMetrics; keywordFallbacks: number;
-    /** The assistant's final text and its tool calls, so a run can be audited by hand. */
-    answer?: string;
-    trace?: TraceStep[];
-  }[] | null;
+  turns: TurnResult[] | null;
   /** Checks over the whole conversation (tools and their inputs, the quote, the link); empty when it did not run. */
   checks: Check[];
   skippedReason?: string;
@@ -20,8 +25,8 @@ export interface EvalRun {
   date: string;
   model: string;
   promptVersion: string;
-  /** What the runner actually spent: model calls (failed ones and retries included), summed steps and embedding queries. */
-  calls?: { used: number; steps: number; embeddings: number };
+  /** What the runner spent: model calls (failed ones and retries included), summed steps and embedding queries. */
+  calls: { used: number; steps: number; embeddings: number };
   results: ScenarioResult[];
 }
 
@@ -29,18 +34,18 @@ export interface EvalSummary {
   passed: number;
   run: number;
   total: number;
-  quantityFlags: number;
+  /** Peso amounts in the answers that no tool returned and the customer never stated. */
+  moneyNotFromTools: number;
+  /** Quote lines whose quantity computeMaterials did not return. */
+  inventedQuantities: number;
+  /** Median steps and p95 latency count completed turns only; timeouts are counted on their own. */
   medianSteps: number;
-  p50LatencyMs: number;
   p95LatencyMs: number;
-  avgInputTokensPerTurn: number;
-  /** The largest per-turn average of input tokens per model call: what a turn costs against the 250K tokens-per-minute limit. */
-  maxTurnAvgInputPerCall: number;
-  /** Steps summed over all turns. */
-  modelCalls: number;
-  /** Real calls the runner spent, when known. */
-  callsUsed?: number;
-  embeddingCalls?: number;
+  timeouts: number;
+  calls: EvalRun["calls"];
+  promptVersion: string;
+  /** Passed ≥ total − 1, no money outside the tools and no invented quantity. */
+  meetsBar: boolean;
 }
 
 export const scenarioPassed = (result: ScenarioResult) =>
@@ -53,67 +58,82 @@ const percentile = (values: number[], p: number) => {
 };
 
 export function summarize(run: EvalRun): EvalSummary {
-  const turns = run.results.flatMap((r) => r.turns ?? []);
-  const metrics = turns.map((t) => t.metrics);
+  const metrics = run.results.flatMap((r) => r.turns ?? []).map((t) => t.metrics);
+  const completed = metrics.filter((m) => m.outcome === "ok");
+  const passed = run.results.filter(scenarioPassed).length;
+  const total = run.results.length;
+  const moneyNotFromTools = metrics.reduce((n, m) => n + m.moneyNotFromTools.length, 0);
+  const inventedQuantities = metrics.reduce((n, m) => n + m.inventedQuantities.length, 0);
   return {
-    passed: run.results.filter(scenarioPassed).length,
+    passed,
     run: run.results.filter((r) => r.turns !== null).length,
-    total: run.results.length,
-    quantityFlags: metrics.reduce((n, m) => n + m.inventedQuantities.length, 0),
-    medianSteps: percentile(metrics.map((m) => m.steps), 50),
-    p50LatencyMs: percentile(metrics.map((m) => m.durationMs), 50),
-    p95LatencyMs: percentile(metrics.map((m) => m.durationMs), 95),
-    avgInputTokensPerTurn: metrics.length ? Math.round(metrics.reduce((n, m) => n + m.inputTokens, 0) / metrics.length) : 0,
-    maxTurnAvgInputPerCall: Math.max(0, ...metrics.map((m) => (m.steps ? Math.round(m.inputTokens / m.steps) : 0))),
-    modelCalls: metrics.reduce((n, m) => n + m.steps, 0),
-    callsUsed: run.calls?.used,
-    embeddingCalls: run.calls?.embeddings,
+    total,
+    moneyNotFromTools,
+    inventedQuantities,
+    medianSteps: percentile(completed.map((m) => m.steps), 50),
+    p95LatencyMs: percentile(completed.map((m) => m.durationMs), 95),
+    timeouts: metrics.filter((m) => m.outcome === "timeout").length,
+    calls: run.calls,
+    promptVersion: run.promptVersion,
+    meetsBar: passed >= total - 1 && moneyNotFromTools === 0 && inventedQuantities === 0,
   };
 }
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+const cell = (text: string) => text.replace(/\s+/g, " ").trim().replaceAll("|", "\\|");
+const EXCERPT = 160;
+const excerpt = (text: string) => {
+  const flat = cell(text);
+  return flat.length > EXCERPT ? `${flat.slice(0, EXCERPT)}…` : flat;
+};
+/** Tool names in order; a call that did not finish ok shows its status or error code. */
+const tools = (trace: TraceStep[]) => trace.map((s) => (s.status === "ok" ? s.tool : `${s.tool} (${s.error ?? s.status})`)).join(" → ") || "—";
 
-/** The committed report: a summary the README quotes, then every scenario with its failing checks. */
+function renderScenario(r: ScenarioResult): string[] {
+  const heading = `### ${r.title} (\`${r.id}\`)`;
+  if (r.turns === null) return [`${heading}: not run, ${r.skippedReason ?? ""}`, ""];
+  const failing = [
+    ...r.turns.flatMap((t, i) => t.checks.filter((c) => !c.ok).map((c) => `- T${i + 1} ${c.name}: ${c.detail}`)),
+    ...r.checks.filter((c) => !c.ok).map((c) => `- ${c.name}: ${c.detail}`),
+  ];
+  return [
+    `${heading}: ${scenarioPassed(r) ? "pass" : "**fail**"}`,
+    "",
+    "| Turn | Outcome | Steps | Latency | Tokens in / out | Tools | Answer |",
+    "|---|---|---|---|---|---|---|",
+    ...r.turns.map(
+      ({ metrics: m, trace = [], answer = "" }, i) =>
+        `| ${i + 1} | ${m.outcome} | ${m.steps} | ${seconds(m.durationMs)} | ${m.inputTokens} / ${m.outputTokens} | ${tools(trace)} | ${excerpt(answer)} |`,
+    ),
+    "",
+    ...(failing.length ? ["Failing checks:", "", ...failing.map(cell), ""] : []),
+  ];
+}
+
+/** The committed report: the summary and the success bar, then every scenario turn by turn. */
 export function renderReport(run: EvalRun): string {
   const s = summarize(run);
-  const lines = [
+  return [
     "# Grounding evals",
     "",
-    `Run ${run.date} · model \`${run.model}\` · prompt \`${run.promptVersion}\`. Generated by \`npm run evals\`; do not edit by hand.`,
+    `Run ${run.date} · model \`${run.model}\`. Generated by \`npm run evals\`; do not edit by hand.`,
     "",
     "| Metric | Result |",
     "|---|---|",
     `| Scenarios passed | **${s.passed}/${s.total}**${s.run < s.total ? ` (${s.total - s.run} not run)` : ""} |`,
-    `| Quote quantities not from computeMaterials | ${s.quantityFlags} |`,
-    `| Median steps per turn | ${s.medianSteps} |`,
-    `| Turn latency p50 / p95 | ${seconds(s.p50LatencyMs)} / ${seconds(s.p95LatencyMs)} |`,
-    `| Input tokens per turn (avg) · largest per-turn average per model call | ${s.avgInputTokensPerTurn} · ${s.maxTurnAvgInputPerCall} |`,
-    `| Model calls spent | ${s.callsUsed !== undefined ? `${s.callsUsed} (${s.modelCalls} steps summed) · ${s.embeddingCalls ?? 0} embedding queries` : `${s.modelCalls} steps summed`} |`,
+    `| Money in answers not from a tool or the customer | ${s.moneyNotFromTools} |`,
+    `| Quote quantities not from computeMaterials | ${s.inventedQuantities} |`,
+    `| Median steps per turn (completed turns) | ${s.medianSteps} |`,
+    `| Turn latency p95 (completed turns) | ${seconds(s.p95LatencyMs)} |`,
+    `| Timeouts | ${s.timeouts} |`,
+    `| Model calls spent | ${s.calls.used} (${s.calls.steps} steps summed) · ${s.calls.embeddings} embedding queries |`,
+    `| Prompt version | \`${s.promptVersion}\` |`,
+    `| Success bar (passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | **${s.meetsBar ? "met" : "not met"}** |`,
+    "",
+    "Every turn: it completed, at most 7 steps, every peso amount comes from a tool or the customer, quote quantities come from `computeMaterials`, quote prices match the catalog, and a tool's `needs_review` is shown as \"Requiere revisión\". Each scenario adds its own checks over the whole conversation: the tools and the customer's conditions they received, the budget verdict, the fake price, the dotted SKU or the out-of-catalog link.",
     "",
     "## Scenarios",
     "",
-    "| Scenario | Search | Result | Steps | Tokens | Latency | Keyword fallbacks | Failing checks |",
-    "|---|---|---|---|---|---|---|---|",
-  ];
-  for (const r of run.results) {
-    if (r.turns === null) {
-      lines.push(`| ${r.title} | ${r.mode} | not run | | | | | ${r.skippedReason ?? ""} |`);
-      continue;
-    }
-    const failing = [
-      ...r.turns.flatMap((t, i) => t.checks.filter((c) => !c.ok).map((c) => `${r.turns!.length > 1 ? `T${i + 1} ` : ""}${c.name}: ${c.detail}`)),
-      ...r.checks.filter((c) => !c.ok).map((c) => `${c.name}: ${c.detail}`),
-    ];
-    const steps = r.turns.map((t) => t.metrics.steps).join(" + ");
-    const tokens = r.turns.map((t) => `${t.metrics.inputTokens} in / ${t.metrics.outputTokens} out`).join(" + ");
-    const fallbacks = r.turns.reduce((n, t) => n + t.keywordFallbacks, 0);
-    const latency = r.turns.map((t) => seconds(t.metrics.durationMs)).join(" + ");
-    lines.push(`| ${r.title} | ${r.mode} | ${scenarioPassed(r) ? "pass" : "**fail**"} | ${steps} | ${tokens} | ${latency} | ${fallbacks} | ${failing.join("<br>").replaceAll("|", "\\|") || "—"} |`);
-  }
-  lines.push(
-    "",
-    "Checks on every turn: the turn completed; at most 7 steps; every peso amount comes from a tool or the customer; quote quantities match `computeMaterials`; quote prices match the catalog; a tool's `needs_review` is shown as \"Requiere revisión\". Scenario checks add the tools and inputs that must appear in the conversation, the budget verdict and the out-of-catalog link.",
-    "",
-  );
-  return lines.join("\n");
+    ...run.results.flatMap(renderScenario),
+  ].join("\n");
 }

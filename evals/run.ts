@@ -53,11 +53,15 @@ const run: EvalRun = {
 };
 const outDir = scripted ? "evals/out" : "evals";
 mkdirSync(outDir, { recursive: true });
-writeFileSync(`${outDir}/report.md`, renderReport(run));
-writeFileSync(`${outDir}/results.json`, `${JSON.stringify({ ...run, summary: summarize(run) }, null, 2)}\n`);
 const summary = summarize(run);
+writeFileSync(`${outDir}/report.md`, renderReport(run));
+writeFileSync(`${outDir}/results.json`, `${JSON.stringify({ ...run, summary }, null, 2)}\n`);
 console.log(
-  `\n${summary.passed}/${summary.total} scenarios passed · ${out.callsUsed} model calls (${out.stepsSummed} steps summed) · ${out.embeddingCalls} embedding queries · report in ${outDir}/report.md`,
+  [
+    `\n${summary.passed}/${summary.total} scenarios passed · success bar ${summary.meetsBar ? "met" : "not met"} · prompt ${summary.promptVersion}`,
+    `money not from tools: ${summary.moneyNotFromTools} · invented quantities: ${summary.inventedQuantities} · median ${summary.medianSteps} steps per completed turn · p95 ${(summary.p95LatencyMs / 1000).toFixed(1)} s · ${summary.timeouts} timeouts`,
+    `${out.callsUsed} model calls (${out.stepsSummed} steps summed) · ${out.embeddingCalls} embedding queries · report in ${outDir}/report.md`,
+  ].join("\n"),
 );
 if (out.stopReason) console.log(`Stopped early: ${out.stopReason}`);
 process.exitCode = exitCodeFor(out.stopReason);
