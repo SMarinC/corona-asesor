@@ -54,7 +54,7 @@ describe("scripted demo through the real handler and tools", () => {
     const supplies = await runTurn(messages);
     expect(tools(supplies)).toEqual(["tool-searchSupplies", "tool-searchSupplies", "tool-checkCompatibility"]);
     const offered = results(supplies, "tool-searchSupplies");
-    for (const name of ["PEGACOR® Cerámico Gris", "CONCOLOR® Junta Estrecha 2 Kg Gris Claro"]) {
+    for (const name of ["PEGACOR® Cerámico Gris · 25 kg", "CONCOLOR® Junta Estrecha 2 Kg Gris Claro"]) {
       expect(offered).toContain(name);
       expect(text(supplies)).toContain(name);
     }

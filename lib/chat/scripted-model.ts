@@ -9,7 +9,8 @@ export const DEMO_SKUS = { tile: "555332501", adhesive: "901391501", grout: "993
 
 const PROJECT = { surface: "floor", environment: "indoor", wetArea: true } as const;
 const TILE = "Piso Soria Gris Caras Diferenciadas 55.2X55.2";
-const ADHESIVE = "PEGACOR® Cerámico Gris";
+/** As searchSupplies shows it: the catalog name plus the bag size. */
+const ADHESIVE = "PEGACOR® Cerámico Gris · 25 kg";
 const GROUT = "CONCOLOR® Junta Estrecha 2 Kg Gris Claro";
 const NOTE = "\n\n_Respuesta guionada para desarrollo local: no usa el modelo._";
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { executeSearchSupplies, searchSuppliesInput } from "@/lib/agent/tools/search-supplies";
+import { getToolDeps } from "@/lib/agent/tools";
 import { makeToolDeps } from "@/tests/fixtures/tool-deps";
 
 const deps = makeToolDeps();
@@ -36,5 +37,18 @@ describe("searchSupplies tool", () => {
 
   it("requires a kind", () => {
     expect(searchSuppliesInput.safeParse({ tileMaterial: "ceramic" }).success).toBe(false);
+  });
+});
+
+describe("searchSupplies on the real catalog", () => {
+  it("names each adhesive with its bag size from the catalog, so same-name SKUs stay distinct", () => {
+    // The stage-4 search for a ceramic tile; two SKUs are both called "PEGACOR® Interiores Gris" (10 kg and 25 kg bags).
+    const data = okData(executeSearchSupplies(getToolDeps(), { kind: "adhesive", tileMaterial: "ceramic", limit: 10 }));
+    const name = (sku: string) => data.results.find((r) => r.sku === sku)?.name;
+    expect(name("901061501")).toBe("PEGACOR® Interiores Gris · 10 kg");
+    expect(name("901021501")).toBe("PEGACOR® Interiores Gris · 25 kg");
+    expect(new Set(data.results.map((r) => r.name)).size).toBe(data.results.length);
+    // A name that already states its weight is left alone.
+    expect(name("901521501")).toBe("PEGACOR® Ultra Gel Gris 25 kg");
   });
 });

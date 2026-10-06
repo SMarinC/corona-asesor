@@ -1,4 +1,5 @@
 import { round } from "@/lib/domain/calculations";
+import { parseKg } from "@/lib/domain/parse";
 import type { Adhesive, Grout, Product, Tile } from "@/lib/domain/types";
 
 /** What one unit of `price` buys, per product kind. */
@@ -68,10 +69,16 @@ export interface AdhesiveSummary {
   imageUrl: string | null;
 }
 
+/** The catalog name plus its bag size when the name does not state one: some SKUs share a name across bag sizes. */
+function adhesiveDisplayName(a: Adhesive): string {
+  if (a.bagKg === null || parseKg(a.name) !== null) return a.name;
+  return `${a.name} · ${String(a.bagKg).replace(".", ",")} kg`;
+}
+
 export function summarizeAdhesive(a: Adhesive): AdhesiveSummary {
   return {
     sku: a.sku,
-    name: a.name,
+    name: adhesiveDisplayName(a),
     price: a.price,
     priceUnit: PRICE_UNIT.adhesive,
     bagKg: a.bagKg,
