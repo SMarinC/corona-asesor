@@ -1,7 +1,10 @@
 import type { CoronaUIMessage } from "@/lib/agent/agent";
+import type { QuoteLineData } from "@/lib/agent/tools/build-quote";
+import type { Catalog } from "@/lib/data/catalog";
 import { deriveProject } from "@/lib/ui/derive-project";
-import { isToolPart, type ToolName, toolNameOf } from "@/lib/ui/tool-parts";
-import type { TurnExpect } from "./scenarios";
+import { type CoronaToolPart, isToolPart, isToolPartOf, type ToolName, toolFailed, toolNameOf, toolPhase } from "@/lib/ui/tool-parts";
+import type { ScenarioExpect } from "./scenarios";
+import { answerOf, traceOf } from "./trace";
 
 /** The `chat_turn` log line the handler writes for each turn (see lib/chat/turn-log.ts). */
 export interface TurnLog {
@@ -18,14 +21,19 @@ export interface Check {
   detail: string;
 }
 
+/** How a turn ended: it answered (a turn cut at the step cap still answers), it ran out of time, or it failed. */
+export type Outcome = "ok" | "timeout" | "error";
+
 export interface TurnMetrics {
+  outcome: Outcome;
   steps: number;
   durationMs: number;
   inputTokens: number;
   outputTokens: number;
-  tools: string[];
-  /** Quote lines whose quantity did not come from computeMaterials (or a stale quote). */
-  quantityFlags: string[];
+  /** Peso amounts in the answer that no tool returned and the customer never stated. */
+  moneyNotFromTools: number[];
+  /** Quote lines whose quantity did not come from computeMaterials, as "sku:check". */
+  inventedQuantities: string[];
 }
 
 export interface TurnInput {
@@ -34,17 +42,38 @@ export interface TurnInput {
   turnLog: TurnLog | null;
   /** A stream error code (e.g. quota_exhausted) or an HTTP rejection, if the turn failed. */
   error: string | null;
-  expect: TurnExpect;
+  /** The turn must ask the customer for the missing data instead of answering. */
+  asks?: boolean;
+  /** Every quote line's unit price must be this catalog's price. */
+  catalog: Pick<Catalog, "get">;
 }
 
-export const DEFAULT_MAX_STEPS = 7;
+/** The spec's step budget for one turn; the agent's hard cap (MAX_STEPS) is higher. */
+export const MAX_TURN_STEPS = 7;
 
 const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-const textOf = (message: CoronaUIMessage) => message.parts.flatMap((p) => (p.type === "text" ? [p.text] : [])).join("\n");
+/** getCompanyInfo answers questions about the company; every other tool reads the product catalog. */
+const isCatalogTool = (tool: ToolName) => tool !== "getCompanyInfo";
 
-const outputsOf = (messages: CoronaUIMessage[]) =>
-  messages.flatMap((m) => (m.role === "assistant" ? m.parts.flatMap((p) => (isToolPart(p) && p.state === "output-available" ? [p.output] : [])) : []));
+const toolPartsOf = (messages: CoronaUIMessage[]) => messages.flatMap((m) => (m.role === "assistant" ? m.parts.filter(isToolPart) : []));
+
+/** A call that finished without failing; an incompatible or needs_review result still ran. */
+const succeeded = (part: CoronaToolPart) => part.state === "output-available" && !toolFailed(part);
+
+const quoteLinesOf = (parts: CoronaToolPart[]): QuoteLineData[] =>
+  parts.flatMap((p) => (isToolPartOf(p, "buildQuote") && p.state === "output-available" && p.output.status !== "error" ? (p.output.data.lines ?? []) : []));
+
+const outcomeOf = (turnLog: TurnLog | null, error: string | null): Outcome => {
+  if (turnLog?.outcome === "timeout") return "timeout";
+  return error === null && (turnLog?.outcome === "ok" || turnLog?.outcome === "step_cap") ? "ok" : "error";
+};
+
+/** Numbers stated in prose ("1.500.000", "6,6", "3 x 2"), outside URLs and list markers; digits glued to letters ("m2", "60x120") are labels. */
+export function numbersIn(text: string): string[] {
+  const prose = text.replace(/https?:\/\/\S+/g, " ").replace(/^\s*\d+[.)]\s/gm, " ");
+  return [...prose.matchAll(/(?<![\p{L}\d.,])\d+(?:[.,]\d+)*(?![\p{L}\d])/gu)].map((m) => m[0]);
+}
 
 const AMOUNT = String.raw`(\d{1,3}(?:\.\d{3})+|\d+)`;
 const MILLIONS = String.raw`(\d+(?:,\d+)?)\s*mill(?:ón|on|ones)`;
@@ -65,7 +94,7 @@ const moneyIn = (text: string) => [
 
 const MONEY_KEY = /price|subtotal|^total$|budget|difference/i;
 
-/** The exact peso values tools returned (unit prices, subtotals, totals, budget, difference): no derived forms. */
+/** The exact peso values tools returned (unit prices, subtotals, totals, budget, difference), plus their absolute values. */
 function toolMoneyValues(outputs: unknown[]): Set<number> {
   const values = new Set<number>();
   const visit = (node: unknown) => {
@@ -87,93 +116,119 @@ function toolMoneyValues(outputs: unknown[]): Set<number> {
 // A request for data worded without a question mark: "necesito que me compartas…", "compárteme…", "indícame…".
 const DATA_REQUEST = /\bnecesito (?:que me|saber|conocer)\b|\b(?:compart|indic|conf[ií]rm|cu[eé]nt)(?:ame|eme)\b|\bdime\b|\bpor favor (?:comparte|indica|dime|confirma)\b/;
 
-/** The answer asks the user for something: a question (? or ¿) or an explicit data request. */
+/** The answer asks the customer for something: a question (? or ¿) or an explicit data request. */
 export const asksForData = (text: string): boolean => /[?¿]/.test(text) || DATA_REQUEST.test(normalize(text));
 
-const inputMatches = (inputs: Record<string, unknown>[], wanted: Record<string, unknown>) =>
-  inputs.some((input) => Object.entries(wanted).every(([key, value]) => input?.[key] === value));
-
-export function scoreTurn({ messages, turnLog, error, expect }: TurnInput): { checks: Check[]; metrics: TurnMetrics } {
+/** The checks every turn gets, plus `asks` when the scenario expects a question back. */
+export function scoreTurn({ messages, turnLog, error, asks, catalog }: TurnInput): { checks: Check[]; metrics: TurnMetrics } {
   const assistant = messages.at(-1)!;
-  const text = textOf(assistant);
-  const plain = normalize(text);
-  const userTexts = messages.filter((m) => m.role === "user").map(textOf);
-  const allOutputs = outputsOf(messages);
-  const turnToolParts = assistant.parts.filter(isToolPart);
-  const turnTools = turnToolParts.map((p) => toolNameOf(p));
-  const completedTools = turnToolParts.filter((p) => p.state === "output-available").map((p) => toolNameOf(p));
-  const completedInputs = (tool: string) =>
-    turnToolParts.filter((p) => p.state === "output-available" && toolNameOf(p) === tool).map((p) => p.input as Record<string, unknown>);
-  const project = deriveProject(messages);
-
-  const toolMoney = toolMoneyValues(allOutputs);
-  // A peso amount passes when a tool returned it or the user wrote it (their budget). A total derived from a price
-  // the user made up matches neither source.
-  const userMoney = new Set(userTexts.flatMap(moneyIn));
-  const userOnlyMoney = moneyIn(text).filter((n) => !toolMoney.has(n) && !userMoney.has(n));
-
-  const quotedThisTurn = turnTools.includes("buildQuote");
-  const quote = project.quote;
-  const quantityFlags = quotedThisTurn && quote ? Object.entries(quote.lineChecks).filter(([, c]) => c !== "computed").map(([sku, c]) => `${sku}:${c}`) : [];
-  if (quotedThisTurn && quote?.stale) quantityFlags.push("stale");
-
-  const turnOutputs = outputsOf([assistant]) as { status?: string; data?: { verdict?: string } }[];
-  const toolSaysReview = turnOutputs.some((o) => o?.status === "needs_review" || o?.data?.verdict === "needs_review");
-
+  const answer = answerOf(assistant);
+  const turnParts = assistant.parts.filter(isToolPart);
+  const outcome = outcomeOf(turnLog, error);
   const steps = turnLog?.steps ?? 0;
-  const maxSteps = expect.maxSteps ?? DEFAULT_MAX_STEPS;
-  const checks: Check[] = [
-    { name: "completed", ok: error === null && turnLog?.outcome === "ok", detail: error ?? turnLog?.outcome ?? "sin línea chat_turn" },
-    { name: "steps", ok: steps > 0 && steps <= maxSteps, detail: `${steps} pasos (máx. ${maxSteps})` },
-    { name: "money-from-tools", ok: userOnlyMoney.length === 0, detail: userOnlyMoney.length ? `montos que no salieron de una tool: ${userOnlyMoney.join(", ")}` : "ok" },
-    { name: "quantities-computed", ok: quantityFlags.length === 0, detail: quantityFlags.length ? quantityFlags.join(", ") : "ok" },
-    { name: "review", ok: !toolSaysReview || plain.includes("requiere revision"), detail: toolSaysReview ? "una tool pidió revisión" : "nada que revisar" },
-  ];
 
-  for (const tool of expect.must ?? []) checks.push({ name: `calls:${tool}`, ok: completedTools.includes(tool), detail: turnTools.join(" → ") || "ninguna tool" });
-  for (const tool of expect.mustNot ?? []) checks.push({ name: `skips:${tool}`, ok: !turnTools.includes(tool), detail: turnTools.join(" → ") || "ninguna tool" });
-  if (expect.quote) {
-    const data = quotedThisTurn ? quote?.data : undefined;
-    const ok =
-      expect.quote === "none"
-        ? !quotedThisTurn
-        : expect.quote === "within"
-          ? data?.withinBudget === true
-          : expect.quote === "over"
-            ? data?.withinBudget === false
-            : data !== undefined && data.budget === null && data.withinBudget === null;
-    checks.push({ name: `quote:${expect.quote}`, ok, detail: data ? `total ${data.total}, withinBudget ${String(data.withinBudget)}` : "sin cotización en este turno" });
-  }
-  if (expect.forbidsPrice) {
-    const forbidden = expect.forbidsPrice;
-    const lines = quotedThisTurn ? (quote?.data.lines ?? []) : [];
-    const inQuote = lines.filter((l) => l.unitPrice !== null && forbidden.includes(l.unitPrice)).map((l) => `${l.sku}:${l.unitPrice}`);
-    checks.push({ name: "no-fake-price", ok: inQuote.length === 0, detail: inQuote.length ? `precio del usuario en la cotización: ${inQuote.join(", ")}` : "los precios salen del catálogo" });
-  }
-  for (const [tool, wanted] of Object.entries(expect.toolInput ?? {})) {
-    const inputs = completedInputs(tool);
-    checks.push({ name: `input:${tool}`, ok: inputMatches(inputs, wanted), detail: inputs.map((i) => JSON.stringify(i)).join(" | ") || "la tool no corrió" });
-  }
-  if (expect.areaM2 !== undefined) {
-    const area = expect.areaM2;
-    const areas = completedInputs("computeMaterials").map((i) => Number(i.lengthM) * Number(i.widthM));
-    checks.push({ name: "area", ok: areas.some((a) => Math.abs(a - area) <= area * 0.01), detail: `esperado ${area} m2; computeMaterials recibió ${areas.join(", ") || "nada"}` });
-  }
-  if (expect.asks) checks.push({ name: "asks", ok: asksForData(text), detail: text.slice(0, 120) });
-  if (expect.mentionsAny) {
-    const hit = expect.mentionsAny.find((phrase) => plain.includes(normalize(phrase)));
-    checks.push({ name: "mentions", ok: hit !== undefined, detail: hit ?? `ninguna de: ${expect.mentionsAny.join(" | ")}` });
+  const outputs = toolPartsOf(messages).flatMap((p) => (p.state === "output-available" ? [p.output] : []));
+  const toolMoney = toolMoneyValues(outputs);
+  const customerMoney = new Set(messages.filter((m) => m.role === "user").flatMap((m) => moneyIn(answerOf(m))));
+  const moneyNotFromTools = moneyIn(answer).filter((n) => !toolMoney.has(n) && !customerMoney.has(n));
+
+  const lines = quoteLinesOf(turnParts);
+  // The panel's own ledger over the whole conversation: the last quote is this turn's.
+  const lineChecks = lines.length > 0 ? (deriveProject(messages).quote?.lineChecks ?? {}) : {};
+  const inventedQuantities = Object.entries(lineChecks).filter(([, check]) => check !== "computed").map(([sku, check]) => `${sku}:${check}`);
+  const wrongPrices = lines.flatMap((line) => {
+    const price = catalog.get(line.sku)?.price ?? null;
+    return line.unitPrice === price ? [] : [`${line.sku}: ${line.unitPrice} en la cotización, ${price} en el catálogo`];
+  });
+  const needsReview = turnParts.some((p) => toolPhase(p) === "review");
+
+  const checks: Check[] = [
+    { name: "completed", ok: outcome === "ok", detail: error ?? turnLog?.outcome ?? "sin línea chat_turn" },
+    { name: "steps", ok: steps <= MAX_TURN_STEPS, detail: `${steps} pasos (máx. ${MAX_TURN_STEPS})` },
+    { name: "money-from-tools", ok: moneyNotFromTools.length === 0, detail: moneyNotFromTools.length ? `montos que no salieron de una tool ni del cliente: ${moneyNotFromTools.join(", ")}` : "ok" },
+    { name: "quantities-computed", ok: inventedQuantities.length === 0, detail: inventedQuantities.join(", ") || "ok" },
+    { name: "catalog-prices", ok: wrongPrices.length === 0, detail: wrongPrices.join("; ") || "ok" },
+    { name: "review", ok: !needsReview || normalize(answer).includes("requiere revision"), detail: needsReview ? "una tool pidió revisión" : "nada que revisar" },
+  ];
+  if (asks) {
+    const catalogCalls = turnParts.map(toolNameOf).filter(isCatalogTool);
+    const numbers = numbersIn(answer);
+    const problem = catalogCalls.length
+      ? `llamó ${catalogCalls.join(", ")}`
+      : numbers.length
+        ? `escribió números: ${numbers.join(", ")}`
+        : asksForData(answer)
+          ? null
+          : `no pide datos: "${answer.slice(0, 100)}"`;
+    checks.push({ name: "asks", ok: problem === null, detail: problem ?? "pide los datos que faltan" });
   }
 
   return {
     checks,
     metrics: {
+      outcome,
       steps,
       durationMs: turnLog?.durationMs ?? 0,
       inputTokens: turnLog?.inputTokens ?? 0,
       outputTokens: turnLog?.outputTokens ?? 0,
-      tools: turnTools as ToolName[],
-      quantityFlags,
+      moneyNotFromTools,
+      inventedQuantities,
     },
   };
+}
+
+/** The scenario's own checks, run once over the whole conversation after its last turn. */
+export function scoreScenario(messages: CoronaUIMessage[], expect: ScenarioExpect): Check[] {
+  const parts = toolPartsOf(messages);
+  const ran = (tool: ToolName) => parts.filter((p) => toolNameOf(p) === tool && succeeded(p));
+  const trail = parts.map(toolNameOf).join(" → ") || "ninguna tool";
+  const quote = deriveProject(messages).quote?.data;
+  const checks: Check[] = [];
+
+  for (const tool of expect.calls ?? []) checks.push({ name: `calls:${tool}`, ok: ran(tool).length > 0, detail: trail });
+  for (const [tool, wanted] of Object.entries(expect.inputs ?? {}) as [ToolName, Record<string, unknown>][]) {
+    const inputs = ran(tool).map((p) => p.input as Record<string, unknown>);
+    const ok = inputs.some((input) => Object.entries(wanted).every(([key, value]) => input[key] === value));
+    checks.push({ name: `input:${tool}`, ok, detail: inputs.map((i) => JSON.stringify(i)).join(" | ") || "la tool no corrió" });
+  }
+  if (expect.areaM2 !== undefined) {
+    const area = expect.areaM2;
+    const areas = ran("computeMaterials").map((p) => {
+      const { lengthM, widthM } = p.input as { lengthM: number; widthM: number };
+      return lengthM * widthM;
+    });
+    checks.push({ name: "area", ok: areas.some((a) => Math.abs(a - area) <= area * 0.01), detail: `esperado ${area} m2; computeMaterials recibió ${areas.join(", ") || "nada"}` });
+  }
+  if (expect.quote) {
+    checks.push({
+      name: `quote:${expect.quote}`,
+      ok: quote?.withinBudget === (expect.quote === "within"),
+      detail: quote ? `total ${quote.total}, withinBudget ${String(quote.withinBudget)}` : "sin cotización",
+    });
+  }
+  if (expect.quoteMentions) {
+    const quoting = messages.findLast((m) => m.role === "assistant" && m.parts.some((p) => isToolPartOf(p, "buildQuote") && succeeded(p)));
+    const said = normalize(quoting ? answerOf(quoting) : "");
+    const hit = expect.quoteMentions.find((phrase) => said.includes(normalize(phrase)));
+    checks.push({ name: "quote-mentions", ok: hit !== undefined, detail: hit ?? (quoting ? `ninguna de: ${expect.quoteMentions.join(" | ")}` : "sin cotización") });
+  }
+  if (expect.fakePrice !== undefined) {
+    const carried = quoteLinesOf(parts).filter((line) => line.unitPrice === expect.fakePrice).map((line) => line.sku);
+    checks.push({ name: "no-fake-price", ok: carried.length === 0, detail: carried.length ? `precio del cliente en la cotización: ${carried.join(", ")}` : "ok" });
+  }
+  if (expect.resolvesSku) {
+    const sku = expect.resolvesSku;
+    const detours = messages.flatMap((m) => (m.role === "assistant" ? traceOf(m) : [])).filter((step) => step.error === "unknown_sku").length;
+    const quoted = quote?.lines?.some((line) => line.sku === sku) ?? false;
+    const ok = quoted && detours === 0;
+    checks.push({ name: `resolves:${sku}`, ok, detail: ok ? "ok" : `${quoted ? "cotizado" : "no cotizado"}; ${detours} llamadas con unknown_sku` });
+  }
+  if (expect.link) {
+    const link = expect.link;
+    const catalogCalls = parts.map(toolNameOf).filter(isCatalogTool);
+    const linked = messages.some((m) => m.role === "assistant" && answerOf(m).includes(link));
+    const problem = catalogCalls.length ? `llamó ${catalogCalls.join(", ")}` : linked ? null : `sin el enlace ${link}`;
+    checks.push({ name: "link", ok: problem === null, detail: problem ?? "ok" });
+  }
+  return checks;
 }

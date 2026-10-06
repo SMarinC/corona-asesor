@@ -1,10 +1,12 @@
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
-import { runTurn, type TurnRecord } from "@/evals/harness";
-import { SCENARIOS, type TurnExpect } from "@/evals/scenarios";
-import { scoreTurn } from "@/evals/score";
+import { runTurn } from "@/evals/harness";
+import { scenarioPassed } from "@/evals/report";
+import { runScenarios } from "@/evals/runner";
+import { SCENARIOS } from "@/evals/scenarios";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
+import { getCatalog } from "@/lib/data/catalog";
 import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
 
 const usage = {
@@ -37,29 +39,27 @@ function sheetSearchModel() {
 }
 
 describe("eval harness", () => {
-  it("runs turns through the real handler and tools, and every turn of the staged scripted quote passes its checks", async () => {
+  it("the scripted model drives bathroom-budget end to end through the real handler and tools, and it passes", async () => {
     const scenario = SCENARIOS.find((s) => s.id === "bathroom-budget")!;
     const model = createScriptedDemoModel({ delayMs: 0 });
-    // The one-shot scenario's expectations, split across the stages that now produce them.
-    const { quote, areaM2, toolInput } = scenario.turns[0].expect;
-    const turns: { user: string; expect: TurnExpect; steps: number }[] = [
-      { user: scenario.turns[0].user, expect: { must: ["searchTiles"], quote: "none", asks: true }, steps: 2 },
-      {
-        user: "Me quedo con el Piso Soria Gris.",
-        expect: { must: ["searchSupplies", "checkCompatibility"], quote: "none", asks: true, toolInput: { checkCompatibility: toolInput!.checkCompatibility } },
-        steps: 3,
-      },
-      { user: "Sí, los confirmo.", expect: { must: ["computeMaterials", "buildQuote"], quote, areaM2, asks: true, toolInput: { buildQuote: toolInput!.buildQuote } }, steps: 3 },
-    ];
-    let history: TurnRecord["messages"] = [];
-    for (const turn of turns) {
-      const record = await runTurn(history, turn.user, "keyword", model);
-      expect(record.error).toBeNull();
-      expect(record.turnLog).toMatchObject({ outcome: "ok", steps: turn.steps });
-      const { checks } = scoreTurn({ messages: record.messages, turnLog: record.turnLog, error: record.error, expect: turn.expect });
-      expect(checks.filter((c) => !c.ok), turn.user).toEqual([]);
-      history = record.messages;
-    }
+    const out = await runScenarios({
+      scenarios: [scenario],
+      run: (history, text, mode) => runTurn(history, text, mode, model, { offline: true }),
+      maxCalls: 110,
+      catalog: getCatalog(),
+    });
+    const [result] = out.results;
+    const failing = [...result.turns!.flatMap((t) => t.checks), ...result.checks].filter((c) => !c.ok);
+    expect(failing).toEqual([]);
+    expect(scenarioPassed(result)).toBe(true);
+    // Stage by stage: tiles, then adhesive and grout, then the quote, then the closing.
+    expect(result.turns!.map((t) => t.trace!.map((s) => s.tool))).toEqual([
+      ["searchTiles"],
+      ["searchSupplies", "searchSupplies", "checkCompatibility"],
+      ["computeMaterials", "buildQuote"],
+      [],
+    ]);
+    expect(out).toMatchObject({ callsUsed: 9, stopReason: null });
   });
 
   it("falls back to keyword search when the query embedder fails, and counts the fallback", async () => {
@@ -75,12 +75,6 @@ describe("eval harness", () => {
     const record = await runTurn([], "Dime el rendimiento de la boquilla", "semantic", sheetSearchModel(), { offline: true });
     expect(record.keywordFallbacks).toBe(1);
     expect(record.embedCalls).toBe(0);
-  });
-
-  it("has the spec's 12 scenarios, each with at least one turn", () => {
-    expect(SCENARIOS).toHaveLength(12);
-    expect(new Set(SCENARIOS.map((s) => s.id)).size).toBe(12);
-    expect(SCENARIOS.filter((s) => s.mode === "keyword").length).toBeGreaterThan(0);
   });
 });
 

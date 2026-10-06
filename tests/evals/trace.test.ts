@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { answerOf, traceOf } from "@/evals/trace";
 import { runScenarios } from "@/evals/runner";
 import type { Scenario } from "@/evals/scenarios";
+import { makeToolDeps } from "@/tests/fixtures/tool-deps";
 import { assistantMessage, bathroomConversation, errorPart, toolPart } from "@/tests/fixtures/ui-messages";
 
 describe("traceOf and answerOf", () => {
@@ -54,11 +55,12 @@ describe("traceOf and answerOf", () => {
 
 describe("runScenarios keeps the answer and the trace", () => {
   it("persists them on every turn result", async () => {
-    const scenario: Scenario = { id: "one", title: "Un turno", mode: "semantic", turns: [{ user: "uno", expect: {} }] };
+    const scenario: Scenario = { id: "one", title: "Un turno", mode: "semantic", turns: [{ user: "uno" }], expect: {} };
     const out = await runScenarios({
       scenarios: [scenario],
       run: async () => ({ messages: bathroomConversation(), turnLog: { outcome: "ok", steps: 6, durationMs: 1, inputTokens: 1, outputTokens: 1 }, error: null, keywordFallbacks: 0, embedCalls: 0 }),
       maxCalls: 110,
+      catalog: makeToolDeps().catalog,
     });
     const turn = out.results[0].turns![0];
     expect(turn.answer).toContain("[c0001]");

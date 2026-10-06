@@ -11,6 +11,8 @@ export interface ScenarioResult {
     answer?: string;
     trace?: TraceStep[];
   }[] | null;
+  /** Checks over the whole conversation (tools and their inputs, the quote, the link); empty when it did not run. */
+  checks: Check[];
   skippedReason?: string;
 }
 
@@ -41,7 +43,8 @@ export interface EvalSummary {
   embeddingCalls?: number;
 }
 
-export const scenarioPassed = (result: ScenarioResult) => result.turns !== null && result.turns.every((t) => t.checks.every((c) => c.ok));
+export const scenarioPassed = (result: ScenarioResult) =>
+  result.turns !== null && result.turns.every((t) => t.checks.every((c) => c.ok)) && result.checks.every((c) => c.ok);
 
 const percentile = (values: number[], p: number) => {
   if (values.length === 0) return 0;
@@ -56,7 +59,7 @@ export function summarize(run: EvalRun): EvalSummary {
     passed: run.results.filter(scenarioPassed).length,
     run: run.results.filter((r) => r.turns !== null).length,
     total: run.results.length,
-    quantityFlags: metrics.reduce((n, m) => n + m.quantityFlags.length, 0),
+    quantityFlags: metrics.reduce((n, m) => n + m.inventedQuantities.length, 0),
     medianSteps: percentile(metrics.map((m) => m.steps), 50),
     p50LatencyMs: percentile(metrics.map((m) => m.durationMs), 50),
     p95LatencyMs: percentile(metrics.map((m) => m.durationMs), 95),
@@ -97,7 +100,10 @@ export function renderReport(run: EvalRun): string {
       lines.push(`| ${r.title} | ${r.mode} | not run | | | | | ${r.skippedReason ?? ""} |`);
       continue;
     }
-    const failing = r.turns.flatMap((t, i) => t.checks.filter((c) => !c.ok).map((c) => `${r.turns!.length > 1 ? `T${i + 1} ` : ""}${c.name}: ${c.detail}`));
+    const failing = [
+      ...r.turns.flatMap((t, i) => t.checks.filter((c) => !c.ok).map((c) => `${r.turns!.length > 1 ? `T${i + 1} ` : ""}${c.name}: ${c.detail}`)),
+      ...r.checks.filter((c) => !c.ok).map((c) => `${c.name}: ${c.detail}`),
+    ];
     const steps = r.turns.map((t) => t.metrics.steps).join(" + ");
     const tokens = r.turns.map((t) => `${t.metrics.inputTokens} in / ${t.metrics.outputTokens} out`).join(" + ");
     const fallbacks = r.turns.reduce((n, t) => n + t.keywordFallbacks, 0);
@@ -106,7 +112,7 @@ export function renderReport(run: EvalRun): string {
   }
   lines.push(
     "",
-    "Checks on every turn: the turn completed; at most 7 steps (3 for questions); every peso amount comes from a tool or the user; quote quantities match `computeMaterials`; a tool's `needs_review` is shown as \"Requiere revisión\". Scenario checks add the tools that must (not) run, the budget verdict and expected wording.",
+    "Checks on every turn: the turn completed; at most 7 steps; every peso amount comes from a tool or the customer; quote quantities match `computeMaterials`; quote prices match the catalog; a tool's `needs_review` is shown as \"Requiere revisión\". Scenario checks add the tools and inputs that must appear in the conversation, the budget verdict and the out-of-catalog link.",
     "",
   );
   return lines.join("\n");

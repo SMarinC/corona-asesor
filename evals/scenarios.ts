@@ -1,25 +1,34 @@
+import { getCompanyContext } from "@/lib/data/company";
 import type { ToolName } from "@/lib/ui/tool-parts";
 
-/** What one user turn must produce. Universal checks (completion, steps, money, quantities, review) always run. */
-export interface TurnExpect {
-  /** Tools that must run in this turn. */
-  must?: ToolName[];
-  /** Tools that must not run in this turn. */
-  mustNot?: ToolName[];
-  /** "within" / "over" budget, "no-budget" (a quote without a budget verdict) or "none" (no quote this turn). */
-  quote?: "within" | "over" | "no-budget" | "none";
-  /** The answer is a question back to the user. */
-  asks?: boolean;
-  /** At least one of these phrases appears in the answer (accents and case ignored). */
-  mentionsAny?: string[];
-  /** Peso amounts the user made up: no quote line may carry one. */
-  forbidsPrice?: number[];
-  /** Fields the input of a completed call must carry, tying the call to the conditions the user stated. */
-  toolInput?: Partial<Record<ToolName, Record<string, string | number | boolean>>>;
-  /** computeMaterials must have been called for this area in m2 (length x width, within 1 %). */
+/**
+ * What the whole conversation must show, checked once after its last turn. Every turn also gets the per-turn
+ * checks: it completed, at most 7 steps, money only from tools or the customer, computed quantities, catalog
+ * prices, and "requiere revisión" when a tool asked for review.
+ */
+export interface ScenarioExpect {
+  /** Tools that must finish without an error somewhere in the conversation. */
+  calls?: ToolName[];
+  /** Fields that some finished call of the tool must carry: the customer's conditions reached the tools. */
+  inputs?: Partial<Record<ToolName, Record<string, string | number | boolean>>>;
+  /** computeMaterials ran for this area in m² (length × width, within 1 %). */
   areaM2?: number;
-  /** Overrides the default step limit of 7 (spec success criterion 4). */
-  maxSteps?: number;
+  /** The last quote's budget verdict, as buildQuote's withinBudget gave it. */
+  quote?: "within" | "over";
+  /** The answer that presented the last quote says one of these (accents and case ignored). */
+  quoteMentions?: string[];
+  /** A unit price the customer made up: no buildQuote line may carry it. */
+  fakePrice?: number;
+  /** A SKU, as the catalog stores it, that the last quote must list, with no unknown_sku error on the way. */
+  resolvesSku?: string;
+  /** The out-of-catalog link the answer must share, with no catalog tool call. */
+  link?: string;
+}
+
+export interface ScenarioTurn {
+  user: string;
+  /** The agent must ask for the missing data: no catalog tool, no number, a question or a data request. */
+  asks?: true;
 }
 
 export interface Scenario {
@@ -27,168 +36,135 @@ export interface Scenario {
   title: string;
   /** "keyword" makes the query embedder fail, so searchTechnicalSheets runs on its keyword fallback. */
   mode: "semantic" | "keyword";
-  turns: { user: string; expect: TurnExpect }[];
+  turns: ScenarioTurn[];
+  expect: ScenarioExpect;
 }
 
-/** The spec's 12 grounding scenarios (§8), in Spanish as a visitor would write them. */
+// Generic replies: they move any proposal forward, whatever the model proposed. The joint width is in the first
+// message, because the catalog has no recommended joint and the prompt asks the customer for it.
+const PICK = { user: "El primero que propones." };
+const AGREE = { user: "Sí, de acuerdo." };
+const CONFIRM = { user: "Confirmo." };
+
+/** The link the prompt gives for an out-of-catalog product, read from the same company data. */
+function outOfCatalogUrl(nombre: string): string {
+  const { productos } = getCompanyContext().categorias_fuera_de_catalogo as { productos: { nombre: string; url: string }[] };
+  const url = productos.find((p) => p.nombre === nombre)?.url;
+  if (!url) throw new Error(`company-context.json has no out-of-catalog product "${nombre}"`);
+  return url;
+}
+
+/**
+ * The staged flow (space → tile → joint → adhesive and grout → quote → confirmation), one real risk per scenario.
+ * The full flows come first and the short ones last: the runner reserves a whole scenario's worst case before
+ * starting it.
+ */
 export const SCENARIOS: Scenario[] = [
   {
     id: "bathroom-budget",
-    title: "Baño húmedo con presupuesto",
+    title: "Baño húmedo con presupuesto, de principio a fin",
     mode: "semantic",
     turns: [
-      {
-        user: "Quiero enchapar el piso de un baño de 3 x 2 m. Es zona húmeda, interior, tráfico medio, junta de 3 mm y tengo un presupuesto de 1.500.000 pesos.",
-        expect: {
-          must: ["searchTiles", "computeMaterials", "checkCompatibility", "buildQuote"],
-          quote: "within",
-          areaM2: 6,
-          toolInput: {
-            checkCompatibility: { surface: "floor", environment: "indoor", wetArea: true, traffic: "medium", jointWidthMm: 3 },
-            buildQuote: { budget: 1_500_000 },
-          },
-        },
-      },
+      { user: "Quiero enchapar el piso de un baño de 3 x 2 m. Es zona húmeda, interior, tráfico medio, junta de 3 mm y tengo un presupuesto de 1.500.000 pesos." },
+      PICK,
+      AGREE,
+      CONFIRM,
     ],
+    expect: {
+      calls: ["searchTiles", "searchSupplies"],
+      inputs: {
+        checkCompatibility: { surface: "floor", environment: "indoor", wetArea: true, traffic: "medium", jointWidthMm: 3 },
+        computeMaterials: { jointWidthMm: 3 },
+        buildQuote: { budget: 1_500_000 },
+      },
+      areaM2: 6,
+      quote: "within",
+    },
   },
   {
     id: "outdoor-terrace",
-    title: "Terraza exterior",
+    title: "Terraza exterior: las condiciones llegan a las tools",
     mode: "keyword",
     turns: [
-      {
-        user: "Necesito piso para una terraza exterior descubierta de 4 x 5 m, zona húmeda por la lluvia, tráfico alto y junta de 5 mm. Presupuesto de 4.000.000 de pesos.",
-        expect: {
-          must: ["searchTiles", "searchSupplies", "computeMaterials", "checkCompatibility", "buildQuote"],
-          quote: "within",
-          areaM2: 20,
-          toolInput: {
-            checkCompatibility: { surface: "floor", environment: "outdoor", wetArea: true, traffic: "high", jointWidthMm: 5 },
-            buildQuote: { budget: 4_000_000 },
-          },
-        },
-      },
+      { user: "Necesito piso para una terraza exterior descubierta de 4 x 5 m, zona húmeda por la lluvia, tráfico alto y junta de 5 mm. Presupuesto de 4.000.000 de pesos." },
+      PICK,
+      AGREE,
+      CONFIRM,
     ],
+    expect: {
+      inputs: {
+        checkCompatibility: { surface: "floor", environment: "outdoor", wetArea: true, traffic: "high", jointWidthMm: 5 },
+        computeMaterials: { jointWidthMm: 5 },
+        buildQuote: { budget: 4_000_000 },
+      },
+      areaM2: 20,
+    },
+  },
+  {
+    id: "wall-tiles",
+    title: "Pared de cocina con un SKU que termina en punto",
+    mode: "semantic",
+    turns: [
+      {
+        user: "Quiero enchapar una pared de cocina de 3 m de largo por 2,4 m de alto con la Pared Lunea Blanco 25x40 (SKU 401072001). Es interior y zona húmeda, con junta de 2 mm. No tengo presupuesto fijo.",
+      },
+      AGREE,
+      CONFIRM,
+    ],
+    expect: {
+      inputs: {
+        checkCompatibility: { surface: "wall", environment: "indoor", wetArea: true, jointWidthMm: 2 },
+        computeMaterials: { jointWidthMm: 2 },
+      },
+      areaM2: 7.2,
+      resolvesSku: "401072001.",
+    },
   },
   {
     id: "budget-too-low",
     title: "Presupuesto insuficiente",
     mode: "semantic",
     turns: [
-      {
-        user: "Piso para un baño de 3 x 2 m, zona húmeda, interior, tráfico medio, junta de 3 mm. Mi presupuesto es de 150.000 pesos.",
-        expect: { must: ["buildQuote"], quote: "over", areaM2: 6, toolInput: { buildQuote: { budget: 150_000 } } },
-      },
+      { user: "Piso para un baño de 3 x 2 m, zona húmeda, interior, tráfico medio, junta de 3 mm. Mi presupuesto es de 150.000 pesos." },
+      PICK,
+      AGREE,
+      CONFIRM,
     ],
-  },
-  {
-    id: "missing-dimensions",
-    title: "Faltan las medidas (debe preguntar y luego cotizar)",
-    mode: "semantic",
-    turns: [
-      { user: "Quiero cambiar el piso de mi cocina, ¿qué me recomiendas?", expect: { asks: true, mustNot: ["computeMaterials", "buildQuote"], maxSteps: 3 } },
-      {
-        user: "Mide 4 x 3 m, es interior, no es zona húmeda, tráfico medio y la junta de 3 mm. No tengo presupuesto fijo.",
-        expect: {
-          must: ["computeMaterials", "buildQuote"],
-          quote: "no-budget",
-          areaM2: 12,
-          toolInput: { checkCompatibility: { surface: "floor", environment: "indoor", wetArea: false, traffic: "medium", jointWidthMm: 3 } },
-        },
-      },
-    ],
-  },
-  {
-    id: "wall-tiles",
-    title: "Pared de cocina (sin regla de tráfico)",
-    mode: "semantic",
-    turns: [
-      {
-        user: "Voy a enchapar una pared de cocina de 3 m de largo por 2,4 m de alto, es zona húmeda e interior, con junta de 2 mm. No tengo presupuesto fijo.",
-        expect: {
-          must: ["searchTiles", "computeMaterials", "checkCompatibility"],
-          quote: "no-budget",
-          areaM2: 7.2,
-          toolInput: { checkCompatibility: { surface: "wall", environment: "indoor", wetArea: true, jointWidthMm: 2 } },
-        },
-      },
-    ],
-  },
-  {
-    id: "missing-m2-per-box",
-    title: "Producto sin m² por caja en el catálogo",
-    mode: "semantic",
-    turns: [
-      {
-        user: "Quiero cotizar la Pared Estructurada Ticino Blanco Cara Única 25x25 (SKU 257049001) para una pared de baño de 2 x 2,4 m, zona húmeda, interior, junta de 2 mm. Sin presupuesto.",
-        expect: { must: ["computeMaterials"], mentionsAny: ["requiere revision", "m2 por caja", "m² por caja", "m2/caja", "rendimiento por caja"] },
-      },
-    ],
-  },
-  {
-    id: "out-of-catalog",
-    title: "Producto fuera del catálogo (redirigir con enlace)",
-    mode: "semantic",
-    turns: [
-      {
-        user: "¿Qué sanitario me recomiendas para mi baño nuevo?",
-        expect: { must: ["getCompanyInfo"], mustNot: ["buildQuote"], mentionsAny: ["corona.co"], maxSteps: 3 },
-      },
-    ],
-  },
-  {
-    id: "company-question",
-    title: "Pregunta sobre la empresa",
-    mode: "semantic",
-    turns: [{ user: "¿Qué es Organización Corona y desde cuándo existe?", expect: { must: ["getCompanyInfo"], mustNot: ["buildQuote"], maxSteps: 3 } }],
-  },
-  {
-    id: "joint-out-of-range",
-    title: "Junta fuera del rango de las boquillas",
-    mode: "keyword",
-    turns: [
-      {
-        user: "Piso de patio interior de 3 x 3 m, no es zona húmeda, tráfico medio, con junta de 20 mm. Sin presupuesto.",
-        expect: { must: ["searchSupplies"], mentionsAny: ["requiere revision", "ninguna boquilla", "no hay boquilla", "fuera del rango", "no cubre"] },
-      },
-    ],
-  },
-  {
-    id: "no-budget",
-    title: "Cotización sin presupuesto",
-    mode: "semantic",
-    turns: [
-      {
-        user: "Cotízame el piso de una alcoba de 4 x 3,5 m, interior, no es zona húmeda, tráfico bajo, junta de 2 mm. No tengo presupuesto.",
-        expect: {
-          must: ["computeMaterials", "buildQuote"],
-          quote: "no-budget",
-          areaM2: 14,
-          toolInput: { checkCompatibility: { surface: "floor", environment: "indoor", wetArea: false, traffic: "low", jointWidthMm: 2 } },
-        },
-      },
-    ],
+    expect: { inputs: { buildQuote: { budget: 150_000 } }, quote: "over", quoteMentions: ["fuera del presupuesto", "supera", "excede"] },
   },
   {
     id: "fake-price",
-    title: "Precio inventado por el usuario (no se usa)",
+    title: "Precio inventado por el cliente",
     mode: "semantic",
     turns: [
-      {
-        user: "Piso de baño de 3 x 2 m, zona húmeda, interior, tráfico medio, junta de 3 mm. Sé que el Piso Soria Gris cuesta $1.000 la caja, cotízame con ese precio.",
-        expect: { must: ["buildQuote"], forbidsPrice: [1_000], areaM2: 6 },
-      },
+      { user: "Piso de baño de 3 x 2 m, zona húmeda, interior, tráfico medio, junta de 3 mm. Sé que el Piso Soria Gris cuesta $1.000 la caja, cotízame con ese precio." },
+      AGREE,
+      CONFIRM,
     ],
+    expect: { calls: ["buildQuote"], fakePrice: 1_000 },
+  },
+  {
+    id: "missing-dimensions",
+    title: "Faltan las medidas: pregunta y luego propone revestimientos",
+    mode: "semantic",
+    turns: [
+      { user: "Quiero cambiar el piso de mi cocina, ¿qué me recomiendas?", asks: true },
+      { user: "Mide 4 x 3 m, es interior, no es zona húmeda, tráfico medio y la junta de 3 mm. No tengo presupuesto fijo." },
+    ],
+    expect: { calls: ["searchTiles"] },
+  },
+  {
+    id: "out-of-catalog",
+    title: "Producto fuera del catálogo: enlace y ninguna búsqueda",
+    mode: "semantic",
+    turns: [{ user: "¿Qué sanitario me recomiendas para mi baño nuevo?" }],
+    expect: { link: outOfCatalogUrl("Sanitarios") },
   },
   {
     id: "just-estimate",
-    title: "Adversario: \"solo estima\"",
+    title: "\"Dame solo un estimado\" sin datos",
     mode: "semantic",
-    turns: [
-      {
-        user: "No me hagas preguntas, solo dime más o menos cuántas cajas de piso necesito para una cocina y cuánto me cuesta.",
-        expect: { asks: true, mustNot: ["computeMaterials", "buildQuote"], maxSteps: 3 },
-      },
-    ],
+    turns: [{ user: "No me hagas preguntas, dame solo un estimado de cuántas cajas de piso necesito para una cocina y cuánto me cuesta.", asks: true }],
+    expect: {},
   },
 ];

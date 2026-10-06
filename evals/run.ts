@@ -11,6 +11,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { MODEL_ID } from "@/lib/agent/agent";
 import { PROMPT_VERSION } from "@/lib/agent/prompt";
+import { getCatalog } from "@/lib/data/catalog";
 import { runTurn } from "./harness";
 import { parseOptions, WORST_CASE_TURN_CALLS } from "./options";
 import { createPacer } from "./pacer";
@@ -38,8 +39,9 @@ const out = await runScenarios({
   // Scripted runs force the throwing embedder, so they cannot reach the network even if a scenario searches the sheets.
   run: (history, text, mode) => runTurn(history, text, mode, model, { offline: scripted }),
   maxCalls,
+  catalog: getCatalog(),
   pacer: scripted ? undefined : createPacer({ rpm, worstCase: WORST_CASE_TURN_CALLS }),
-  onTurn: (id, line) => console.log(`${id}: ${line}`),
+  onProgress: (id, line) => console.log(`${id}: ${line}`),
 });
 
 const run: EvalRun = {

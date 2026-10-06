@@ -8,7 +8,7 @@ on:
         description: Model call budget for the run (1-110)
         default: "110"
       only:
-        description: Comma-separated scenario ids (empty runs all 12)
+        description: Comma-separated scenario ids (empty runs all 8)
         default: ""
 
 permissions:
