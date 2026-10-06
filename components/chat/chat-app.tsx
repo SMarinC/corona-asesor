@@ -14,6 +14,7 @@ import { fitHistoryBudget, truncateHistory } from "@/lib/guard/limits";
 import { chatFetch, parseChatError } from "@/lib/ui/chat-error";
 import { deriveProject } from "@/lib/ui/derive-project";
 import { DISCLAIMER_SHORT } from "@/lib/ui/legal";
+import { preloadAssistantText } from "./assistant-text";
 import { CitationsProvider } from "./citations-context";
 import { ComposerDock, isLocked } from "./composer-dock";
 import { EmptyState } from "./empty-state";
@@ -93,6 +94,8 @@ export function ChatApp() {
     setStopped(false);
     setFailure(null);
     clearError();
+    // The model's first token takes about a second; the markdown renderer loads in that time.
+    preloadAssistantText();
     void sendMessage({ text });
   };
   const retry = () => {

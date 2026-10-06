@@ -41,6 +41,11 @@ describe("parseChatError", () => {
 });
 
 describe("chatErrorCopy", () => {
+  it("says the same as the server for invalid_input", async () => {
+    const server = (await errorResponse("invalid_input").json()) as { error: { message: string } };
+    expect(chatErrorCopy({ kind: "invalid_input", retryAfter: null }, null)).toBe(server.error.message);
+  });
+
   it("states the wait while it runs and the recovery after", () => {
     expect(chatErrorCopy({ kind: "rate_limited", retryAfter: 30 }, 30)).toBe(
       "Enviaste varios mensajes seguidos. Puedes escribir de nuevo en 30 s.",

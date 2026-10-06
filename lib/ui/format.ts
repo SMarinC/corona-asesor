@@ -3,8 +3,10 @@ const decimal = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 });
 
 /** Colombian pesos as the agent writes them: "$612.300". */
 export function formatCOP(value: number): string {
-  const sign = value < 0 ? "-" : "";
-  return `${sign}$${integer.format(Math.abs(Math.round(value)))}`;
+  // Round first: -0,4 pesos is "$0", not "-$0".
+  const rounded = Math.round(value);
+  const sign = rounded < 0 ? "-" : "";
+  return `${sign}$${integer.format(Math.abs(rounded))}`;
 }
 
 /** Decimal comma, at most two decimals: 6.6 → "6,6". */

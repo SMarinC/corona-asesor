@@ -5,6 +5,7 @@ describe("format", () => {
   it("writes pesos with dot thousands and no decimals", () => {
     expect(formatCOP(612300)).toBe("$612.300");
     expect(formatCOP(330012.4)).toBe("$330.012");
+    expect(formatCOP(-0.4)).toBe("$0");
     expect(formatCOP(1500000)).toBe("$1.500.000");
     expect(formatCOP(-42935)).toBe("-$42.935");
     expect(formatCOP(0)).toBe("$0");

@@ -1,37 +1,21 @@
 "use client";
 
-import { memo, type ReactNode } from "react";
-import { type Components, Streamdown } from "streamdown";
-import { citationIdFromHref, linkCitations } from "@/lib/ui/citations";
-import { Citation } from "./citations-context";
+import { lazy, memo, Suspense } from "react";
 
-const components: Components = {
-  a: ({ href, children }) => {
-    const url = typeof href === "string" ? href : undefined;
-    // Streamdown closes a half-typed "[c00" as a link to this placeholder; keep it as plain text until it completes.
-    if (url === "streamdown:incomplete-link") return <span>{children as ReactNode}</span>;
-    const citation = citationIdFromHref(url);
-    if (citation) return <Citation id={citation} />;
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-2 wrap-anywhere">
-        {children as ReactNode}
-      </a>
-    );
-  },
-  // Images from the model are a tracking vector; product images live in the cards.
-  img: () => null,
-};
+// Streamdown (markdown, sanitizer and highlighter) is the largest client chunk; the empty state never needs it.
+const loadMarkdown = () => import("./assistant-markdown");
+const AssistantMarkdown = lazy(loadMarkdown);
 
-/** The model's answer as streaming markdown; "[c0084]" becomes a chip that opens the cited fragment. */
+/** Starts downloading the markdown renderer, e.g. when the visitor sends a first message. */
+export function preloadAssistantText(): void {
+  void loadMarkdown();
+}
+
+/** The model's answer. Plain text until the markdown renderer arrives, which is usually before the first token. */
 export const AssistantText = memo(function AssistantText({ text, streaming }: { text: string; streaming: boolean }) {
   return (
-    <Streamdown
-      className="space-y-3 text-[0.95rem] leading-relaxed [&_li]:my-1 [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
-      components={components}
-      isAnimating={streaming}
-      controls={false}
-    >
-      {linkCitations(text)}
-    </Streamdown>
+    <Suspense fallback={<p data-markdown-fallback="" className="whitespace-pre-wrap text-[0.95rem] leading-relaxed">{text}</p>}>
+      <AssistantMarkdown text={text} streaming={streaming} />
+    </Suspense>
   );
 });
