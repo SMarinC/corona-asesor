@@ -44,7 +44,9 @@ export function mergeDuplicateLines(lines: QuoteLineInput[]): { lines: QuoteLine
 }
 
 export function executeBuildQuote(deps: ToolDeps, input: BuildQuoteInput): ToolResult<QuoteData> {
-  const merged = mergeDuplicateLines(input.lines);
+  // Canonical spelling first, so "401072001" and "401072001." merge and match the ledger as one SKU.
+  const canonical = input.lines.map((line) => ({ ...line, sku: deps.catalog.get(line.sku)?.sku ?? line.sku }));
+  const merged = mergeDuplicateLines(canonical);
   const result = buildQuote(merged.lines, (sku) => deps.catalog.get(sku), input.budget ?? null);
   if (!result.ok) return toolError("unknown_sku", `SKU que no existen en el catálogo: ${result.unknownSkus.join(", ")}.`);
 

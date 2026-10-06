@@ -61,3 +61,17 @@ describe("getCatalog (data/catalog.json)", () => {
     expect(wrong.map((t) => t.sku)).toEqual([]);
   });
 });
+
+describe("catalog.get with a trailing period", () => {
+  it("finds a SKU stored with a trailing period without it, and the other way round", () => {
+    const catalog = createCatalog([makeTile({ sku: "123." }), makeTile({ sku: "456" })]);
+    expect(catalog.get("123")?.sku).toBe("123.");
+    expect(catalog.get("123.")?.sku).toBe("123.");
+    expect(catalog.get("456.")?.sku).toBe("456");
+    expect(catalog.get("12")).toBeUndefined();
+  });
+
+  it("resolves a real trailing-dot SKU from data/catalog.json", () => {
+    expect(getCatalog().get("401072001")?.sku).toBe("401072001.");
+  });
+});

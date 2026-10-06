@@ -1,3 +1,5 @@
+import { skuKey } from "./sku";
+
 /** How a quote line's quantity relates to what the materials calculator returned for that SKU. */
 export type LineCheck = "computed" | "differs" | "not_computed";
 
@@ -20,7 +22,7 @@ export interface CalcQuantities {
 export function checkQuoteQuantities(calcs: CalcQuantities[], lines: { sku: string; quantity: number }[]): Record<string, LineCheck> {
   const collect = (source: CalcQuantities[], kinds: ("tile" | "supply")[]) => {
     const values = new Map<string, number[]>();
-    const add = (sku: string, value: number) => values.set(sku, [...(values.get(sku) ?? []), value]);
+    const add = (sku: string, value: number) => values.set(skuKey(sku), [...(values.get(skuKey(sku)) ?? []), value]);
     for (const calc of source) {
       if (kinds.includes("tile") && calc.tile) add(calc.tile.sku, calc.tile.boxes);
       if (kinds.includes("supply") && calc.adhesive) add(calc.adhesive.sku, calc.adhesive.bags);
@@ -28,16 +30,16 @@ export function checkQuoteQuantities(calcs: CalcQuantities[], lines: { sku: stri
     }
     return values;
   };
-  const listed = new Set(lines.map((line) => line.sku));
-  const quoted = calcs.filter((calc) => calc.tile && listed.has(calc.tile.sku));
+  const listed = new Set(lines.map((line) => skuKey(line.sku)));
+  const quoted = calcs.filter((calc) => calc.tile && listed.has(skuKey(calc.tile.sku)));
   const tiles = collect(calcs, ["tile"]);
   const supplies = collect(quoted.length > 0 ? quoted : calcs, ["supply"]);
   const knownSupplies = collect(calcs, ["supply"]);
   const checks: Record<string, LineCheck> = {};
   for (const line of lines) {
-    const values = tiles.get(line.sku) ?? supplies.get(line.sku);
+    const values = tiles.get(skuKey(line.sku)) ?? supplies.get(skuKey(line.sku));
     if (values === undefined) {
-      checks[line.sku] = knownSupplies.has(line.sku) ? "differs" : "not_computed";
+      checks[line.sku] = knownSupplies.has(skuKey(line.sku)) ? "differs" : "not_computed";
       continue;
     }
     const sum = values.reduce((a, b) => a + b, 0);
@@ -65,7 +67,7 @@ export function createQuantityLedger(): QuantityLedger {
   const forQuote = new Map<string, CalcQuantities>();
   return {
     recordCalculation(tileSku, quantities) {
-      pending = [...pending.filter((call) => call.tileSku !== tileSku), { tileSku, quantities }];
+      pending = [...pending.filter((call) => call.tileSku !== skuKey(tileSku)), { tileSku: skuKey(tileSku), quantities }];
     },
     takeForQuote() {
       for (const call of pending) forQuote.set(call.tileSku, call.quantities);

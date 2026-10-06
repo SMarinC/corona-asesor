@@ -54,7 +54,8 @@ export async function executeSearchTechnicalSheets(
   if (input.sku !== undefined && !deps.catalog.get(input.sku)) {
     return toolError("unknown_sku", `El SKU ${input.sku} no existe en el catálogo.`);
   }
-  const { mode, hits } = await deps.sheets.search(input.query, { sku: input.sku, k: input.k ?? 3 });
+  const sku = input.sku === undefined ? undefined : deps.catalog.get(input.sku)?.sku;
+  const { mode, hits } = await deps.sheets.search(input.query, { sku, k: input.k ?? 3 });
   return ok({
     mode,
     hits: hits.map(toHitData),
