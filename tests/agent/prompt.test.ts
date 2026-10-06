@@ -33,6 +33,14 @@ describe("system prompt", () => {
     expect(PROMPT_VERSION).toBe("2026-10-06.1");
   });
 
+  it("cites values taken from the technical sheets, in the existing citation rule", () => {
+    const rule = SYSTEM_PROMPT.split(NL).filter((line) => line.startsWith("- Citar es obligatorio"));
+    expect(rule).toHaveLength(1);
+    for (const part of ["Todo valor que tomes de searchTechnicalSheets", "override citado", "m² por caja", "con el [cXXXX] del fragmento del que salió"]) {
+      expect(rule[0], part).toContain(part);
+    }
+  });
+
   it("does not use real corpus ids in the citation example", () => {
     expect(SYSTEM_PROMPT).not.toContain("[c0170]");
     expect(SYSTEM_PROMPT).not.toContain("[c0171]");
