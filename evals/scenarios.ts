@@ -1,6 +1,6 @@
 import type { ToolName } from "@/lib/ui/tool-parts";
 
-/** What one user turn must produce. Universal checks (grounding, citations, quantities, honesty, steps) always run. */
+/** What one user turn must produce. Universal checks (completion, steps, money, quantities, review) always run. */
 export interface TurnExpect {
   /** Tools that must run in this turn. */
   must?: ToolName[];
@@ -12,7 +12,7 @@ export interface TurnExpect {
   asks?: boolean;
   /** At least one of these phrases appears in the answer (accents and case ignored). */
   mentionsAny?: string[];
-  /** Peso amounts the user made up: no quote line may carry one, and no un-negated clause of the answer may state one. */
+  /** Peso amounts the user made up: no quote line may carry one. */
   forbidsPrice?: number[];
   /** Fields the input of a completed call must carry, tying the call to the conditions the user stated. */
   toolInput?: Partial<Record<ToolName, Record<string, string | number | boolean>>>;

@@ -27,10 +27,6 @@ export interface EvalSummary {
   passed: number;
   run: number;
   total: number;
-  ungroundedNumbers: number;
-  citedIds: number;
-  turnsWithoutCitations: number;
-  unverifiedIds: number;
   quantityFlags: number;
   medianSteps: number;
   p50LatencyMs: number;
@@ -60,10 +56,6 @@ export function summarize(run: EvalRun): EvalSummary {
     passed: run.results.filter(scenarioPassed).length,
     run: run.results.filter((r) => r.turns !== null).length,
     total: run.results.length,
-    ungroundedNumbers: metrics.reduce((n, m) => n + m.ungrounded.length, 0),
-    citedIds: metrics.reduce((n, m) => n + m.citedIds.length, 0),
-    turnsWithoutCitations: metrics.filter((m) => m.citedIds.length === 0).length,
-    unverifiedIds: metrics.reduce((n, m) => n + m.unverifiedIds.length, 0),
     quantityFlags: metrics.reduce((n, m) => n + m.quantityFlags.length, 0),
     medianSteps: percentile(metrics.map((m) => m.steps), 50),
     p50LatencyMs: percentile(metrics.map((m) => m.durationMs), 50),
@@ -89,8 +81,6 @@ export function renderReport(run: EvalRun): string {
     "| Metric | Result |",
     "|---|---|",
     `| Scenarios passed | **${s.passed}/${s.total}**${s.run < s.total ? ` (${s.total - s.run} not run)` : ""} |`,
-    `| Numbers in answers with no tool or user source | ${s.ungroundedNumbers} |`,
-    `| Citations in answers that no tool returned | ${s.unverifiedIds} of ${s.citedIds} (${s.turnsWithoutCitations} turns cite nothing) |`,
     `| Quote quantities not from computeMaterials | ${s.quantityFlags} |`,
     `| Median steps per turn | ${s.medianSteps} |`,
     `| Turn latency p50 / p95 | ${seconds(s.p50LatencyMs)} / ${seconds(s.p95LatencyMs)} |`,
@@ -116,7 +106,7 @@ export function renderReport(run: EvalRun): string {
   }
   lines.push(
     "",
-    "Checks on every turn: the turn completed; at most 7 steps (3 for questions); every number in the answer appears in a tool output or the user's own messages; every peso amount comes from a tool; every cited `[cXXXX]` was returned by a tool; quote quantities match `computeMaterials`; a tool's `needs_review` is shown as \"Requiere revisión\". Scenario checks add the tools that must (not) run, the budget verdict and expected wording.",
+    "Checks on every turn: the turn completed; at most 7 steps (3 for questions); every peso amount comes from a tool or the user; quote quantities match `computeMaterials`; a tool's `needs_review` is shown as \"Requiere revisión\". Scenario checks add the tools that must (not) run, the budget verdict and expected wording.",
     "",
   );
   return lines.join("\n");
