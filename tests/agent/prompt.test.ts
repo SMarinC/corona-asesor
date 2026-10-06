@@ -24,7 +24,13 @@ describe("system prompt", () => {
     expect(SYSTEM_PROMPT).toContain(line);
     expect(SYSTEM_PROMPT.split(line)).toHaveLength(2);
     expect(SYSTEM_PROMPT.match(/No uses emojis/g)).toHaveLength(1);
-    expect(PROMPT_VERSION).toBe("2026-10-03.1");
+  });
+
+  it("copies amounts exactly, leaves line subtotals to the cards and states the total and the budget result", () => {
+    const line = "- Copia los montos exactamente como los devuelven las herramientas. No repitas en el texto el subtotal de cada línea (las tarjetas ya lo muestran): di el total y el resultado frente al presupuesto.";
+    expect(SYSTEM_PROMPT).toContain(line);
+    expect(SYSTEM_PROMPT.split(line)).toHaveLength(2);
+    expect(PROMPT_VERSION).toBe("2026-10-06.1");
   });
 
   it("does not use real corpus ids in the citation example", () => {
