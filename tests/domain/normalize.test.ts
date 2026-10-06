@@ -172,10 +172,12 @@ describe("normalizeProduct", () => {
     });
   });
 
-  it("takes the bag size from the SKU's own product content when the name and the sheet fields lack it", () => {
+  it("takes the bag size from the SKU's own product content before the family sheet's presentation", () => {
     const specifications = JSON.stringify({ Presentación: ["Bolsa"], "Contenido del producto": ["10 Kg"] });
-    const adhesive = normalizeProduct(raw({ category: "Pegantes", name: "PEGACOR® Interiores Gris", specifications }));
-    expect(adhesive).toMatchObject({ kind: "adhesive", bagKg: 10 });
+    const own = normalizeProduct(raw({ category: "Pegantes", name: "PEGACOR® Interiores Gris", specifications, specs_pdf: JSON.stringify({ presentacion_kg: 25 }) }));
+    expect(own).toMatchObject({ kind: "adhesive", bagKg: 10 });
+    const sheetOnly = normalizeProduct(raw({ category: "Pegantes", name: "PEGACOR® Max Gris", specs_pdf: JSON.stringify({ presentacion_kg: 25 }) }));
+    expect(sheetOnly).toMatchObject({ kind: "adhesive", bagKg: 25 });
   });
 
   it.each([

@@ -131,8 +131,8 @@ function normalizeAdhesive(base: ProductBase, specs: Specs, pdf: Specs): Adhesiv
     compatibilityCitationId: null,
     coverageKgM2: parseCoverageKgM2(coverageText),
     coverageText,
-    // The product page's own content field last: the family sheet can describe another bag size.
-    bagKg: parseKg(base.name) ?? positiveNumber(pdf.presentacion_kg) ?? parseKg(list(specs, "Contenido del producto")[0]),
+    // The SKU's own name and product-page content come before the family sheet, which can describe another bag size.
+    bagKg: parseKg(base.name) ?? parseKg(list(specs, "Contenido del producto")[0]) ?? positiveNumber(pdf.presentacion_kg),
     standard: text(pdf.clasificacion_normativa),
   };
 }
