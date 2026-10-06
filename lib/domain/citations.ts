@@ -34,6 +34,12 @@ function numbersAfterBoxLabel(text: string): number[] {
   return out;
 }
 
+/** The one m² per box value a sheet text labels ("M2 POR CAJA ... 2"), or null when it states none or several. */
+export function statedM2PerBox(text: string): number | null {
+  const values = [...new Set(numbersAfterBoxLabel(normalizeText(text)))].filter((n) => n > 0);
+  return values.length === 1 ? values[0] : null;
+}
+
 function coverageBounds(text: string): number[] {
   const out: number[] = [];
   for (const m of text.matchAll(COVERAGE)) {

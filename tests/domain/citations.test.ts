@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verifyCitedValue } from "@/lib/domain/citations";
+import { statedM2PerBox, verifyCitedValue } from "@/lib/domain/citations";
 import type { SheetChunk } from "@/lib/domain/types";
 
 const chunk: SheetChunk = {
@@ -53,5 +53,15 @@ describe("verifyCitedValue", () => {
   it("accepts a bag size in kg but not a coverage figure", () => {
     expect(check("Bulto x 25 kg", 25, "bagKg")).toEqual({ ok: true });
     expect(check("5 kg/m2", 5, "bagKg")).toEqual({ ok: false, reason: "value_not_in_citation" });
+  });
+});
+
+describe("statedM2PerBox", () => {
+  it("reads the one value a sheet labels as m² per box", () => {
+    expect(statedM2PerBox("M2 POR CAJA SQ FT APPROX 1,8 Color: BLANCO")).toBe(1.8);
+  });
+  it("returns null when no label precedes a number, or when the label is followed by two different numbers", () => {
+    expect(statedM2PerBox("Colección: ORIGENES 2017 ... (±) 2.00% ... m2")).toBeNull();
+    expect(statedM2PerBox("M2 POR CAJA SQ FT APPROX 1,8 19,38")).toBeNull();
   });
 });

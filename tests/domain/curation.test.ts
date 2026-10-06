@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { findAdhesiveLine } from "@/lib/domain/adhesive-lines";
-import { attachAdhesiveLines, attachGroutJoints, curate, dedupeChunks } from "@/lib/domain/curation";
+import { attachAdhesiveLines, attachGroutJoints, curate, dedupeChunks, fillM2PerBoxFromSheets } from "@/lib/domain/curation";
 import type { RawChunk, RawProduct, SheetChunk } from "@/lib/domain/types";
-import { makeAdhesive, makeGrout } from "@/tests/fixtures/products";
+import { makeAdhesive, makeGrout, makeTile } from "@/tests/fixtures/products";
 
 const chunk = (sku: string, text: string, template = "materiales_pinturas", section = "USOS"): RawChunk => ({
   sku,
@@ -46,6 +46,23 @@ describe("attachGroutJoints", () => {
     ];
     const [grout] = attachGroutJoints([makeGrout({ jointMm: null, jointCitationId: null })], sheets);
     expect(grout).toMatchObject({ jointMm: { min: 1, max: 5 }, jointCitationId: "c0001" });
+  });
+});
+
+describe("fillM2PerBoxFromSheets", () => {
+  const sheet = (citationId: string, skus: string[], text: string): SheetChunk => ({ citationId, skus, section: "ficha_general", docType: "revestimiento", text });
+  const box = "M2 POR CAJA SQ FT APPROX 2 Color: BLANCO";
+
+  it("fills a missing m² per box from a chunk of the tile's own sheet that states one value", () => {
+    const [tile] = fillM2PerBoxFromSheets([makeTile({ sku: "T9", m2PerBox: null })], [sheet("c0001", ["T9"], box)]);
+    expect(tile).toMatchObject({ sku: "T9", m2PerBox: 2 });
+  });
+
+  it("never overwrites a catalog value, and ignores chunks shared with other SKUs or that state nothing", () => {
+    const chunks = [sheet("c0001", ["T8", "T9"], box), sheet("c0002", ["T9"], "Sin datos de empaque")];
+    const [kept, unfilled] = fillM2PerBoxFromSheets([makeTile({ sku: "T7", m2PerBox: 1.44 }), makeTile({ sku: "T9", m2PerBox: null })], [...chunks, sheet("c0003", ["T7"], box)]);
+    expect(kept.kind === "tile" && kept.m2PerBox).toBe(1.44);
+    expect(unfilled.kind === "tile" && unfilled.m2PerBox).toBeNull();
   });
 });
 

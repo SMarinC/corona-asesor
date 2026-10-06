@@ -1,4 +1,5 @@
 import { findAdhesiveLine } from "./adhesive-lines";
+import { statedM2PerBox } from "./citations";
 import { normalizeProduct } from "./normalize";
 import { normalizeText, parseJointRangeMm } from "./parse";
 import type { Product, RawChunk, RawProduct, SheetChunk } from "./types";
@@ -56,6 +57,22 @@ export function attachGroutJoints(products: Product[], chunks: SheetChunk[]): Pr
   });
 }
 
+/**
+ * A tile whose structured specs lack m² per box takes it from its own sheet, when a chunk that belongs to that SKU
+ * alone states exactly one value. Chunks shared across variants are skipped: a family sheet can describe another size.
+ */
+export function fillM2PerBoxFromSheets(products: Product[], chunks: SheetChunk[]): Product[] {
+  return products.map((product) => {
+    if (product.kind !== "tile" || product.m2PerBox !== null) return product;
+    for (const chunk of chunks) {
+      if (chunk.skus.length !== 1 || chunk.skus[0] !== product.sku) continue;
+      const m2PerBox = statedM2PerBox(chunk.text);
+      if (m2PerBox !== null) return { ...product, m2PerBox };
+    }
+    return product;
+  });
+}
+
 export function attachAdhesiveLines(products: Product[], chunks: SheetChunk[]): Product[] {
   return products.map((product) => {
     if (product.kind !== "adhesive") return product;
@@ -87,7 +104,7 @@ export function curate(
   const catalogSkus = new Set(normalized.map((p) => p.sku));
   const relevant = rawChunks.filter((c) => !isSafetySheet(c));
   const chunks = dedupeChunks(relevant, catalogSkus);
-  const products = attachAdhesiveLines(attachGroutJoints(normalized, chunks), chunks);
+  const products = fillM2PerBoxFromSheets(attachAdhesiveLines(attachGroutJoints(normalized, chunks), chunks), chunks);
 
   const count = (predicate: (p: Product) => boolean) => products.filter(predicate).length;
   return {

@@ -31,9 +31,12 @@ describe("getCatalog (data/catalog.json)", () => {
     expect(catalog.grouts).toHaveLength(31);
   });
 
-  it("has box coverage for almost every tile", () => {
-    const withBox = catalog.tiles.filter((t) => t.m2PerBox !== null).length;
-    expect(withBox).toBeGreaterThanOrEqual(290);
+  it("takes m² per box from the tile's own sheet when the structured specs lack it", () => {
+    // Both Ticino sheets say "M2 POR CAJA ... 2" (32 pieces of 25x25 cm); the other two sheets state no value.
+    const box = (sku: string) => catalog.all.find((p) => p.sku === sku);
+    expect(box("257049001")).toMatchObject({ m2PerBox: 2 });
+    expect(box("257059181")).toMatchObject({ m2PerBox: 2 });
+    expect(catalog.tiles.filter((t) => t.m2PerBox === null).map((t) => t.sku).sort()).toEqual(["19108871", "8027909"]);
   });
 
   it("backs every adhesive compatibility with a citation", () => {
