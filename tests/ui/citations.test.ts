@@ -13,22 +13,9 @@ describe("citationIdsIn", () => {
         ],
         checks: [{ rule: "Pegante ↔ material", citationId: "c0046" }],
         citationIds: ["c0084", "c0759"],
-        adhesive: { citationIds: [] },
       },
     };
     expect(citationIdsIn(output)).toEqual(["c0046", "c0084", "c0759"]);
-  });
-
-  it("skips rejectedOverrides: those ids were written by the model, not returned by a tool", () => {
-    const output = {
-      status: "ok",
-      data: {
-        tile: { citationId: "c0046" },
-        adhesive: { citationIds: ["c0084"] },
-        rejectedOverrides: [{ field: "bagKg", citationId: "c9999", reason: "unknown_citation", message: "x" }],
-      },
-    };
-    expect(citationIdsIn(output)).toEqual(["c0046", "c0084"]);
   });
 
   it("ignores ids under other keys and malformed ids", () => {

@@ -5,22 +5,16 @@ import { Citation } from "@/components/chat/citations-context";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { QuoteData } from "@/lib/agent/tools/build-quote";
 import type { CompatibilityData } from "@/lib/agent/tools/check-compatibility";
-import type { MaterialsData, RejectedOverride } from "@/lib/agent/tools/compute-materials";
+import type { MaterialsData } from "@/lib/agent/tools/compute-materials";
 import type { SearchTechnicalSheetsData } from "@/lib/agent/tools/search-technical-sheets";
 import { formatCOP, formatM2, formatNumber, formatQuantity } from "@/lib/ui/format";
 import { VerdictBadge, VerdictDot } from "./verdict-badge";
 
 export function MaterialsSummary({ data }: { data: Partial<MaterialsData> }) {
-  const rows: { label: string; value: string; detail: string; citations: string[] }[] = [];
-  if (data.tile) {
-    rows.push({ label: data.tile.name, value: formatQuantity(data.tile.boxes, "caja"), detail: `cubren ${formatM2(data.tile.coveredM2)}`, citations: data.tile.citationId ? [data.tile.citationId] : [] });
-  }
-  if (data.adhesive) {
-    rows.push({ label: data.adhesive.name, value: formatQuantity(data.adhesive.bags, "bulto"), detail: `${formatNumber(data.adhesive.kg)} kg`, citations: data.adhesive.citationIds });
-  }
-  if (data.grout) {
-    rows.push({ label: data.grout.name, value: formatQuantity(data.grout.units, "unidad"), detail: `${formatNumber(data.grout.kg)} kg estimados`, citations: [] });
-  }
+  const rows: { label: string; value: string; detail: string }[] = [];
+  if (data.tile) rows.push({ label: data.tile.name, value: formatQuantity(data.tile.boxes, "caja"), detail: `cubren ${formatM2(data.tile.coveredM2)}` });
+  if (data.adhesive) rows.push({ label: data.adhesive.name, value: formatQuantity(data.adhesive.bags, "bulto"), detail: `${formatNumber(data.adhesive.kg)} kg` });
+  if (data.grout) rows.push({ label: data.grout.name, value: formatQuantity(data.grout.units, "unidad"), detail: `${formatNumber(data.grout.kg)} kg estimados` });
   return (
     <div className="space-y-2 text-sm">
       {data.area && (
@@ -32,12 +26,7 @@ export function MaterialsSummary({ data }: { data: Partial<MaterialsData> }) {
         <ul className="divide-y divide-border rounded-lg border bg-card">
           {rows.map((row) => (
             <li key={row.label} className="flex items-baseline justify-between gap-3 px-3 py-2">
-              <span className="min-w-0">
-                <span>{row.label}</span>
-                {row.citations.map((id) => (
-                  <Citation key={id} id={id} />
-                ))}
-              </span>
+              <span className="min-w-0">{row.label}</span>
               <span className="shrink-0 text-right tabular">
                 <span className="font-medium">{row.value}</span> <span className="text-xs text-muted-foreground">{row.detail}</span>
               </span>
@@ -45,21 +34,7 @@ export function MaterialsSummary({ data }: { data: Partial<MaterialsData> }) {
           ))}
         </ul>
       )}
-      <RejectedOverrides rejected={data.rejectedOverrides ?? []} />
     </div>
-  );
-}
-
-function RejectedOverrides({ rejected }: { rejected: RejectedOverride[] }) {
-  if (rejected.length === 0) return null;
-  return (
-    <ul className="space-y-1 text-xs text-muted-foreground">
-      {rejected.map((r) => (
-        <li key={`${r.field}-${r.citationId}`}>
-          Dato citado descartado ({r.citationId}): {r.message}
-        </li>
-      ))}
-    </ul>
   );
 }
 

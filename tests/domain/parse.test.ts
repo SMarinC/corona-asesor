@@ -7,6 +7,7 @@ import {
   parseKg,
   parseNumbers,
   parseThicknessMm,
+  statedM2PerBox,
 } from "@/lib/domain/parse";
 
 describe("parseNumbers", () => {
@@ -78,5 +79,15 @@ describe("parseJointRangeMm", () => {
   });
   it.each(["Juntas de 3 mm: 200", "juntas de menos de 3 mm (1/8"])("ignores %s", (text) => {
     expect(parseJointRangeMm(text)).toBeNull();
+  });
+});
+
+describe("statedM2PerBox", () => {
+  it("reads the one value a sheet labels as m² per box", () => {
+    expect(statedM2PerBox("M2 POR CAJA SQ FT APPROX 1,8 Color: BLANCO")).toBe(1.8);
+  });
+  it("returns null when no label precedes a number, or when the label is followed by two different numbers", () => {
+    expect(statedM2PerBox("Colección: ORIGENES 2017 ... (±) 2.00% ... m2")).toBeNull();
+    expect(statedM2PerBox("M2 POR CAJA SQ FT APPROX 1,8 19,38")).toBeNull();
   });
 });

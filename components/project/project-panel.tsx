@@ -2,7 +2,6 @@
 
 import { TriangleAlert } from "lucide-react";
 import { type ReactNode, useId } from "react";
-import { Citation } from "@/components/chat/citations-context";
 import { CompatibilityResult } from "@/components/tools/analysis-results";
 import { TileRow } from "@/components/tools/product-results";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
@@ -75,10 +74,10 @@ function MaterialsSection({ project }: { project: ProjectState }) {
   const m = project.materials;
   if (!m) return null;
   const rows = [
-    m.tile && { name: m.tile.name, qty: formatQuantity(m.tile.boxes, "caja"), cite: m.tile.citationId ? [m.tile.citationId] : [] },
-    m.adhesive && { name: m.adhesive.name, qty: formatQuantity(m.adhesive.bags, "bulto"), cite: m.adhesive.citationIds },
-    m.grout && { name: m.grout.name, qty: formatQuantity(m.grout.units, "unidad"), cite: [] as string[] },
-  ].filter((row): row is { name: string; qty: string; cite: string[] } => Boolean(row));
+    m.tile && { name: m.tile.name, qty: formatQuantity(m.tile.boxes, "caja") },
+    m.adhesive && { name: m.adhesive.name, qty: formatQuantity(m.adhesive.bags, "bulto") },
+    m.grout && { name: m.grout.name, qty: formatQuantity(m.grout.units, "unidad") },
+  ].filter((row): row is { name: string; qty: string } => Boolean(row));
   return (
     <div className="space-y-3">
       {m.tile && (
@@ -90,12 +89,7 @@ function MaterialsSection({ project }: { project: ProjectState }) {
         <ul className="space-y-1.5 text-sm">
           {rows.map((row) => (
             <li key={row.name} className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0">
-                {row.name}
-                {row.cite.map((id) => (
-                  <Citation key={id} id={id} />
-                ))}
-              </span>
+              <span className="min-w-0">{row.name}</span>
               <span className="shrink-0 font-medium tabular">{row.qty}</span>
             </li>
           ))}

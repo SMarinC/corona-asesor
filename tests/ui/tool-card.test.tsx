@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { MaterialsSummary } from "@/components/tools/analysis-results";
 import { TileResults } from "@/components/tools/product-results";
 import { VerdictBadge, VerdictDot } from "@/components/tools/verdict-badge";
 import { CitationsProvider } from "@/components/chat/citations-context";
@@ -150,21 +149,5 @@ describe("result bodies", () => {
     expect(screen.getAllByText("Requiere revisión")).toHaveLength(1);
     expect(screen.queryByText("Compatible")).toBeNull();
     expect(screen.getByRole("img", { name: "Requiere revisión" })).toBeTruthy();
-  });
-
-  it("shows a citation chip next to values taken from a technical sheet", () => {
-    const output = (find("computeMaterials") as unknown as { output: { data: Parameters<typeof MaterialsSummary>[0]["data"] } }).output.data;
-    const data = {
-      ...output,
-      tile: { ...output.tile!, citationId: "c0001" },
-      adhesive: { ...output.adhesive!, citationIds: ["c0002"] },
-    };
-    render(
-      <CitationsProvider ids={["c0001"]}>
-        <MaterialsSummary data={data} />
-      </CitationsProvider>,
-    );
-    expect(screen.getByRole("button", { name: "Ver la cita c0001 de la ficha técnica" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Cita c0002 no verificada: ninguna herramienta la devolvió" })).toBeTruthy();
   });
 });

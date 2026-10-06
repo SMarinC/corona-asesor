@@ -8,7 +8,7 @@ export const MAX_HIT_CHARS = 4_000;
 export const MAX_HIT_SKUS = 10;
 
 export const searchTechnicalSheetsInput = z.object({
-  query: z.string().min(3).max(200).describe("Qué buscar, p. ej. 'm2 por caja', 'rendimiento kg/m2', 'ancho de junta'."),
+  query: z.string().min(3).max(200).describe("Qué buscar, p. ej. 'uso en exteriores', 'ancho de junta', 'tiempo de secado'."),
   sku: z.string().min(1).max(20).optional().describe("Limita la búsqueda a la ficha de este SKU."),
   k: z.number().int().min(1).max(6).optional().describe("Número de fragmentos (por defecto 3)."),
 });
@@ -60,14 +60,14 @@ export async function executeSearchTechnicalSheets(
   return ok({
     mode,
     hits: hits.map(toHitData),
-    note: "Cita los datos con su citationId entre corchetes, p. ej. [c0170]. Para usar un valor en computeMaterials pásalo como { value, citationId }.",
+    note: "Fragmentos para responder preguntas técnicas; las cantidades se calculan solo con los datos del catálogo.",
   });
 }
 
 export const createSearchTechnicalSheetsTool = (deps: ToolDeps) =>
   tool({
     description:
-      "Busca fragmentos de las fichas técnicas (rendimientos, m² por caja, juntas, usos, restricciones). Cada fragmento trae un citationId para citarlo o para pasar un valor verificable a computeMaterials.",
+      "Busca fragmentos de las fichas técnicas para preguntas técnicas (usos, instalación, juntas, restricciones). Cada fragmento trae su citationId, que la interfaz muestra como cita.",
     inputSchema: searchTechnicalSheetsInput,
     execute: (input) => runTool("searchTechnicalSheets", () => executeSearchTechnicalSheets(deps, input)),
   });

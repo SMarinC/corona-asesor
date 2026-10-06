@@ -5,8 +5,6 @@ const CITATION_KEYS = new Set(["citationId", "compatibilityCitationId", "jointCi
 export function citationIdsIn(value: unknown): string[] {
   const found = new Set<string>();
   const visit = (node: unknown, key: string | null) => {
-    // Ids the model supplied and computeMaterials rejected: never tool-returned, so never verified.
-    if (key === "rejectedOverrides") return;
     if (typeof node === "string") {
       if (key !== null && CITATION_KEYS.has(key) && CITATION_ID.test(node)) found.add(node);
       return;

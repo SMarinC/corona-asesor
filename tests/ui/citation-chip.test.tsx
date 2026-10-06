@@ -2,7 +2,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CitationChip, resetFragmentCache } from "@/components/tools/citation-chip";
-import { citationIdsIn } from "@/lib/ui/citations";
 import type { CitationFragment } from "@/lib/ui/citation-fragment";
 
 const fragment: CitationFragment = {
@@ -131,12 +130,5 @@ describe("CitationChip failures and semantics", () => {
     expect(screen.getByRole("dialog", { name: "Cita c0015" })).toBeTruthy();
     const text = await screen.findByText("Apto para cerámica.");
     expect(text.getAttribute("tabindex")).toBe("0");
-  });
-});
-
-describe("verified ids", () => {
-  it("excludes ids a tool rejected", () => {
-    const ids = citationIdsIn({ data: { adhesive: { citationId: "c0001" }, rejectedOverrides: [{ citationId: "c0999" }] } });
-    expect(ids).toEqual(["c0001"]);
   });
 });

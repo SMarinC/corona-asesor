@@ -44,9 +44,9 @@ describe("system prompt", () => {
     }
   });
 
-  it("looks up data the catalog lacks in the sheets and passes it as a cited override", () => {
-    const fill = lineStarting("Si computeMaterials indica");
-    for (const part of ['"missing"', "searchTechnicalSheets", "overrides", "{ value, citationId }"]) expect(fill, part).toContain(part);
+  it("uses the sheets for technical questions, never to feed values into calculations", () => {
+    expect(lineStarting("Para preguntas técnicas")).toContain("searchTechnicalSheets");
+    expect(SYSTEM_PROMPT).not.toContain("overrides");
   });
 
   it("keeps the honesty core", () => {

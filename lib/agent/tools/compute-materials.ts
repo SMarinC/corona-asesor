@@ -9,16 +9,11 @@ import {
   DEFAULT_WASTE_PCT,
   GROUT_DENSITY_G_CM3,
 } from "@/lib/domain/calculations";
-import { type CitationField, type CitedValue, verifyCitedValue } from "@/lib/domain/citations";
 import type { ToolDeps } from "./deps";
 import { isToolError, lookup } from "./lookup";
 import { type MissingField, needsReview, ok, runTool, type ToolResult, toolError } from "./result";
 
-const citedValue = z.object({
-  value: z.number().positive(),
-  citationId: z.string().min(1).max(10).describe("citationId del fragmento de ficha técnica, p. ej. c0170."),
-});
-
+/** Every data value comes from the catalog: the model only supplies the room, the SKUs and the joint width. */
 export const computeMaterialsInput = z.object({
   lengthM: z.number().positive().max(100).describe("Largo del espacio en metros."),
   widthM: z.number().positive().max(100).describe("Ancho del espacio en metros."),
@@ -27,34 +22,13 @@ export const computeMaterialsInput = z.object({
   adhesiveSku: z.string().min(1).max(20).optional(),
   groutSku: z.string().min(1).max(20).optional(),
   jointWidthMm: z.number().positive().max(30).optional().describe("Ancho de junta en mm; necesario para calcular la boquilla."),
-  overrides: z
-    .object({
-      m2PerBox: citedValue.optional(),
-      adhesiveCoverageKgM2: citedValue.optional(),
-      bagKg: citedValue.optional(),
-    })
-    .optional()
-    .describe("Solo para datos que el catálogo no trae, leídos de una ficha con searchTechnicalSheets. Se verifican contra el fragmento citado."),
 });
 export type ComputeMaterialsInput = z.infer<typeof computeMaterialsInput>;
-
-export type OverrideField = "m2PerBox" | "adhesiveCoverageKgM2" | "bagKg";
-export type ValueSource = "catalog" | "citation";
-export type RejectionReason = "unknown_citation" | "citation_other_product" | "value_not_in_citation" | "catalog_has_value";
-
-export interface RejectedOverride {
-  field: OverrideField;
-  citationId: string;
-  reason: RejectionReason;
-  message: string;
-}
 
 export interface TileQuantity {
   sku: string;
   name: string;
   m2PerBox: number;
-  m2PerBoxSource: ValueSource;
-  citationId: string | null;
   boxes: number;
   coveredM2: number;
 }
@@ -64,8 +38,6 @@ export interface AdhesiveQuantity {
   name: string;
   coverageKgM2: number;
   bagKg: number;
-  /** Fragments that supplied values missing from the catalog. */
-  citationIds: string[];
   kg: number;
   bags: number;
   note: string;
@@ -87,51 +59,10 @@ export interface MaterialsData {
   tile: TileQuantity;
   adhesive: AdhesiveQuantity | null;
   grout: GroutQuantity | null;
-  rejectedOverrides: RejectedOverride[];
 }
-
-const REJECTION_ES: Record<RejectionReason, string> = {
-  unknown_citation: "El citationId no existe en las fichas técnicas.",
-  citation_other_product: "El fragmento citado no pertenece a ese producto.",
-  value_not_in_citation: "El valor no aparece en el fragmento citado junto al dato correspondiente.",
-  catalog_has_value: "El catálogo ya trae este dato; se usa el valor del catálogo.",
-};
-
-/** Tells the model how to fill a missing catalog value: from a cited technical-sheet fragment. */
-const SHEET_HINT = (field: keyof NonNullable<ComputeMaterialsInput["overrides"]>) =>
-  `búscalo en su ficha técnica con searchTechnicalSheets (filtrando por su SKU) y pásalo en overrides.${field} como { value, citationId }.`;
 
 const ADHESIVE_NOTE = "Usa el límite superior del rendimiento de la ficha (estimación conservadora) sobre el área sin desperdicio.";
 const GROUT_NOTE = `Estimación por volumen de junta (densidad ${GROUT_DENSITY_G_CM3} g/cm³, profundidad = espesor del revestimiento) sobre el área sin desperdicio.`;
-
-interface Resolved {
-  value: number;
-  source: ValueSource;
-  citationId: string | null;
-}
-
-/** Catalog values win; a cited value fills a gap only if its fragment really states it for that SKU. */
-function resolveValue(
-  deps: ToolDeps,
-  sku: string,
-  field: OverrideField,
-  citationField: CitationField,
-  catalogValue: number | null,
-  cited: CitedValue | undefined,
-  rejected: RejectedOverride[],
-): Resolved | null {
-  if (catalogValue !== null) {
-    if (cited && cited.value !== catalogValue) {
-      rejected.push({ field, citationId: cited.citationId, reason: "catalog_has_value", message: REJECTION_ES.catalog_has_value });
-    }
-    return { value: catalogValue, source: "catalog", citationId: null };
-  }
-  if (!cited) return null;
-  const check = verifyCitedValue(cited, sku, (id) => deps.sheets.getChunk(id), citationField);
-  if (check.ok) return { value: cited.value, source: "citation", citationId: cited.citationId };
-  rejected.push({ field, citationId: cited.citationId, reason: check.reason, message: REJECTION_ES[check.reason] });
-  return null;
-}
 
 export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsInput): ToolResult<MaterialsData> {
   const tile = lookup(deps, input.tileSku, "tile");
@@ -145,31 +76,25 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
   }
 
   const area = computeArea(input.lengthM, input.widthM, input.wastePct ?? DEFAULT_WASTE_PCT);
-  const overrides = input.overrides ?? {};
   const missing: MissingField[] = [];
-  const rejectedOverrides: RejectedOverride[] = [];
 
   let tileQuantity: TileQuantity | undefined;
-  const m2PerBox = resolveValue(deps, tile.sku, "m2PerBox", "m2PerBox", tile.m2PerBox, overrides.m2PerBox, rejectedOverrides);
-  if (m2PerBox) {
-    const { boxes, coveredM2 } = computeBoxes(area.areaWithWasteM2, m2PerBox.value);
-    tileQuantity = { sku: tile.sku, name: tile.name, m2PerBox: m2PerBox.value, m2PerBoxSource: m2PerBox.source, citationId: m2PerBox.citationId, boxes, coveredM2 };
+  if (tile.m2PerBox !== null) {
+    const { boxes, coveredM2 } = computeBoxes(area.areaWithWasteM2, tile.m2PerBox);
+    tileQuantity = { sku: tile.sku, name: tile.name, m2PerBox: tile.m2PerBox, boxes, coveredM2 };
   } else {
-    missing.push({ field: "m2PerBox", reason: `El catálogo no indica los m² por caja de ${tile.name}; ${SHEET_HINT("m2PerBox")}` });
+    missing.push({ field: "m2PerBox", reason: `El catálogo no indica los m² por caja de ${tile.name}; sin ese dato no se pueden calcular las cajas.` });
   }
 
   let adhesiveQuantity: AdhesiveQuantity | undefined;
   if (adhesive) {
-    const coverage = resolveValue(deps, adhesive.sku, "adhesiveCoverageKgM2", "coverageKgM2", adhesive.coverageKgM2?.max ?? null, overrides.adhesiveCoverageKgM2, rejectedOverrides);
-    const bagKg = resolveValue(deps, adhesive.sku, "bagKg", "bagKg", adhesive.bagKg, overrides.bagKg, rejectedOverrides);
-    if (!coverage) {
-      missing.push({ field: "adhesiveCoverageKgM2", reason: `No hay rendimiento (kg/m²) verificado para ${adhesive.name}; ${SHEET_HINT("adhesiveCoverageKgM2")}` });
-    }
-    if (!bagKg) missing.push({ field: "bagKg", reason: `No hay peso del bulto verificado para ${adhesive.name}; ${SHEET_HINT("bagKg")}` });
-    if (coverage && bagKg) {
-      const { kg, bags } = computeAdhesive(area.areaM2, coverage.value, bagKg.value);
-      const citationIds = [...new Set([coverage.citationId, bagKg.citationId].filter((id): id is string => id !== null))];
-      adhesiveQuantity = { sku: adhesive.sku, name: adhesive.name, coverageKgM2: coverage.value, bagKg: bagKg.value, citationIds, kg, bags, note: ADHESIVE_NOTE };
+    const coverage = adhesive.coverageKgM2?.max ?? null;
+    const { bagKg } = adhesive;
+    if (coverage === null) missing.push({ field: "adhesiveCoverageKgM2", reason: `El catálogo no indica el rendimiento (kg/m²) de ${adhesive.name}.` });
+    if (bagKg === null) missing.push({ field: "bagKg", reason: `El catálogo no indica el peso del bulto de ${adhesive.name}.` });
+    if (coverage !== null && bagKg !== null) {
+      const { kg, bags } = computeAdhesive(area.areaM2, coverage, bagKg);
+      adhesiveQuantity = { sku: adhesive.sku, name: adhesive.name, coverageKgM2: coverage, bagKg, kg, bags, note: ADHESIVE_NOTE };
     }
   }
 
@@ -190,18 +115,15 @@ export function executeComputeMaterials(deps: ToolDeps, input: ComputeMaterialsI
   }
 
   if (missing.length === 0 && tileQuantity) {
-    return ok({ area, tile: tileQuantity, adhesive: adhesiveQuantity ?? null, grout: groutQuantity ?? null, rejectedOverrides });
+    return ok({ area, tile: tileQuantity, adhesive: adhesiveQuantity ?? null, grout: groutQuantity ?? null });
   }
-  return needsReview<MaterialsData>(
-    { area, tile: tileQuantity, adhesive: adhesive ? adhesiveQuantity : null, grout: grout ? groutQuantity : null, rejectedOverrides },
-    missing,
-  );
+  return needsReview<MaterialsData>({ area, tile: tileQuantity, adhesive: adhesive ? adhesiveQuantity : null, grout: grout ? groutQuantity : null }, missing);
 }
 
 export const createComputeMaterialsTool = (deps: ToolDeps) =>
   tool({
     description:
-      "Calcula para un espacio rectangular: área con desperdicio, cajas de revestimiento, kg y bultos de pegante, y kg y unidades de boquilla. Usa datos del catálogo; si falta uno (m² por caja, rendimiento o peso del bulto) acepta un valor citado de una ficha técnica y lo verifica. Devuelve needs_review con lo que falte.",
+      "Calcula para un espacio rectangular: área con desperdicio, cajas de revestimiento, kg y bultos de pegante, y kg y unidades de boquilla. Todos los datos de producto salen del catálogo. Devuelve needs_review con lo que falte.",
     inputSchema: computeMaterialsInput,
     execute: (input) =>
       runTool("computeMaterials", () => {

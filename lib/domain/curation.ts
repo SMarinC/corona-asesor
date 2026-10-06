@@ -1,7 +1,6 @@
 import { findAdhesiveLine } from "./adhesive-lines";
-import { statedM2PerBox } from "./citations";
 import { normalizeProduct } from "./normalize";
-import { normalizeText, parseJointRangeMm } from "./parse";
+import { normalizeText, parseJointRangeMm, statedM2PerBox } from "./parse";
 import type { Product, RawChunk, RawProduct, SheetChunk } from "./types";
 
 export interface CurationReport {

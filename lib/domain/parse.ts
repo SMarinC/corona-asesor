@@ -83,3 +83,20 @@ export function parseJointRangeMm(text: string): Range | null {
   }
   return null;
 }
+
+// A standalone number: not glued to letters/digits/separators ("H1I1", "2017", "m2" do not count).
+const STANDALONE_NUMBER = /(?<![\p{L}\d.,])(\d+(?:[.,]\d+)?)(?![\p{L}\d])/gu;
+const BOX_LABEL = /m(?:2|²) por caja|metros cuadrados por caja/g;
+const BOX_WINDOW = 40;
+
+/** The one m² per box value a sheet text labels ("M2 POR CAJA ... 2"), or null when it states none or several. */
+export function statedM2PerBox(text: string): number | null {
+  const normalized = normalizeText(text);
+  const values = new Set<number>();
+  for (const label of normalized.matchAll(BOX_LABEL)) {
+    const from = (label.index ?? 0) + label[0].length;
+    for (const m of normalized.slice(from, from + BOX_WINDOW).matchAll(STANDALONE_NUMBER)) values.add(toNumber(m[1]));
+  }
+  const positive = [...values].filter((n) => n > 0);
+  return positive.length === 1 ? positive[0] : null;
+}
