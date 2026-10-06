@@ -182,6 +182,26 @@ describe("deriveProject", () => {
     expect(old.review.map((r) => r.field)).toEqual(["quantity:T1"]);
   });
 
+  it("does not accept the grout quantity of another tile alternative for the same floor", () => {
+    const deps = makeToolDeps();
+    const big = { lengthM: 10, widthM: 8, tileSku: "T1", adhesiveSku: "A1", groutSku: "G1", jointWidthMm: 3 };
+    const alt = { ...big, tileSku: "T3" };
+    const run = (input: typeof big) => {
+      const result = executeComputeMaterials(deps, input);
+      if (result.status !== "ok") throw new Error("fixture: calculation should be ok");
+      return { result, part: toolPart("computeMaterials", input, result) };
+    };
+    const t1 = run(big);
+    const t3 = run(alt);
+    expect(t3.result.data.grout!.units).not.toBe(t1.result.data.grout!.units);
+    const quote = (lines: { sku: string; quantity: number }[]) => toolPart("buildQuote", { lines }, executeBuildQuote(deps, { lines }));
+    const first = [{ sku: "T1", quantity: t1.result.data.tile.boxes }, { sku: "G1", quantity: t1.result.data.grout!.units }];
+    const second = [{ sku: "T3", quantity: t3.result.data.tile.boxes }, { sku: "G1", quantity: t1.result.data.grout!.units }];
+    const project = deriveProject([assistantMessage([t1.part, quote(first), t3.part, quote(second)])]);
+    expect(project.quote?.lineChecks).toEqual({ T3: "computed", G1: "differs" });
+    expect(project.review.map((r) => r.field)).toEqual(["quantity:G1"]);
+  });
+
   it("marks every line not_computed when the quote has no calculation at all", () => {
     const deps = makeToolDeps();
     const input = { lines: [{ sku: "T1", quantity: 5 }, { sku: "A1", quantity: 2 }] };

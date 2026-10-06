@@ -122,3 +122,22 @@ describe("buildQuote quantity guard: floor, then wall in a later quote", () => {
     expect(old).toMatchObject({ status: "needs_review", missing: [{ field: "quantity:T1" }] });
   });
 });
+
+describe("buildQuote quantity guard: alternatives for the same floor", () => {
+  type Materials = { data: { tile: { boxes: number }; grout: { units: number } } };
+
+  it("does not accept the grout of another tile alternative", async () => {
+    const deps = { ...makeToolDeps(), quantities: createQuantityLedger() };
+    const compute = createComputeMaterialsTool(deps);
+    const quoteTool = createBuildQuoteTool(deps);
+    const big = { ...materialsInput, lengthM: 10, widthM: 8 };
+    const t1 = await callTool<Materials>(compute, big);
+    await callTool(quoteTool, { lines: [{ sku: "T1", quantity: t1.data.tile.boxes }, { sku: "G1", quantity: t1.data.grout.units }] });
+    const t3 = await callTool<Materials>(compute, { ...big, tileSku: "T3" });
+    expect(t3.data.grout.units).not.toBe(t1.data.grout.units);
+    const wrong = await callTool(quoteTool, { lines: [{ sku: "T3", quantity: t3.data.tile.boxes }, { sku: "G1", quantity: t1.data.grout.units }] });
+    expect(wrong).toMatchObject({ status: "needs_review", missing: [{ field: "quantity:G1", reason: expect.stringContaining("no coincide") }] });
+    const right = await callTool(quoteTool, { lines: [{ sku: "T3", quantity: t3.data.tile.boxes }, { sku: "G1", quantity: t3.data.grout.units }] });
+    expect(right).toMatchObject({ status: "ok" });
+  });
+});

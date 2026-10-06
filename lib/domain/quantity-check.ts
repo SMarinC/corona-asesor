@@ -12,20 +12,36 @@ export interface CalcQuantities {
  * A line is "computed" when its quantity equals one calculation's value for that SKU, or the sum over all of
  * them (one adhesive shared by a floor and a wall); "differs" when the SKU was calculated with other values;
  * "not_computed" when no calculation produced it at all.
+ *
+ * Tiles are checked against every calculation of that tile. Adhesive and grout are checked only against the
+ * calculations of the tiles the quote actually lists, so the supply quantity of another tile alternative for the
+ * same floor cannot pass; with no listed tile that was calculated, every calculation counts.
  */
 export function checkQuoteQuantities(calcs: CalcQuantities[], lines: { sku: string; quantity: number }[]): Record<string, LineCheck> {
-  const computed = new Map<string, number[]>();
-  const add = (sku: string, value: number) => computed.set(sku, [...(computed.get(sku) ?? []), value]);
-  for (const calc of calcs) {
-    if (calc.tile) add(calc.tile.sku, calc.tile.boxes);
-    if (calc.adhesive) add(calc.adhesive.sku, calc.adhesive.bags);
-    if (calc.grout) add(calc.grout.sku, calc.grout.units);
-  }
+  const collect = (source: CalcQuantities[], kinds: ("tile" | "supply")[]) => {
+    const values = new Map<string, number[]>();
+    const add = (sku: string, value: number) => values.set(sku, [...(values.get(sku) ?? []), value]);
+    for (const calc of source) {
+      if (kinds.includes("tile") && calc.tile) add(calc.tile.sku, calc.tile.boxes);
+      if (kinds.includes("supply") && calc.adhesive) add(calc.adhesive.sku, calc.adhesive.bags);
+      if (kinds.includes("supply") && calc.grout) add(calc.grout.sku, calc.grout.units);
+    }
+    return values;
+  };
+  const listed = new Set(lines.map((line) => line.sku));
+  const quoted = calcs.filter((calc) => calc.tile && listed.has(calc.tile.sku));
+  const tiles = collect(calcs, ["tile"]);
+  const supplies = collect(quoted.length > 0 ? quoted : calcs, ["supply"]);
+  const knownSupplies = collect(calcs, ["supply"]);
   const checks: Record<string, LineCheck> = {};
   for (const line of lines) {
-    const values = computed.get(line.sku);
-    const sum = values?.reduce((a, b) => a + b, 0);
-    checks[line.sku] = values === undefined ? "not_computed" : values.includes(line.quantity) || sum === line.quantity ? "computed" : "differs";
+    const values = tiles.get(line.sku) ?? supplies.get(line.sku);
+    if (values === undefined) {
+      checks[line.sku] = knownSupplies.has(line.sku) ? "differs" : "not_computed";
+      continue;
+    }
+    const sum = values.reduce((a, b) => a + b, 0);
+    checks[line.sku] = values.includes(line.quantity) || sum === line.quantity ? "computed" : "differs";
   }
   return checks;
 }
