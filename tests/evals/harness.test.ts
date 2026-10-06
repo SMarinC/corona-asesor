@@ -1,8 +1,8 @@
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
-import { runTurn } from "@/evals/harness";
-import { SCENARIOS } from "@/evals/scenarios";
+import { runTurn, type TurnRecord } from "@/evals/harness";
+import { SCENARIOS, type TurnExpect } from "@/evals/scenarios";
 import { scoreTurn } from "@/evals/score";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
 import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
@@ -37,13 +37,29 @@ function sheetSearchModel() {
 }
 
 describe("eval harness", () => {
-  it("runs a scenario turn through the real handler and tools, and the scripted bathroom quote passes every check", async () => {
+  it("runs turns through the real handler and tools, and every turn of the staged scripted quote passes its checks", async () => {
     const scenario = SCENARIOS.find((s) => s.id === "bathroom-budget")!;
-    const record = await runTurn([], scenario.turns[0].user, "keyword", createScriptedDemoModel({ delayMs: 0 }));
-    expect(record.error).toBeNull();
-    expect(record.turnLog).toMatchObject({ outcome: "ok", steps: 6 });
-    const { checks } = scoreTurn({ messages: record.messages, turnLog: record.turnLog, error: record.error, expect: scenario.turns[0].expect });
-    expect(checks.filter((c) => !c.ok)).toEqual([]);
+    const model = createScriptedDemoModel({ delayMs: 0 });
+    // The one-shot scenario's expectations, split across the stages that now produce them.
+    const { quote, areaM2, toolInput } = scenario.turns[0].expect;
+    const turns: { user: string; expect: TurnExpect; steps: number }[] = [
+      { user: scenario.turns[0].user, expect: { must: ["searchTiles"], quote: "none", asks: true }, steps: 2 },
+      {
+        user: "Me quedo con el Piso Soria Gris.",
+        expect: { must: ["searchSupplies", "checkCompatibility"], quote: "none", asks: true, toolInput: { checkCompatibility: toolInput!.checkCompatibility } },
+        steps: 3,
+      },
+      { user: "Sí, los confirmo.", expect: { must: ["computeMaterials", "buildQuote"], quote, areaM2, asks: true, toolInput: { buildQuote: toolInput!.buildQuote } }, steps: 3 },
+    ];
+    let history: TurnRecord["messages"] = [];
+    for (const turn of turns) {
+      const record = await runTurn(history, turn.user, "keyword", model);
+      expect(record.error).toBeNull();
+      expect(record.turnLog).toMatchObject({ outcome: "ok", steps: turn.steps });
+      const { checks } = scoreTurn({ messages: record.messages, turnLog: record.turnLog, error: record.error, expect: turn.expect });
+      expect(checks.filter((c) => !c.ok), turn.user).toEqual([]);
+      history = record.messages;
+    }
   });
 
   it("falls back to keyword search when the query embedder fails, and counts the fallback", async () => {

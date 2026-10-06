@@ -7,7 +7,6 @@ import { handleChat } from "@/lib/chat/handler";
 import { createProductionChatDeps, scriptedModelEnabled } from "@/lib/chat/production";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
 import { createMemoryGuardLimits, DEFAULT_GUARD_CONFIG } from "@/lib/guard/rate-limit";
-import { citationIdsIn } from "@/lib/ui/citations";
 import { deriveProject } from "@/lib/ui/derive-project";
 import { BATHROOM_PROMPT, userMessage } from "../fixtures/ui-messages";
 
@@ -34,22 +33,40 @@ async function runTurn(messages: CoronaUIMessage[]): Promise<CoronaUIMessage> {
   return last;
 }
 
-describe("scripted demo turn through the real handler and tools", () => {
-  it("streams the whole quote flow and the panel derives a consistent project", async () => {
-    const user = userMessage(BATHROOM_PROMPT);
-    const assistant = await runTurn([user]);
-    const tools = assistant.parts.filter((p) => p.type.startsWith("tool-")).map((p) => p.type);
-    expect(tools).toEqual([
-      "tool-searchTiles",
-      "tool-searchSupplies",
-      "tool-searchSupplies",
-      "tool-getProduct",
-      "tool-computeMaterials",
-      "tool-checkCompatibility",
-      "tool-buildQuote",
-    ]);
+describe("scripted demo through the real handler and tools", () => {
+  it("walks the staged flow, one decision per turn, and the panel derives a consistent project", async () => {
+    const tools = (m: CoronaUIMessage) => m.parts.filter((p) => p.type.startsWith("tool-")).map((p) => p.type);
+    const text = (m: CoronaUIMessage) => m.parts.flatMap((p) => (p.type === "text" ? [p.text] : [])).join("");
+    const results = (m: CoronaUIMessage, type: string) =>
+      m.parts.filter((p) => p.type === type).flatMap((p) => (p as { output: { data: { results: { name: string }[] } } }).output.data.results.map((r) => r.name));
 
-    const project = deriveProject([user, assistant]);
+    // Turn 1: the space is complete (joint and budget included), so the agent proposes tiles and lets the customer choose.
+    const messages: CoronaUIMessage[] = [userMessage(BATHROOM_PROMPT)];
+    const tile = await runTurn(messages);
+    expect(tools(tile)).toEqual(["tool-searchTiles"]);
+    const proposed = results(tile, "tool-searchTiles");
+    expect(proposed).toHaveLength(3);
+    for (const name of proposed) expect(text(tile)).toContain(name);
+    expect(text(tile)).toContain("¿Cuál prefieres?");
+
+    // Turn 2: adhesive and grout, verified with the confirmed joint.
+    messages.push(tile, userMessage("Me quedo con el Piso Soria Gris."));
+    const supplies = await runTurn(messages);
+    expect(tools(supplies)).toEqual(["tool-searchSupplies", "tool-searchSupplies", "tool-checkCompatibility"]);
+    const offered = results(supplies, "tool-searchSupplies");
+    for (const name of ["PEGACOR® Cerámico Gris", "CONCOLOR® Junta Estrecha 2 Kg Gris Claro"]) {
+      expect(offered).toContain(name);
+      expect(text(supplies)).toContain(name);
+    }
+
+    // Turn 3: the quote, closed with the confirmation question.
+    messages.push(supplies, userMessage("Sí, los confirmo."));
+    const quote = await runTurn(messages);
+    expect(tools(quote)).toEqual(["tool-computeMaterials", "tool-buildQuote"]);
+    expect(text(quote)).toContain("¿Confirmas esta cotización o quieres cambiar algo?");
+    messages.push(quote);
+
+    const project = deriveProject(messages);
     expect(project.tile).toMatchObject({ sku: DEMO_SKUS.tile, formatMm: { length: 552, width: 552 } });
     expect(project.compatibility?.verdict).toBe("compatible");
     // The script's quantities must be exactly what computeMaterials returns for the real catalog.
@@ -57,23 +74,19 @@ describe("scripted demo turn through the real handler and tools", () => {
     expect(project.quote?.data).toMatchObject({ total: 330012, withinBudget: true });
     expect(project.review).toEqual([]);
     // The server-side guard saw the same-turn calculation, so the quote itself is clean.
-    const quotePart = assistant.parts.find((p) => p.type === "tool-buildQuote") as { output: { status: string } };
+    const quotePart = quote.parts.find((p) => p.type === "tool-buildQuote") as { output: { status: string } };
     expect(quotePart.output.status).toBe("ok");
 
-    // Every id the scripted answer cites was returned by a tool in this turn.
-    const text = assistant.parts.flatMap((p) => (p.type === "text" ? [p.text] : [])).join("");
-    const cited = [...text.matchAll(/\[(c\d{4})\]/g)].map((m) => m[1]);
-    expect(cited).toEqual(["c0046", "c0084"]);
-    const returned = assistant.parts.flatMap((p) => ("output" in p ? citationIdsIn(p.output) : []));
-    for (const id of cited) expect(returned).toContain(id);
-    expect(text).toContain("$330.012");
-
     // The prose is tied to the tool outputs: if the catalog or the maths change, this fails instead of lying.
-    const { tile, adhesive, grout } = project.materials!;
+    const answer = text(quote);
+    expect(answer).toContain("$330.012");
+    const { tile: boxes, adhesive, grout } = project.materials!;
     const es = (n: number) => String(n).replace(".", ",");
-    expect(text).toContain(`${tile!.boxes} cajas, que cubren ${es(tile!.coveredM2)} m²`);
-    expect(text).toContain(`${adhesive!.bags} bultos de ${es(adhesive!.bagKg)} kg`);
-    expect(text).toContain(`${grout!.units} unidad de ${es(grout!.packageKg)} kg`);
+    expect(answer).toContain(`${boxes!.boxes} cajas, que cubren ${es(boxes!.coveredM2)} m²`);
+    expect(answer).toContain(`${adhesive!.bags} bultos de ${es(adhesive!.bagKg)} kg`);
+    expect(answer).toContain(`${grout!.units} unidad de ${es(grout!.packageKg)} kg`);
+    // Citations are chips from the tool outputs; the scripted prose writes no bracketed ids.
+    for (const m of [tile, supplies, quote]) expect(text(m)).not.toMatch(/\[c\d{4}\]/);
   });
 
   it("is enabled only locally: never on Vercel previews or production", () => {
