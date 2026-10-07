@@ -7,6 +7,7 @@ import { scenarioPassed } from "@/evals/report";
 import { runScenarios } from "@/evals/runner";
 import { SCENARIOS } from "@/evals/scenarios";
 import { traceOf } from "@/evals/trace";
+import { buildSystemPrompt } from "@/lib/agent/prompt";
 import { TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
 import { getCatalog } from "@/lib/data/catalog";
@@ -65,6 +66,9 @@ describe("eval harness", () => {
       [],
     ]);
     expect(out).toMatchObject({ callsUsed: 9, stopReason: null });
+    // Each turn gets its stage's prompt; turn 4 ("Confirmo.") comes after the quote, so it gets the quoted step.
+    const prompts = [...new Set(model.doStreamCalls.map((call) => call.prompt[0].content))];
+    expect(prompts).toEqual((["explore", "supplies", "quote", "quoted"] as const).map(buildSystemPrompt));
   });
 
   it("falls back to keyword search when the query embedder fails, and counts the fallback", async () => {

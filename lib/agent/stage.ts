@@ -9,18 +9,22 @@ import type { CoronaTools } from "./tools";
  * Known limitation: the client trims the history (last 20 messages, 64 KB). If the turn that proposed the tiles is
  * trimmed out, the stage falls back to explore. That costs the agent a re-search, never a wrong quote.
  */
-export type Stage = "explore" | "supplies" | "quote";
+export type Stage = "explore" | "supplies" | "quote" | "quoted";
 
 type ToolName = keyof CoronaTools & string;
 
 const EXPLORE: ToolName[] = ["searchTiles", "getProduct", "getCompanyInfo", "searchTechnicalSheets"];
 const SUPPLIES: ToolName[] = [...EXPLORE, "searchSupplies", "checkCompatibility"];
 
+const QUOTE: ToolName[] = [...SUPPLIES, "computeMaterials", "buildQuote"];
+
 /** Each stage keeps the earlier stages' tools, so the customer can always go back and change a decision. */
 export const STAGE_TOOLS: Record<Stage, readonly ToolName[]> = {
   explore: EXPLORE,
   supplies: SUPPLIES,
-  quote: [...SUPPLIES, "computeMaterials", "buildQuote"],
+  quote: QUOTE,
+  // After the quote nothing new opens: the step only changes what the agent does with a confirmation or a change.
+  quoted: QUOTE,
 };
 
 /**
@@ -37,8 +41,8 @@ interface PartLike {
 
 type Output = { status?: string; data?: { results?: unknown[]; product?: { kind?: string } } } | undefined;
 
-/** What a finished call put in front of the customer: tiles (search results or a tile by SKU), supplies, or nothing. */
-function proposal(part: PartLike): "tiles" | "supplies" | null {
+/** What a finished call put in front of the customer: tiles (search results or a tile by SKU), supplies, a quote, or nothing. */
+function proposal(part: PartLike): "tiles" | "supplies" | "quote" | null {
   if (part.state !== "output-available") return null;
   const output = part.output as Output;
   if (!output || output.status === "error") return null;
@@ -46,12 +50,14 @@ function proposal(part: PartLike): "tiles" | "supplies" | null {
   if (part.type === "tool-searchTiles" && found) return "tiles";
   if (part.type === "tool-getProduct" && output.data?.product?.kind === "tile") return "tiles";
   if (part.type === "tool-searchSupplies" && found) return "supplies";
+  if (part.type === "tool-buildQuote") return "quote";
   return null;
 }
 
 /** The stage for the turn about to run: pass the conversation before it (the new user message may be included). */
 export function stageFromHistory(messages: readonly { role: string; parts: readonly PartLike[] }[]): Stage {
   const proposed = new Set(messages.flatMap((m) => (m.role === "assistant" ? m.parts.map(proposal) : [])));
+  if (proposed.has("quote")) return "quoted";
   if (proposed.has("supplies")) return "quote";
   return proposed.has("tiles") ? "supplies" : "explore";
 }

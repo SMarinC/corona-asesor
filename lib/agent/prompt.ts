@@ -2,7 +2,7 @@ import { getCompanyContext } from "@/lib/data/company";
 import { type Stage, STAGE_TOOLS } from "./stage";
 
 /** Bump when the prompt changes; evals (Plan 4) report against this version. */
-export const PROMPT_VERSION = "2026-10-07.1";
+export const PROMPT_VERSION = "2026-10-07.2";
 
 interface OutOfCatalog {
   cubierto_en_catalogo: string[];
@@ -56,6 +56,11 @@ Pregunta o confirma el ancho de junta en mm: el catálogo no trae una junta reco
     title: "cotización",
     todo: `Calcula con computeMaterials y arma la cotización con buildQuote (pasa budget si hay presupuesto).
 Presenta el total, si está dentro del presupuesto según withinBudget y lo que requiere revisión; luego pregunta: "¿Confirmas esta cotización o quieres cambiar algo?".`,
+  },
+  quoted: {
+    title: "cotización lista",
+    todo: `La cotización ya está hecha. Si el cliente la confirma, agradécele y cierra en una o dos frases, sin repetir la cotización.
+Si pide un cambio, rehaz con las herramientas solo el paso afectado.`,
   },
 };
 

@@ -30,7 +30,13 @@ describe("stageFromHistory", () => {
 
   it("moves to the quote once an earlier turn proposed supplies", () => {
     expect(stageFromHistory(before([tilesFound()], [suppliesFound()]))).toBe("quote");
-    expect(stageFromHistory([...bathroomConversation(), userMessage("Vuelve a cotizar")])).toBe("quote");
+    // A quote that failed is not a quote yet.
+    expect(stageFromHistory(before([tilesFound()], [suppliesFound()], [toolPart("buildQuote", { lines: [] }, { status: "error", code: "unknown_sku", message: "x" })]))).toBe("quote");
+  });
+
+  it("is quoted once an earlier turn built a quote, with every tool still active for a change", () => {
+    expect(stageFromHistory([...bathroomConversation(), userMessage("Confirmo.")])).toBe("quoted");
+    expect(STAGE_TOOLS.quoted).toEqual(STAGE_TOOLS.quote);
   });
 
   it("keeps the earlier stages' tools in every later stage, so the customer can change their mind", () => {

@@ -5,6 +5,7 @@ import { assistantMessage, bathroomConversation, toolPart } from "@/tests/fixtur
 import { buildSystemPrompt } from "@/lib/agent/prompt";
 import { STAGE_TOOLS, TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 import { createTools } from "@/lib/agent/tools";
+import { executeSearchSupplies } from "@/lib/agent/tools/search-supplies";
 import { executeSearchTiles } from "@/lib/agent/tools/search-tiles";
 import { type ChatDeps, endOnTimeout, handleChat } from "@/lib/chat/handler";
 import { createMemoryGuardLimits, DEFAULT_GUARD_CONFIG, type GuardConfig } from "@/lib/guard/rate-limit";
@@ -489,12 +490,14 @@ describe("handleChat", () => {
   describe("stage gate", () => {
     const sentTools = (model: MockLanguageModelV4, call = 0) => (model.doStreamCalls[call].tools ?? []).map((t) => t.name).sort();
     const tilesProposed = () => assistantMessage([toolPart("searchTiles", { surface: "floor" }, executeSearchTiles(makeToolDeps(), { surface: "floor" }))]);
+    const suppliesProposed = () => assistantMessage([toolPart("searchSupplies", { kind: "adhesive" }, executeSearchSupplies(makeToolDeps(), { kind: "adhesive" }))]);
 
     it("hands the model the prompt and only the tools of the stage the earlier turns reached", async () => {
       const cases = [
         { stage: "explore", messages: [user("Piso para baño")] },
         { stage: "supplies", messages: [user("Piso para baño"), tilesProposed(), user("El primero")] },
-        { stage: "quote", messages: [...bathroomConversation(), user("Vuelve a cotizar")] },
+        { stage: "quote", messages: [user("Piso para baño"), tilesProposed(), user("El primero"), suppliesProposed(), user("Sí")] },
+        { stage: "quoted", messages: [...bathroomConversation(), user("Confirmo.")] },
       ] as const;
       for (const { stage, messages } of cases) {
         const { deps, model } = makeDeps();

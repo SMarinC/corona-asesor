@@ -4,13 +4,13 @@ import { type Stage, STAGE_TOOLS } from "@/lib/agent/stage";
 import { TOOL_NAMES } from "@/lib/agent/tools";
 import { getCompanyContext } from "@/lib/data/company";
 
-const STAGES: Stage[] = ["explore", "supplies", "quote"];
+const STAGES: Stage[] = ["explore", "supplies", "quote", "quoted"];
 const STAY_IN_STEP =
   "Las cantidades y los totales solo se calculan en el paso de cotización con las herramientas; nunca los calcules tú. Si el cliente pide algo de un paso siguiente, dile que lo verás en cuanto confirme este paso.";
 
 describe("system prompt", () => {
   it("is versioned", () => {
-    expect(PROMPT_VERSION).toBe("2026-10-07.1");
+    expect(PROMPT_VERSION).toBe("2026-10-07.2");
   });
 
   it("names only the tools of its stage, so the model is never told about a tool the gate hides", () => {
@@ -27,7 +27,14 @@ describe("system prompt", () => {
       expect(prompt.endsWith(STAY_IN_STEP), stage).toBe(true);
     }
     expect(buildSystemPrompt("quote")).toContain('"¿Confirmas esta cotización o quieres cambiar algo?"');
-    expect(buildSystemPrompt("explore")).not.toContain("¿Confirmas esta cotización");
+    for (const stage of ["explore", "quoted"] as const) expect(buildSystemPrompt(stage)).not.toContain("¿Confirmas esta cotización");
+  });
+
+  it("after the quote, closes on a confirmation without repeating the quote and redoes only the step a change affects", () => {
+    const prompt = buildSystemPrompt("quoted");
+    expect(prompt).toContain("La cotización ya está hecha");
+    expect(prompt).toContain("sin repetir la cotización");
+    expect(prompt).toContain("solo el paso afectado");
   });
 
   it("keeps the honesty core in every stage", () => {
