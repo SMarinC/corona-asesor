@@ -13,7 +13,7 @@ export const checkCompatibilityInput = z.object({
   environment: z.enum(["indoor", "outdoor"]),
   wetArea: z.boolean(),
   traffic: z.enum(["low", "medium", "high"]).optional().describe("Tráfico esperado. Obligatorio para pisos; en paredes no aplica."),
-  jointWidthMm: z.number().positive().max(30).optional(),
+  jointWidthMm: z.number().positive().max(30).optional().describe("Ancho de junta confirmado en mm; sin él no se puede verificar la boquilla."),
   adhesiveSku: z.string().min(1).max(20).optional(),
   groutSku: z.string().min(1).max(20).optional(),
 });
