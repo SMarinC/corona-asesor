@@ -1,7 +1,7 @@
 import { APICallError, type UIMessageChunk } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { assistantMessage, bathroomConversation, toolPart } from "@/tests/fixtures/ui-messages";
+import { assistantMessage, bathroomConversation, errorPart, toolPart } from "@/tests/fixtures/ui-messages";
 import { buildSystemPrompt } from "@/lib/agent/prompt";
 import { STAGE_TOOLS, TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 import { createTools } from "@/lib/agent/tools";
@@ -526,6 +526,17 @@ describe("handleChat", () => {
       const turnLines = () => jsonLines(logSpy).filter((l) => l.event === "chat_turn");
       await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
       expect(turnLines()[0]).toMatchObject({ outcome: "ok", tools: [{ tool: "buildQuote", status: "tool_error" }, { tool: "getProduct", status: "tool_error" }] });
+    });
+
+    it("leaves an earlier rejected call out of the model's history, so the model never reads the tool as unavailable", async () => {
+      const rejected = errorPart("computeMaterials", { lengthM: 3, widthM: 2, tileSku: "T1" }, TOOL_UNAVAILABLE);
+      const earlier = assistantMessage([rejected, { type: "text", text: "¿Cuál de los pisos prefieres?" }]);
+      const { deps, model } = makeDeps();
+      await (await handleChat(chatRequest([user("Piso para baño de 3 x 2 m"), earlier, user("El primero")]), deps)).text();
+      const history = JSON.stringify(model.doStreamCalls[0].prompt.slice(1));
+      expect(history).toContain("¿Cuál de los pisos prefieres?");
+      expect(history).not.toContain("computeMaterials");
+      expect(history).not.toContain(TOOL_UNAVAILABLE);
     });
   });
 });

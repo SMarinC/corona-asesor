@@ -10,6 +10,7 @@ import { parseChatRequest } from "@/lib/guard/input";
 import { clientIp, hashIp } from "@/lib/guard/ip";
 import { checkLimits, type GuardLimits, type LimitCheck, recordModelCall } from "@/lib/guard/rate-limit";
 import { errorMessage, log } from "@/lib/log";
+import { isToolPart, toolRejected } from "@/lib/ui/tool-parts";
 import { createTurnLogger } from "./turn-log";
 
 /** Below the route's maxDuration (60 s), so a hung model stream ends with a logged turn instead of a platform 504. */
@@ -118,10 +119,12 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
 
   // The NoSuchToolErrors of this turn, as strings: calls the stage gate rejected (see TOOL_UNAVAILABLE).
   const rejections = new Set<string>();
+  // An earlier call the gate rejected never ran. Replayed, it would tell the model the tool is unavailable for good.
+  const history = validated.data.map((m) => ({ ...m, parts: m.parts.filter((p) => !(isToolPart(p) && toolRejected(p))) }));
   try {
     const stream = await createAgentUIStream({
       agent,
-      uiMessages: validated.data,
+      uiMessages: history,
       abortSignal: signal,
       onError: (error) => {
         // The SDK routes tool-error parts through this same callback: first with the NoSuchToolError /
