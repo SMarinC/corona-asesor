@@ -33,9 +33,10 @@ describe("eval scenarios", () => {
     expect(getCatalog().get(sku)).toMatchObject({ sku, kind: "tile", surface: "wall" });
   });
 
-  it("check the staging on every full flow, each long enough to reach the quote in turn 3", () => {
+  it("check the staging on every full flow, each with a spare turn after the earliest quote (turn 3)", () => {
     const staged = SCENARIOS.filter((s) => s.expect.staged);
     expect(staged.map((s) => s.id)).toEqual(["bathroom-budget", "outdoor-terrace", "wall-tiles", "budget-too-low", "fake-price"]);
-    for (const s of staged) expect(s.turns.length, s.id).toBeGreaterThanOrEqual(3);
+    // A model that spends one turn on a question still reaches the quote.
+    for (const s of staged) expect(s.turns.length, s.id).toBeGreaterThanOrEqual(4);
   });
 });

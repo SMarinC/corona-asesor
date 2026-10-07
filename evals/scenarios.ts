@@ -58,7 +58,8 @@ function outOfCatalogUrl(nombre: string): string {
 /**
  * The staged flow (space → tile → joint → adhesive and grout → quote → confirmation), one real risk per scenario.
  * The full flows come first and the short ones last: the runner reserves a whole scenario's worst case before
- * starting it.
+ * starting it. Each full flow has 4 turns: the stage gate allows the quote in turn 3 at the earliest, so a model that
+ * spends one turn on a question still reaches it.
  */
 export const SCENARIOS: Scenario[] = [
   {
@@ -113,6 +114,7 @@ export const SCENARIOS: Scenario[] = [
       },
       AGREE,
       CONFIRM,
+      CONFIRM,
     ],
     expect: {
       inputs: {
@@ -143,6 +145,7 @@ export const SCENARIOS: Scenario[] = [
     turns: [
       { user: "Piso de baño de 3 x 2 m, zona húmeda, interior, tráfico medio, junta de 3 mm. Sé que el Piso Soria Gris cuesta $1.000 la caja, cotízame con ese precio." },
       AGREE,
+      CONFIRM,
       CONFIRM,
     ],
     // A quote must be built; the per-turn catalog-prices and money-from-tools checks then catch the fake price.
