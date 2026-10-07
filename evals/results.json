@@ -1,7 +1,7 @@
 {
-  "date": "2026-10-06",
+  "date": "2026-10-07",
   "model": "gemini-3.5-flash-lite",
-  "promptVersion": "2026-10-06.4",
+  "promptVersion": "2026-10-07.2",
   "results": [
     {
       "id": "bathroom-budget",
@@ -12,241 +12,13 @@
           "checks": [
             {
               "name": "completed",
-              "ok": false,
-              "detail": "model_error"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "0 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "error",
-            "steps": 0,
-            "durationMs": 23225,
-            "inputTokens": 0,
-            "outputTokens": 0,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "",
-          "trace": []
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": false,
-              "detail": "model_error"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "0 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "error",
-            "steps": 0,
-            "durationMs": 23193,
-            "inputTokens": 0,
-            "outputTokens": 0,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "",
-          "trace": []
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": false,
-              "detail": "model_error"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "0 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "error",
-            "steps": 0,
-            "durationMs": 23156,
-            "inputTokens": 0,
-            "outputTokens": 0,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "",
-          "trace": []
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": false,
-              "detail": "model_error"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "0 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "error",
-            "steps": 0,
-            "durationMs": 23199,
-            "inputTokens": 0,
-            "outputTokens": 0,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "",
-          "trace": []
-        }
-      ],
-      "checks": [
-        {
-          "name": "calls:searchTiles",
-          "ok": false,
-          "detail": "ninguna tool"
-        },
-        {
-          "name": "calls:searchSupplies",
-          "ok": false,
-          "detail": "ninguna tool"
-        },
-        {
-          "name": "input:checkCompatibility",
-          "ok": false,
-          "detail": "la tool no corrió"
-        },
-        {
-          "name": "input:computeMaterials",
-          "ok": false,
-          "detail": "la tool no corrió"
-        },
-        {
-          "name": "input:buildQuote",
-          "ok": false,
-          "detail": "la tool no corrió"
-        },
-        {
-          "name": "area",
-          "ok": false,
-          "detail": "esperado 6 m2; computeMaterials recibió nada"
-        },
-        {
-          "name": "quote:within",
-          "ok": false,
-          "detail": "sin cotización"
-        }
-      ]
-    },
-    {
-      "id": "outdoor-terrace",
-      "title": "Terraza exterior: las condiciones llegan a las tools",
-      "mode": "keyword",
-      "turns": [
-        {
-          "checks": [
-            {
-              "name": "completed",
               "ok": true,
               "detail": "ok"
             },
             {
               "name": "steps",
               "ok": true,
-              "detail": "5 pasos (máx. 7)"
+              "detail": "2 pasos (máx. 7)"
             },
             {
               "name": "money-from-tools",
@@ -271,34 +43,81 @@
           ],
           "metrics": {
             "outcome": "ok",
-            "steps": 5,
-            "durationMs": 6576,
-            "inputTokens": 27411,
-            "outputTokens": 579,
+            "steps": 2,
+            "durationMs": 3436,
+            "inputTokens": 4770,
+            "outputTokens": 411,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "Revestimiento: Piso Bunes Gris Caras Diferenciadas 60x60 · Junta: 5 mm · Pegante: PEGACOR Cerámico Gris\n\nEsta opción cumple con todas las condiciones para tu terraza exterior descubierta de alta exigencia (tráfico comercial moderado/alto y zona húmeda).\n\n### Cotización\n- **Piso Bunes Gris Caras Diferenciadas 60x60** (13 cajas): $1.055.340\n- **PEGACOR® Cerámico Gris · 25 kg** (6 bultos): $224.400\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (3 unidades): $47.100\n\n- **Total:** $1.326.840\n- **Presupuesto disponible:** $4.000.000 (está dentro del presupuesto).\n- **Veredicto:** Compatible. Ningún punto requiere revisión.\n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "answer": "Con los datos que me diste (piso de baño interior, zona húmeda, tráfico medio, junta de 3 mm y presupuesto por caja de hasta $1.500.000), te propongo estas opciones de revestimiento:\n\n1. **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (SKU: 555332501)\n   - Diseño marmolizado, acabado brillante, formato 55.2 x 55.2 cm.\n   - Precio por caja: $59.878 ($32.900 por m², 1.82 m² por caja).\n\n2. **Piso Belarus Beige Caras Diferenciadas 55.2X55.2** (SKU: 553214031)\n   - Diseño marmolizado, acabado brillante, formato 55.2 x 55.2 cm.\n   - Precio por caja: $61.698 ($33.900 por m², 1.82 m² por caja).\n\n3. **Piso Mikonos Ard Blanco Caras Diferenciadas 33.8x33.8** (SKU: 336392001)\n   - Diseño marmolizado, acabado semibrillante, formato 33.8 x 33.8 cm.\n   - Precio por caja: $64.640 ($40.400 por m², 1.6 m² por caja).\n\nPor favor, elige cuál de estos revestimientos prefieres para continuar con el proceso.",
           "trace": [
             {
               "tool": "searchTiles",
               "status": "ok",
               "input": {
                 "surface": "floor",
-                "environment": "outdoor",
+                "environment": "indoor",
                 "wetArea": true,
-                "design": "exterior",
+                "maxPricePerBox": 1500000,
                 "limit": 3
               }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
             },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "4 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 4,
+            "durationMs": 3897,
+            "inputTokens": 19315,
+            "outputTokens": 219,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Revestimiento: Piso Soria Gris Caras Diferenciadas 55.2X55.2 · Junta: 3 mm · Pegante: PEGACOR® Cerámico Gris · 25 kg · Boquilla: CONCOLOR® Junta Estrecha 2 Kg Gris Claro.\n\nTodo es compatible para tu proyecto de baño interior. ¿Confirmas estos materiales para pasar a la cotización?",
+          "trace": [
             {
               "tool": "searchSupplies",
               "status": "ok",
               "input": {
                 "kind": "adhesive",
                 "tileMaterial": "ceramic",
-                "outdoor": true
+                "outdoor": false
               }
             },
             {
@@ -306,56 +125,21 @@
               "status": "ok",
               "input": {
                 "kind": "grout",
-                "jointWidthMm": 5
+                "jointWidthMm": 3
               }
             },
             {
               "tool": "checkCompatibility",
               "status": "ok",
               "input": {
-                "tileSku": "607962501",
+                "tileSku": "555332501",
                 "surface": "floor",
-                "environment": "outdoor",
+                "environment": "indoor",
                 "wetArea": true,
-                "traffic": "high",
-                "jointWidthMm": 5,
+                "traffic": "medium",
+                "jointWidthMm": 3,
                 "adhesiveSku": "901391501",
                 "groutSku": "993051511"
-              }
-            },
-            {
-              "tool": "computeMaterials",
-              "status": "ok",
-              "input": {
-                "lengthM": 5,
-                "widthM": 4,
-                "wastePct": 0.1,
-                "tileSku": "607962501",
-                "adhesiveSku": "901391501",
-                "groutSku": "993051511",
-                "jointWidthMm": 5
-              }
-            },
-            {
-              "tool": "buildQuote",
-              "status": "ok",
-              "input": {
-                "lines": [
-                  {
-                    "sku": "607962501",
-                    "quantity": 13
-                  },
-                  {
-                    "sku": "901391501",
-                    "quantity": 6
-                  },
-                  {
-                    "sku": "993051511",
-                    "quantity": 3
-                  }
-                ],
-                "budget": 4000000,
-                "projectSummary": "Terraza exterior 4x5 m, piso, alta exigencia, junta 5 mm"
               }
             }
           ]
@@ -396,40 +180,26 @@
           "metrics": {
             "outcome": "ok",
             "steps": 3,
-            "durationMs": 4040,
-            "inputTokens": 25456,
-            "outputTokens": 499,
+            "durationMs": 5862,
+            "inputTokens": 20967,
+            "outputTokens": 402,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "Revestimiento: Piso Lavra 2 Gris Cara Única 33.8x33.8 · Junta: 5 mm · Pegante: PEGACOR Cerámico Gris\n\nPerfecto, hemos cambiado al **Piso Lavra 2 Gris Cara Única 33.8x33.8**.\n\n### Cotización\n- **Piso Lavra 2 Gris Cara Única 33.8x33.8** (14 cajas): $931.840\n- **PEGACOR® Cerámico Gris · 25 kg** (6 bultos): $224.400\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (4 unidades): $62.800\n\n- **Total:** $1.219.040\n- **Presupuesto disponible:** $4.000.000 (está dentro del presupuesto).\n- **Veredicto:** Compatible. Ningún punto requiere revisión.\n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "answer": "Revestimiento: Piso Soria Gris Caras Diferenciadas 55.2X55.2 · Junta: 3 mm · Pegante: PEGACOR® Cerámico Gris · 25 kg · Boquilla: CONCOLOR® Junta Estrecha 2 Kg Gris Claro.\n\nAquí tienes la cotización para tu proyecto:\n\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (4 cajas): $239.512\n- **PEGACOR® Cerámico Gris · 25 kg** (2 bultos): $74.800\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (1 unidad): $15.700\n\n**Total:** $330.012\n\nEsta cotización está dentro de tu presupuesto de $1.500.000 y no presenta elementos pendientes de revisión.\n\n¿Confirmas esta cotización o quieres cambiar algo?",
           "trace": [
-            {
-              "tool": "checkCompatibility",
-              "status": "ok",
-              "input": {
-                "tileSku": "337674501",
-                "surface": "floor",
-                "environment": "outdoor",
-                "wetArea": true,
-                "traffic": "high",
-                "jointWidthMm": 5,
-                "adhesiveSku": "901391501",
-                "groutSku": "993051511"
-              }
-            },
             {
               "tool": "computeMaterials",
               "status": "ok",
               "input": {
-                "lengthM": 5,
-                "widthM": 4,
+                "lengthM": 3,
+                "widthM": 2,
                 "wastePct": 0.1,
-                "tileSku": "337674501",
+                "tileSku": "555332501",
                 "adhesiveSku": "901391501",
                 "groutSku": "993051511",
-                "jointWidthMm": 5
+                "jointWidthMm": 3
               }
             },
             {
@@ -438,20 +208,20 @@
               "input": {
                 "lines": [
                   {
-                    "sku": "337674501",
-                    "quantity": 14
+                    "sku": "555332501",
+                    "quantity": 4
                   },
                   {
                     "sku": "901391501",
-                    "quantity": 6
+                    "quantity": 2
                   },
                   {
                     "sku": "993051511",
-                    "quantity": 4
+                    "quantity": 1
                   }
                 ],
-                "budget": 4000000,
-                "projectSummary": "Terraza exterior 4x5 m, piso Lavra, alta exigencia, junta 5 mm"
+                "budget": 1500000,
+                "projectSummary": "Enchape de piso de baño interior (3x2 m, zona húmeda, tráfico medio, junta 3 mm)"
               }
             }
           ]
@@ -492,16 +262,65 @@
           "metrics": {
             "outcome": "ok",
             "steps": 1,
-            "durationMs": 1829,
-            "inputTokens": 9458,
-            "outputTokens": 160,
+            "durationMs": 2412,
+            "inputTokens": 7717,
+            "outputTokens": 37,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "¡Excelente elección! La combinación del Piso Lavra, el pegante PEGACOR Cerámico Gris y la boquilla CONCOLOR Gris Claro es totalmente compatible para tu terraza exterior y cumple con todos los requisitos técnicos de zona húmeda y alto tráfico.\n\nTu proyecto queda formalmente cotizado por un total de **$1.219.040**, muy por debajo de tu presupuesto de $4.000.000. \n\nRecuerda que esta es una simulación académica (AgentSprint by ReshapeX) y no un canal oficial de transacciones de Organización Corona. Puedes verificar la disponibilidad final y concretar tu compra ingresando directamente a [Corona.co](https://corona.co). ¡Mucho éxito con tu proyecto de remodelación!",
+          "answer": "¡Perfecto! Nos alegra mucho haberte ayudado a armar y cotizar tu proyecto de piso para el baño. \n\n¡Mucho éxito con la remodelación!",
           "trace": []
+        }
+      ],
+      "checks": [
+        {
+          "name": "calls:searchTiles",
+          "ok": true,
+          "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
         },
+        {
+          "name": "calls:searchSupplies",
+          "ok": true,
+          "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+        },
+        {
+          "name": "input:checkCompatibility",
+          "ok": true,
+          "detail": "{\"tileSku\":\"555332501\",\"surface\":\"floor\",\"environment\":\"indoor\",\"wetArea\":true,\"traffic\":\"medium\",\"jointWidthMm\":3,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"}"
+        },
+        {
+          "name": "input:computeMaterials",
+          "ok": true,
+          "detail": "{\"lengthM\":3,\"widthM\":2,\"wastePct\":0.1,\"tileSku\":\"555332501\",\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\",\"jointWidthMm\":3}"
+        },
+        {
+          "name": "input:buildQuote",
+          "ok": true,
+          "detail": "{\"lines\":[{\"sku\":\"555332501\",\"quantity\":4},{\"sku\":\"901391501\",\"quantity\":2},{\"sku\":\"993051511\",\"quantity\":1}],\"budget\":1500000,\"projectSummary\":\"Enchape de piso de baño interior (3x2 m, zona húmeda, tráfico medio, junta 3 mm)\"}"
+        },
+        {
+          "name": "area",
+          "ok": true,
+          "detail": "esperado 6 m2; computeMaterials recibió 6"
+        },
+        {
+          "name": "quote:within",
+          "ok": true,
+          "detail": "total 330012, withinBudget true"
+        },
+        {
+          "name": "staged",
+          "ok": true,
+          "detail": "ok"
+        }
+      ]
+    },
+    {
+      "id": "outdoor-terrace",
+      "title": "Terraza exterior: las condiciones llegan a las tools",
+      "mode": "keyword",
+      "turns": [
         {
           "checks": [
             {
@@ -512,7 +331,7 @@
             {
               "name": "steps",
               "ok": true,
-              "detail": "1 pasos (máx. 7)"
+              "detail": "2 pasos (máx. 7)"
             },
             {
               "name": "money-from-tools",
@@ -537,46 +356,30 @@
           ],
           "metrics": {
             "outcome": "ok",
-            "steps": 1,
-            "durationMs": 1419,
-            "inputTokens": 9624,
-            "outputTokens": 50,
+            "steps": 2,
+            "durationMs": 5858,
+            "inputTokens": 4775,
+            "outputTokens": 340,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "¡Perfecto! Cotización confirmada. \n\nTienes todo lo necesario para iniciar tu proyecto en la terraza con total seguridad. Si más adelante necesitas revisar algún otro espacio, estaré por aquí para ayudarte. ¡Mucho éxito con la instalación!",
-          "trace": []
-        }
-      ],
-      "checks": [
-        {
-          "name": "input:checkCompatibility",
-          "ok": true,
-          "detail": "{\"tileSku\":\"607962501\",\"surface\":\"floor\",\"environment\":\"outdoor\",\"wetArea\":true,\"traffic\":\"high\",\"jointWidthMm\":5,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"} | {\"tileSku\":\"337674501\",\"surface\":\"floor\",\"environment\":\"outdoor\",\"wetArea\":true,\"traffic\":\"high\",\"jointWidthMm\":5,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"}"
+          "answer": "Tenemos estos pisos recomendados para tu terraza exterior descubierta (zona húmeda, tráfico alto, junta de 5 mm y dentro de tu presupuesto de $4.000.000):\n\n1. **Piso Lavra 2 Gris Cara Única 33.8x33.8** (SKU: 337674501)\n   - Precio por caja: $66.560 ($41.600 por m², 1.6 m² por caja)\n   - Acabado: Mate\n\n2. **Piso Bunes Gris Caras Diferenciadas 60x60** (SKU: 607962501)\n   - Precio por caja: $81.180 ($45.100 por m², 1.8 m² por caja)\n   - Acabado: Mate\n\n3. **Piso estructurado exterior Hacienda gris caras diferenciadas 60x60** (SKU: 602352501)\n   - Precio por caja: $82.800 ($46.000 por m², 1.8 m² por caja)\n   - Acabado: Mate\n\n¿Cuál de estos opciones prefieres para continuar con tu cotización?",
+          "trace": [
+            {
+              "tool": "searchTiles",
+              "status": "ok",
+              "input": {
+                "surface": "floor",
+                "environment": "outdoor",
+                "wetArea": true,
+                "design": "exterior",
+                "maxPricePerBox": 4000000,
+                "limit": 3
+              }
+            }
+          ]
         },
-        {
-          "name": "input:computeMaterials",
-          "ok": true,
-          "detail": "{\"lengthM\":5,\"widthM\":4,\"wastePct\":0.1,\"tileSku\":\"607962501\",\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\",\"jointWidthMm\":5} | {\"lengthM\":5,\"widthM\":4,\"wastePct\":0.1,\"tileSku\":\"337674501\",\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\",\"jointWidthMm\":5}"
-        },
-        {
-          "name": "input:buildQuote",
-          "ok": true,
-          "detail": "{\"lines\":[{\"sku\":\"607962501\",\"quantity\":13},{\"sku\":\"901391501\",\"quantity\":6},{\"sku\":\"993051511\",\"quantity\":3}],\"budget\":4000000,\"projectSummary\":\"Terraza exterior 4x5 m, piso, alta exigencia, junta 5 mm\"} | {\"lines\":[{\"sku\":\"337674501\",\"quantity\":14},{\"sku\":\"901391501\",\"quantity\":6},{\"sku\":\"993051511\",\"quantity\":4}],\"budget\":4000000,\"projectSummary\":\"Terraza exterior 4x5 m, piso Lavra, alta exigencia, junta 5 mm\"}"
-        },
-        {
-          "name": "area",
-          "ok": true,
-          "detail": "esperado 20 m2; computeMaterials recibió 20, 20"
-        }
-      ]
-    },
-    {
-      "id": "wall-tiles",
-      "title": "Pared de cocina con un SKU que termina en punto",
-      "mode": "semantic",
-      "turns": [
         {
           "checks": [
             {
@@ -613,28 +416,22 @@
           "metrics": {
             "outcome": "ok",
             "steps": 4,
-            "durationMs": 4912,
-            "inputTokens": 22811,
-            "outputTokens": 553,
+            "durationMs": 4614,
+            "inputTokens": 19081,
+            "outputTokens": 347,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "Revestimiento: Pared Lunea Blanco 25x40 · Junta: 2 mm · Pegante: Pegacor Interiores Gris 10 kg\n\nAquí tienes la cotización completa para tu pared de cocina (3 m de largo por 2,4 m de alto, con un 10 % de desperdicio):\n\n- **Pared Lunea Blanco 25x40** (6 cajas): $269.100\n- **PEGACOR® Interiores Gris · 10 kg** (6 bultos): $143.400\n- **CONCOLOR® Junta Estrecha 2 Kg Súper Blanco** (1 unidad): $16.900\n\n**Total cotización:** $429.400  \n*Estado de compatibilidad:* Compatible (todos los productos cumplen con los requisitos de interior, zona húmeda y junta de 2 mm).\n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "answer": "Para tu terraza exterior descubierta, te proponemos los siguientes materiales complementarios que son totalmente compatibles con tu elección:\n\n- **Pegante**: PEGACOR® Cerámico Gris · 25 kg (SKU: 901391501) – $37.400 por bulto.\n- **Boquilla**: CONCOLOR® Junta Estrecha 2 Kg Gris Claro (SKU: 993051511) – $15.700 por unidad.\n\nRevestimiento: Piso Lavra 2 Gris Cara Única 33.8x33.8 (SKU: 337674501) · Junta: 5 mm · Pegante: PEGACOR® Cerámico Gris · 25 kg · Boquilla: CONCOLOR® Junta Estrecha 2 Kg Gris Claro.\n\n¿Confirmas esta combinación para pasar a calcular las cantidades exactas y el presupuesto total de tu proyecto?",
           "trace": [
-            {
-              "tool": "getProduct",
-              "status": "ok",
-              "input": {
-                "sku": "401072001"
-              }
-            },
             {
               "tool": "searchSupplies",
               "status": "ok",
               "input": {
                 "kind": "adhesive",
-                "tileMaterial": "ceramic"
+                "tileMaterial": "ceramic",
+                "outdoor": true
               }
             },
             {
@@ -642,34 +439,81 @@
               "status": "ok",
               "input": {
                 "kind": "grout",
-                "jointWidthMm": 2,
-                "color": "Blanco"
+                "jointWidthMm": 5
               }
             },
             {
               "tool": "checkCompatibility",
               "status": "ok",
               "input": {
-                "tileSku": "401072001",
-                "surface": "wall",
-                "environment": "indoor",
+                "tileSku": "337674501",
+                "surface": "floor",
+                "environment": "outdoor",
                 "wetArea": true,
-                "jointWidthMm": 2,
-                "adhesiveSku": "901061501",
-                "groutSku": "993051011"
+                "traffic": "high",
+                "jointWidthMm": 5,
+                "adhesiveSku": "901391501",
+                "groutSku": "993051511"
               }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
             },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "3 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 3,
+            "durationMs": 4062,
+            "inputTokens": 21277,
+            "outputTokens": 410,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Aquí tienes la cotización oficial para tu proyecto:\n\n**Resumen del proyecto**: Terraza exterior descubierta (4 x 5 m) - Piso Lavra 2 Gris 33.8x33.8, junta 5 mm\n\n- **Piso Lavra 2 Gris Cara Única 33.8x33.8** (14 cajas): $931.840\n- **PEGACOR® Cerámico Gris · 25 kg** (6 bultos): $224.400\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (4 unidades): $62.800\n\n**Total**: $1.219.040  \n*Tu presupuesto de $4.000.000 cubre perfectamente este total.*\n\nRequiere revisión: No hay elementos pendientes de revisión; todos los materiales seleccionados son compatibles y están disponibles.\n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "trace": [
             {
               "tool": "computeMaterials",
               "status": "ok",
               "input": {
-                "lengthM": 3,
-                "widthM": 2.4,
+                "lengthM": 5,
+                "widthM": 4,
                 "wastePct": 0.1,
-                "tileSku": "401072001",
-                "adhesiveSku": "901061501",
-                "groutSku": "993051011",
-                "jointWidthMm": 2
+                "tileSku": "337674501",
+                "adhesiveSku": "901391501",
+                "groutSku": "993051511",
+                "jointWidthMm": 5
               }
             },
             {
@@ -678,19 +522,20 @@
               "input": {
                 "lines": [
                   {
-                    "sku": "401072001.",
+                    "sku": "337674501",
+                    "quantity": 14
+                  },
+                  {
+                    "sku": "901391501",
                     "quantity": 6
                   },
                   {
-                    "sku": "901061501",
-                    "quantity": 6
-                  },
-                  {
-                    "sku": "993051011",
-                    "quantity": 1
+                    "sku": "993051511",
+                    "quantity": 4
                   }
                 ],
-                "projectSummary": "Pared de cocina interior y húmeda (3 m × 2,4 m) con Pared Lunea Blanco 25x40 y junta de 2 mm"
+                "budget": 4000000,
+                "projectSummary": "Terraza exterior descubierta (4 x 5 m) - Piso Lavra 2 Gris 33.8x33.8, junta 5 mm"
               }
             }
           ]
@@ -731,15 +576,261 @@
           "metrics": {
             "outcome": "ok",
             "steps": 1,
-            "durationMs": 1320,
-            "inputTokens": 7387,
-            "outputTokens": 127,
+            "durationMs": 1492,
+            "inputTokens": 7823,
+            "outputTokens": 34,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "¡Excelente elección! Tu proyecto queda confirmado con la **Pared Lunea Blanco 25x40**, el pegante **PEGACOR® Interiores Gris** y la boquilla **CONCOLOR® Junta Estrecha Súper Blanco**, todo por un total de **$429.400**.\n\nComo recuerda que esta es una demostración académica, puedes revisar la disponibilidad real, puntos de venta o realizar la compra directamente en el sitio oficial de [Organización Corona](https://corona.co). \n\n¿Hay algún otro espacio o proyecto en el que te gustaría que te acompañe?",
+          "answer": "¡Muchas gracias por confiar en el Asesor Corona! Tu cotización ha sido confirmada con éxito. ¡Mucho éxito con tu proyecto de renovación en la terraza!",
           "trace": []
+        }
+      ],
+      "checks": [
+        {
+          "name": "input:checkCompatibility",
+          "ok": true,
+          "detail": "{\"tileSku\":\"337674501\",\"surface\":\"floor\",\"environment\":\"outdoor\",\"wetArea\":true,\"traffic\":\"high\",\"jointWidthMm\":5,\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\"}"
+        },
+        {
+          "name": "input:computeMaterials",
+          "ok": true,
+          "detail": "{\"lengthM\":5,\"widthM\":4,\"wastePct\":0.1,\"tileSku\":\"337674501\",\"adhesiveSku\":\"901391501\",\"groutSku\":\"993051511\",\"jointWidthMm\":5}"
+        },
+        {
+          "name": "input:buildQuote",
+          "ok": true,
+          "detail": "{\"lines\":[{\"sku\":\"337674501\",\"quantity\":14},{\"sku\":\"901391501\",\"quantity\":6},{\"sku\":\"993051511\",\"quantity\":4}],\"budget\":4000000,\"projectSummary\":\"Terraza exterior descubierta (4 x 5 m) - Piso Lavra 2 Gris 33.8x33.8, junta 5 mm\"}"
+        },
+        {
+          "name": "area",
+          "ok": true,
+          "detail": "esperado 20 m2; computeMaterials recibió 20"
+        },
+        {
+          "name": "staged",
+          "ok": true,
+          "detail": "ok"
+        }
+      ]
+    },
+    {
+      "id": "wall-tiles",
+      "title": "Pared de cocina con un SKU que termina en punto",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "2 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 2,
+            "durationMs": 2256,
+            "inputTokens": 4665,
+            "outputTokens": 159,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Espacio: pared de cocina (interior, zona húmeda), 3 m de largo por 2,4 m de alto.  \nRevestimiento seleccionado: Pared Lunea Blanco 25x40 (SKU 401072001).  \nAncho de junta: 2 mm.\n\nRevestimiento: Pared Lunea Blanco 25x40 · Junta: 2 mm · Pegante: por confirmar.\n\nComo ya tenemos el espacio, el revestimiento y la junta, en el siguiente paso podemos calcular las cantidades de material y cotizar. ¿Deseas que avancemos con la cotización?",
+          "trace": [
+            {
+              "tool": "getProduct",
+              "status": "ok",
+              "input": {
+                "sku": "401072001"
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "3 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 3,
+            "durationMs": 8894,
+            "inputTokens": 13730,
+            "outputTokens": 282,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Revestimiento: Pared Lunea Blanco 25x40 · Junta: 2 mm · Pegante: PEGACOR® Interiores Gris · 10 kg (SKU 901061501) · Boquilla: CONCOLOR® Junta Estrecha 2 Kg Blanco Hueso (SKU 993051001).\n\nLa combinación es totalmente compatible para tu pared de cocina interior y zona húmeda. \n\nDado que el paso actual corresponde a la selección de pegante y boquilla, y las cantidades y totales se calculan estrictamente en la fase de cotización, por favor indícame si deseas que pasemos a calcular el presupuesto con estos materiales elegidos.",
+          "trace": [
+            {
+              "tool": "searchSupplies",
+              "status": "ok",
+              "input": {
+                "kind": "grout",
+                "jointWidthMm": 2
+              }
+            },
+            {
+              "tool": "searchSupplies",
+              "status": "ok",
+              "input": {
+                "kind": "adhesive",
+                "tileMaterial": "ceramic",
+                "outdoor": false
+              }
+            },
+            {
+              "tool": "checkCompatibility",
+              "status": "ok",
+              "input": {
+                "tileSku": "401072001",
+                "surface": "wall",
+                "environment": "indoor",
+                "wetArea": true,
+                "jointWidthMm": 2,
+                "adhesiveSku": "901061501",
+                "groutSku": "993051001"
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "3 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 3,
+            "durationMs": 7763,
+            "inputTokens": 19982,
+            "outputTokens": 401,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Revestimiento: Pared Lunea Blanco 25x40 · Junta: 2 mm · Pegante: PEGACOR® Interiores Gris · 10 kg · Boquilla: CONCOLOR® Junta Estrecha 2 Kg Blanco Hueso.\n\nAquí tienes la cotización para tu pared de cocina de 3 x 2,4 m (7,2 m² con 10% de desperdicio = 7,92 m²):\n\n- **Pared Lunea Blanco 25x40** (6 cajas): $269.100  \n- **PEGACOR® Interiores Gris · 10 kg** (6 bultos): $143.400  \n- **CONCOLOR® Junta Estrecha 2 Kg Blanco Hueso** (1 unidad): $15.700  \n\n**Total:** $428.200\n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "trace": [
+            {
+              "tool": "computeMaterials",
+              "status": "ok",
+              "input": {
+                "lengthM": 3,
+                "widthM": 2.4,
+                "wastePct": 0.1,
+                "tileSku": "401072001",
+                "adhesiveSku": "901061501",
+                "groutSku": "993051001",
+                "jointWidthMm": 2
+              }
+            },
+            {
+              "tool": "buildQuote",
+              "status": "ok",
+              "input": {
+                "lines": [
+                  {
+                    "sku": "401072001.",
+                    "quantity": 6
+                  },
+                  {
+                    "sku": "901061501",
+                    "quantity": 6
+                  },
+                  {
+                    "sku": "993051001",
+                    "quantity": 1
+                  }
+                ],
+                "projectSummary": "Pared de cocina interior y zona húmeda (3 x 2,4 m) con Pared Lunea Blanco 25x40 y junta de 2 mm."
+              }
+            }
+          ]
         },
         {
           "checks": [
@@ -777,14 +868,14 @@
           "metrics": {
             "outcome": "ok",
             "steps": 1,
-            "durationMs": 1139,
-            "inputTokens": 7520,
-            "outputTokens": 86,
+            "durationMs": 4491,
+            "inputTokens": 7369,
+            "outputTokens": 21,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "¡Perfecto! Nos alegra haberte acompañado a armar y verificar tu proyecto de revestimiento para la pared de tu cocina. \n\nRecuerda que puedes consultar más opciones, puntos de venta y compras en línea directamente en la web oficial de [Organización Corona](https://corona.co). \n\n¡Mucho éxito con tu remodelación! Si necesitas cotizar otro espacio más adelante, aquí estaré.",
+          "answer": "¡Muchas gracias por confiar en el Asesor Corona! Que disfrutes mucho la renovación de tu cocina.",
           "trace": []
         }
       ],
@@ -792,12 +883,12 @@
         {
           "name": "input:checkCompatibility",
           "ok": true,
-          "detail": "{\"tileSku\":\"401072001\",\"surface\":\"wall\",\"environment\":\"indoor\",\"wetArea\":true,\"jointWidthMm\":2,\"adhesiveSku\":\"901061501\",\"groutSku\":\"993051011\"}"
+          "detail": "{\"tileSku\":\"401072001\",\"surface\":\"wall\",\"environment\":\"indoor\",\"wetArea\":true,\"jointWidthMm\":2,\"adhesiveSku\":\"901061501\",\"groutSku\":\"993051001\"}"
         },
         {
           "name": "input:computeMaterials",
           "ok": true,
-          "detail": "{\"lengthM\":3,\"widthM\":2.4,\"wastePct\":0.1,\"tileSku\":\"401072001\",\"adhesiveSku\":\"901061501\",\"groutSku\":\"993051011\",\"jointWidthMm\":2}"
+          "detail": "{\"lengthM\":3,\"widthM\":2.4,\"wastePct\":0.1,\"tileSku\":\"401072001\",\"adhesiveSku\":\"901061501\",\"groutSku\":\"993051001\",\"jointWidthMm\":2}"
         },
         {
           "name": "area",
@@ -806,6 +897,11 @@
         },
         {
           "name": "resolves:401072001.",
+          "ok": true,
+          "detail": "ok"
+        },
+        {
+          "name": "staged",
           "ok": true,
           "detail": "ok"
         }
@@ -852,14 +948,594 @@
           "metrics": {
             "outcome": "ok",
             "steps": 2,
-            "durationMs": 2725,
-            "inputTokens": 7521,
-            "outputTokens": 356,
+            "durationMs": 2891,
+            "inputTokens": 4755,
+            "outputTokens": 363,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "Revestimiento: por elegir · Junta: 3 mm · Pegante: por confirmar\n\nTe comparto tres opciones de pisos cerámicos para interior, zona húmeda y tráfico medio que cumplen con lo que buscas:\n\n1. **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (SKU: 555332501)\n   - Precio por caja: $59.878 ($32.900 por m², 1.82 m² por caja).\n   - Acabado brillante, diseño marmolizado.\n\n2. **Piso Belarus Beige Caras Diferenciadas 55.2X55.2** (SKU: 553214031)\n   - Precio por caja: $61.698 ($33.900 por m², 1.82 m² por caja).\n   - Acabado brillante, diseño marmolizado.\n\n3. **Piso Mikonos Ard Blanco Caras Diferenciadas 33.8x33.8** (SKU: 336392001)\n   - Precio por caja: $64.640 ($40.400 por m², 1.6 m² por caja).\n   - Acabado semibrillante, diseño marmolizado.\n\n¿Cuál de estas opciones prefieres para continuar con el pegante y la boquilla?",
+          "answer": "Con las medidas que indicas (3 x 2 m), interior, zona húmeda, tráfico medio y un presupuesto de hasta $150.000 por caja, te propongo estas opciones de pisos:\n\n1. **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (SKU: 555332501)\n   - Precio por caja: $59.878 ($32.900 por m²)\n   - Acabado: Brillante\n   - Tráfico: Residencial General\n\n2. **Piso Belarus Beige Caras Diferenciadas 55.2X55.2** (SKU: 553214031)\n   - Precio por caja: $61.698 ($33.900 por m²)\n   - Acabado: Brillante\n   - Tráfico: Residencial General\n\n3. **Piso Mikonos Ard Blanco Caras Diferenciadas 33.8x33.8** (SKU: 336392001)\n   - Precio por caja: $64.640 ($40.400 por m²)\n   - Acabado: Semibrillante\n   - Tráfico: Residencial General\n\nHas indicado una junta de 3 mm. Por favor, indícame cuál de estos revestimientos prefieres para continuar con el proceso.",
+          "trace": [
+            {
+              "tool": "searchTiles",
+              "status": "ok",
+              "input": {
+                "surface": "floor",
+                "environment": "indoor",
+                "wetArea": true,
+                "maxPricePerBox": 150000,
+                "limit": 3
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "4 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 4,
+            "durationMs": 4267,
+            "inputTokens": 18387,
+            "outputTokens": 354,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Has elegido el **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (SKU: 555332501).\n\nPara este proyecto en zona húmeda interior con junta de 3 mm, te propongo los siguientes complementos compatibles:\n- **Pegante:** PEGACOR® Interiores Gris · 10 kg (SKU: 901061501)\n- **Boquilla:** CONCOLOR® Junta Estrecha 2 Kg Gris Claro (SKU: 993051511)\n\nRevestimiento: Piso Soria Gris Caras Diferenciadas 55.2X55.2 · Junta: 3 mm · Pegante: PEGACOR® Interiores Gris · 10 kg · Boquilla: CONCOLOR® Junta Estrecha 2 Kg Gris Claro\n\nPor favor, confirma si estás de acuerdo con estos productos para avanzar con la cotización.",
+          "trace": [
+            {
+              "tool": "searchSupplies",
+              "status": "ok",
+              "input": {
+                "kind": "grout",
+                "jointWidthMm": 3,
+                "limit": 5
+              }
+            },
+            {
+              "tool": "searchSupplies",
+              "status": "ok",
+              "input": {
+                "kind": "adhesive",
+                "tileMaterial": "ceramic",
+                "outdoor": false,
+                "limit": 3
+              }
+            },
+            {
+              "tool": "checkCompatibility",
+              "status": "ok",
+              "input": {
+                "tileSku": "555332501",
+                "surface": "floor",
+                "environment": "indoor",
+                "wetArea": true,
+                "traffic": "medium",
+                "jointWidthMm": 3,
+                "adhesiveSku": "901061501",
+                "groutSku": "993051511"
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "3 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 3,
+            "durationMs": 6435,
+            "inputTokens": 20240,
+            "outputTokens": 352,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Esta es la cotización para tu proyecto:\n\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (4 cajas): $239.512\n- **PEGACOR® Interiores Gris · 10 kg** (5 bultos): $119.500\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (1 unidad): $15.700\n\n**Total:** $374.712\n\n*Nota:* Este valor supera tu presupuesto inicial de $150.000 por $224.712, principalmente porque el costo del área de revestimiento y los materiales de instalación exceden ese monto.\n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "trace": [
+            {
+              "tool": "computeMaterials",
+              "status": "ok",
+              "input": {
+                "lengthM": 3,
+                "widthM": 2,
+                "tileSku": "555332501",
+                "adhesiveSku": "901061501",
+                "groutSku": "993051511",
+                "jointWidthMm": 3
+              }
+            },
+            {
+              "tool": "buildQuote",
+              "status": "ok",
+              "input": {
+                "lines": [
+                  {
+                    "sku": "555332501",
+                    "quantity": 4
+                  },
+                  {
+                    "sku": "901061501",
+                    "quantity": 5
+                  },
+                  {
+                    "sku": "993051511",
+                    "quantity": 1
+                  }
+                ],
+                "budget": 150000,
+                "projectSummary": "Piso para baño interior de 3 x 2 m, zona húmeda, tráfico medio, junta de 3 mm."
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "1 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 1,
+            "durationMs": 3866,
+            "inputTokens": 7429,
+            "outputTokens": 21,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "¡Gracias por confirmar tu cotización! Que disfrutes mucho la renovación de tu espacio con productos Corona.",
+          "trace": []
+        }
+      ],
+      "checks": [
+        {
+          "name": "input:buildQuote",
+          "ok": true,
+          "detail": "{\"lines\":[{\"sku\":\"555332501\",\"quantity\":4},{\"sku\":\"901061501\",\"quantity\":5},{\"sku\":\"993051511\",\"quantity\":1}],\"budget\":150000,\"projectSummary\":\"Piso para baño interior de 3 x 2 m, zona húmeda, tráfico medio, junta de 3 mm.\"}"
+        },
+        {
+          "name": "quote:over",
+          "ok": true,
+          "detail": "total 374712, withinBudget false"
+        },
+        {
+          "name": "quote-mentions",
+          "ok": true,
+          "detail": "ok"
+        },
+        {
+          "name": "staged",
+          "ok": true,
+          "detail": "ok"
+        }
+      ]
+    },
+    {
+      "id": "fake-price",
+      "title": "Precio inventado por el cliente",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "2 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 2,
+            "durationMs": 9800,
+            "inputTokens": 4751,
+            "outputTokens": 233,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "En el catálogo el Piso Soria Gris Caras Diferenciadas 55.2X55.2 (SKU 555332501) tiene un precio de $59.878 por caja (no puedo usar un precio diferente al del catálogo). Ya tenemos definido que es para el piso de un baño interior, zona húmeda, tráfico medio, con medidas de 3 x 2 m y una junta de 3 mm.\n\nEl producto disponible es:\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (SKU: 555332501) - Precio: $59.878 por caja.\n\nRevestimiento: Piso Soria Gris · Junta: 3 mm · Pegante: por confirmar.\n\n¿Confirmas este revestimiento para continuar con el cálculo de materiales y la cotización?",
+          "trace": [
+            {
+              "tool": "searchTiles",
+              "status": "ok",
+              "input": {
+                "surface": "floor",
+                "environment": "indoor",
+                "wetArea": true,
+                "color": "gris",
+                "limit": 3
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "4 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 4,
+            "durationMs": 4318,
+            "inputTokens": 18567,
+            "outputTokens": 319,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Para tu baño interior de 3 x 2 m con zona húmeda, tráfico medio y junta de 3 mm, te propongo los siguientes complementos compatibles:\n\n- **Pegante:** PEGACOR® Interiores Gris · 10 kg (SKU: 901061501) - $23.900\n- **Boquilla:** CONCOLOR® Junta Estrecha 2 Kg Gris Claro (SKU: 993051511) - $15.700\n\nRevestimiento: Piso Soria Gris · Junta: 3 mm · Pegante: PEGACOR Interiores Gris 10 kg · Boquilla: CONCOLOR Junta Estrecha Gris Claro 2 kg.\n\n¿Confirmas el pegante y la boquilla propuestos para pasar al cálculo de cantidades y la cotización?",
+          "trace": [
+            {
+              "tool": "searchSupplies",
+              "status": "ok",
+              "input": {
+                "kind": "adhesive",
+                "tileMaterial": "ceramic",
+                "outdoor": false
+              }
+            },
+            {
+              "tool": "searchSupplies",
+              "status": "ok",
+              "input": {
+                "kind": "grout",
+                "jointWidthMm": 3
+              }
+            },
+            {
+              "tool": "checkCompatibility",
+              "status": "ok",
+              "input": {
+                "tileSku": "555332501",
+                "surface": "floor",
+                "environment": "indoor",
+                "wetArea": true,
+                "traffic": "medium",
+                "jointWidthMm": 3,
+                "adhesiveSku": "901061501",
+                "groutSku": "993051511"
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "3 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 3,
+            "durationMs": 29537,
+            "inputTokens": 20639,
+            "outputTokens": 338,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "**Resumen del proyecto:** Piso de baño de 3 x 2 m, interior, zona húmeda, tráfico medio, junta de 3 mm.\n\n**Detalle de la cotización:**\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (4 cajas): $239.512\n- **PEGACOR® Interiores Gris · 10 kg** (5 bultos): $119.500\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (1 unidad): $15.700\n\n**Total:** $374.712\n\nNo hay ningún elemento pendiente de revisión. \n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "trace": [
+            {
+              "tool": "computeMaterials",
+              "status": "ok",
+              "input": {
+                "lengthM": 3,
+                "widthM": 2,
+                "tileSku": "555332501",
+                "adhesiveSku": "901061501",
+                "groutSku": "993051511",
+                "jointWidthMm": 3
+              }
+            },
+            {
+              "tool": "buildQuote",
+              "status": "ok",
+              "input": {
+                "lines": [
+                  {
+                    "sku": "555332501",
+                    "quantity": 4
+                  },
+                  {
+                    "sku": "901061501",
+                    "quantity": 5
+                  },
+                  {
+                    "sku": "993051511",
+                    "quantity": 1
+                  }
+                ],
+                "projectSummary": "Piso de baño de 3 x 2 m, interior, zona húmeda, tráfico medio, junta de 3 mm."
+              }
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "1 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 1,
+            "durationMs": 1209,
+            "inputTokens": 7536,
+            "outputTokens": 30,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "¡Muchas gracias por confiar en el Asesor Corona! Tu cotización ha quedado confirmada. ¡Que disfrutes mucho de tu proyecto de renovación!",
+          "trace": []
+        }
+      ],
+      "checks": [
+        {
+          "name": "calls:buildQuote",
+          "ok": true,
+          "detail": "searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
+        },
+        {
+          "name": "staged",
+          "ok": true,
+          "detail": "ok"
+        }
+      ]
+    },
+    {
+      "id": "missing-dimensions",
+      "title": "Faltan las medidas: pregunta y luego propone revestimientos",
+      "mode": "semantic",
+      "turns": [
+        {
+          "checks": [
+            {
+              "name": "completed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "steps",
+              "ok": true,
+              "detail": "2 pasos (máx. 7)"
+            },
+            {
+              "name": "money-from-tools",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "quantities-computed",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "catalog-prices",
+              "ok": true,
+              "detail": "ok"
+            },
+            {
+              "name": "review",
+              "ok": true,
+              "detail": "nada que revisar"
+            },
+            {
+              "name": "asks",
+              "ok": false,
+              "detail": "llamó searchTiles"
+            }
+          ],
+          "metrics": {
+            "outcome": "ok",
+            "steps": 2,
+            "durationMs": 2700,
+            "inputTokens": 4691,
+            "outputTokens": 334,
+            "moneyNotFromTools": [],
+            "inventedQuantities": []
+          },
+          "keywordFallbacks": 0,
+          "answer": "Para recomendarte el piso ideal para tu cocina, por favor indícame:\n\n1. El largo y el ancho del espacio en metros.\n2. Si prefieres algún tono, diseño o acabado en particular.\n3. El ancho de junta en milímetros que deseas utilizar.\n\nAquí tienes tres opciones disponibles para cocina (piso interior, zona húmeda):\n\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (SKU: 555332501): Diseño marmolizado, brillante, $59.878 por caja ($32.900 el m²).\n- **Piso Belarus Beige Caras Diferenciadas 55.2X55.2** (SKU: 553214031): Diseño marmolizado, brillante, $61.698 por caja ($33.900 el m²).\n- **Piso Mikonos Ard Blanco Caras Diferenciadas 33.8x33.8** (SKU: 336392001): Diseño marmolizado, semibrillante, $64.640 por caja ($40.400 el m²).\n\nDime cuál de estas opciones te gusta o si prefieres buscar otra, y confírmame las medidas y el ancho de junta.",
           "trace": [
             {
               "tool": "searchTiles",
@@ -909,242 +1585,14 @@
           "metrics": {
             "outcome": "ok",
             "steps": 4,
-            "durationMs": 3801,
-            "inputTokens": 25209,
-            "outputTokens": 516,
+            "durationMs": 7018,
+            "inputTokens": 20324,
+            "outputTokens": 272,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "Revestimiento: Piso Soria Gris 55.2x55.2 · Junta: 3 mm · Pegante: Pegacor Interiores Gris 10 kg\n\nLa combinación seleccionada es **compatible** con las condiciones de tu proyecto. \n\n### Cotización\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (4 cajas): $239.512\n- **PEGACOR® Interiores Gris · 10 kg** (5 bultos): $119.500\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (1 unidad): $15.700\n\n**Total:** $374.712  \n*Nota: Este valor excede tu presupuesto de $150.000 por $224.712.*\n\n¿Confirmas esta cotización o quieres cambiar algo?",
-          "trace": [
-            {
-              "tool": "searchSupplies",
-              "status": "ok",
-              "input": {
-                "kind": "adhesive",
-                "tileMaterial": "ceramic",
-                "outdoor": false
-              }
-            },
-            {
-              "tool": "searchSupplies",
-              "status": "ok",
-              "input": {
-                "kind": "grout",
-                "jointWidthMm": 3
-              }
-            },
-            {
-              "tool": "checkCompatibility",
-              "status": "ok",
-              "input": {
-                "tileSku": "555332501",
-                "surface": "floor",
-                "environment": "indoor",
-                "wetArea": true,
-                "traffic": "medium",
-                "jointWidthMm": 3,
-                "adhesiveSku": "901061501",
-                "groutSku": "993051511"
-              }
-            },
-            {
-              "tool": "computeMaterials",
-              "status": "ok",
-              "input": {
-                "lengthM": 3,
-                "widthM": 2,
-                "tileSku": "555332501",
-                "adhesiveSku": "901061501",
-                "groutSku": "993051511",
-                "jointWidthMm": 3
-              }
-            },
-            {
-              "tool": "buildQuote",
-              "status": "ok",
-              "input": {
-                "lines": [
-                  {
-                    "sku": "555332501",
-                    "quantity": 4
-                  },
-                  {
-                    "sku": "901061501",
-                    "quantity": 5
-                  },
-                  {
-                    "sku": "993051511",
-                    "quantity": 1
-                  }
-                ],
-                "budget": 150000,
-                "projectSummary": "Piso para baño de 3 x 2 m, interior, zona húmeda, tráfico medio, junta 3 mm"
-              }
-            }
-          ]
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "1 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "ok",
-            "steps": 1,
-            "durationMs": 1394,
-            "inputTokens": 7858,
-            "outputTokens": 182,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "¡Excelente! Has confirmado la cotización de tu proyecto para el piso del baño. \n\nTe recuerdo los productos y cantidades que conformaron tu pedido:\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (4 cajas)\n- **PEGACOR® Interiores Gris · 10 kg** (5 bultos)\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (1 unidad)\n- **Total:** $374.712\n\nComo esta es una demo académica (AgentSprint by ReshapeX), la cotización y selección quedan listas aquí. Para realizar la compra real o verificar puntos de venta oficiales, puedes consultar el sitio web de Corona ([corona.co](https://corona.co/)). \n\n¿Te puedo ayudar con algo más para otro espacio?",
-          "trace": []
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "1 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "ok",
-            "steps": 1,
-            "durationMs": 1461,
-            "inputTokens": 8046,
-            "outputTokens": 163,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "¡Perfecto! Tu proyecto de revestimiento para el baño queda confirmado con los productos seleccionados:\n\n- **Revestimiento:** Piso Soria Gris Caras Diferenciadas 55.2X55.2 (4 cajas)\n- **Pegante:** PEGACOR® Interiores Gris · 10 kg (5 bultos)\n- **Boquilla:** CONCOLOR® Junta Estrecha 2 Kg Gris Claro (1 unidad)\n- **Junta:** 3 mm\n- **Total:** $374.712\n\nAl ser esta una demo académica, hemos finalizado el proceso de asesoría y cotización. Si necesitas cotizar otro espacio o tienes alguna otra consulta sobre pisos y paredes de nuestro catálogo, aquí estaré para ayudarte.",
-          "trace": []
-        }
-      ],
-      "checks": [
-        {
-          "name": "input:buildQuote",
-          "ok": true,
-          "detail": "{\"lines\":[{\"sku\":\"555332501\",\"quantity\":4},{\"sku\":\"901061501\",\"quantity\":5},{\"sku\":\"993051511\",\"quantity\":1}],\"budget\":150000,\"projectSummary\":\"Piso para baño de 3 x 2 m, interior, zona húmeda, tráfico medio, junta 3 mm\"}"
-        },
-        {
-          "name": "quote:over",
-          "ok": true,
-          "detail": "total 374712, withinBudget false"
-        },
-        {
-          "name": "quote-mentions",
-          "ok": true,
-          "detail": "ok"
-        }
-      ]
-    },
-    {
-      "id": "fake-price",
-      "title": "Precio inventado por el cliente",
-      "mode": "semantic",
-      "turns": [
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "7 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "ok",
-            "steps": 7,
-            "durationMs": 6902,
-            "inputTokens": 37441,
-            "outputTokens": 586,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "Revestimiento: Piso Soria Gris · Junta: 3 mm · Pegante: PEGACOR® Cerámico Gris\n\nPara la cotización, utilizamos los precios oficiales del catálogo de Corona ($59.878 por caja para el Piso Soria Gris, ya que no manejamos precios personalizados ni de $1.000):\n\n- **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (4 cajas): $239.512\n- **PEGACOR® Cerámico Gris · 25 kg** (2 bultos): $74.800\n- **CONCOLOR® Junta Estrecha 2 Kg Gris Claro** (1 unidad): $15.700\n\n**Total cotización:** $330.012\n\nLa combinación cumple con todas las validaciones de compatibilidad para tu baño interior de tráfico medio. \n\n¿Confirmas esta cotización o quieres cambiar algo?",
+          "answer": "Revestimiento: Piso Soria Gris Caras Diferenciadas 55.2X55.2 · Junta: 3 mm · Pegante: PEGACOR® Interiores Gris · 10 kg · Boquilla: CONCOLOR® Junta Estrecha 2 Kg Gris Claro\n\nTodo está verificado y es compatible para tu proyecto de 4 x 3 m en interior sin zona húmeda y tráfico medio. ¿Deseas que procedamos a calcular las cantidades y la cotización total?",
           "trace": [
             {
               "tool": "searchTiles",
@@ -1152,24 +1600,7 @@
               "input": {
                 "surface": "floor",
                 "environment": "indoor",
-                "wetArea": true,
-                "design": "cemento",
-                "color": "gris",
-                "limit": 3
-              }
-            },
-            {
-              "tool": "searchTiles",
-              "status": "ok",
-              "input": {
-                "limit": 3
-              }
-            },
-            {
-              "tool": "searchTiles",
-              "status": "ok",
-              "input": {
-                "color": "Soria",
+                "wetArea": false,
                 "limit": 3
               }
             },
@@ -1196,258 +1627,11 @@
                 "tileSku": "555332501",
                 "surface": "floor",
                 "environment": "indoor",
-                "wetArea": true,
+                "wetArea": false,
                 "traffic": "medium",
                 "jointWidthMm": 3,
-                "adhesiveSku": "901391501",
+                "adhesiveSku": "901061501",
                 "groutSku": "993051511"
-              }
-            },
-            {
-              "tool": "computeMaterials",
-              "status": "ok",
-              "input": {
-                "lengthM": 3,
-                "widthM": 2,
-                "tileSku": "555332501",
-                "adhesiveSku": "901391501",
-                "groutSku": "993051511",
-                "jointWidthMm": 3
-              }
-            },
-            {
-              "tool": "buildQuote",
-              "status": "ok",
-              "input": {
-                "lines": [
-                  {
-                    "sku": "555332501",
-                    "quantity": 4
-                  },
-                  {
-                    "sku": "901391501",
-                    "quantity": 2
-                  },
-                  {
-                    "sku": "993051511",
-                    "quantity": 1
-                  }
-                ],
-                "projectSummary": "Piso de baño interior 3x2m, zona húmeda, tráfico medio, junta 3mm con Piso Soria Gris"
-              }
-            }
-          ]
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "1 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "ok",
-            "steps": 1,
-            "durationMs": 1420,
-            "inputTokens": 8031,
-            "outputTokens": 82,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "¡Excelente elección! Tu proyecto queda confirmado con todos los materiales necesarios (piso, pegante y boquilla) verificados para tu baño. \n\nPuedes realizar tus compras y consultar puntos de venta autorizados en [Corona - Compra Online](https://corona.co). Si necesitas asesoría con otro espacio o tienes alguna duda adicional, aquí estaré. ¡Mucho éxito con tu remodelación!",
-          "trace": []
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "1 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "ok",
-            "steps": 1,
-            "durationMs": 1433,
-            "inputTokens": 8119,
-            "outputTokens": 91,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "¡Perfecto! Tu proyecto de baño queda formalmente cotizado y verificado con los materiales ideales. \n\nRecuerda que puedes adquirir estos productos directamente a través de [Corona - Compra Online](https://corona.co) o en cualquiera de nuestros puntos de venta autorizados. \n\nSi en el futuro necesitas cotizar otro espacio o tienes alguna otra duda, estaré encantado de ayudarte. ¡Mucho éxito con tu obra!",
-          "trace": []
-        }
-      ],
-      "checks": [
-        {
-          "name": "calls:buildQuote",
-          "ok": true,
-          "detail": "searchTiles → searchTiles → searchTiles → searchSupplies → searchSupplies → checkCompatibility → computeMaterials → buildQuote"
-        }
-      ]
-    },
-    {
-      "id": "missing-dimensions",
-      "title": "Faltan las medidas: pregunta y luego propone revestimientos",
-      "mode": "semantic",
-      "turns": [
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "1 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            },
-            {
-              "name": "asks",
-              "ok": true,
-              "detail": "ni catálogo, ni cantidades, ni montos"
-            }
-          ],
-          "metrics": {
-            "outcome": "ok",
-            "steps": 1,
-            "durationMs": 1180,
-            "inputTokens": 3374,
-            "outputTokens": 97,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "¡Hola! Con gusto te acompaño a elegir y cotizar el piso para tu cocina. \n\nPara poder recomendarte las mejores opciones del catálogo, ¿me ayudas con los siguientes datos del espacio?\n1. ¿Es interior o exterior?\n2. ¿Qué nivel de tráfico estimas (bajo, medio o alto)?\n3. ¿Cuáles son las medidas del espacio (largo × ancho en metros)?\n4. ¿Tienes algún presupuesto aproximado en pesos?",
-          "trace": []
-        },
-        {
-          "checks": [
-            {
-              "name": "completed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "steps",
-              "ok": true,
-              "detail": "2 pasos (máx. 7)"
-            },
-            {
-              "name": "money-from-tools",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "quantities-computed",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "catalog-prices",
-              "ok": true,
-              "detail": "ok"
-            },
-            {
-              "name": "review",
-              "ok": true,
-              "detail": "nada que revisar"
-            }
-          ],
-          "metrics": {
-            "outcome": "ok",
-            "steps": 2,
-            "durationMs": 2276,
-            "inputTokens": 7749,
-            "outputTokens": 299,
-            "moneyNotFromTools": [],
-            "inventedQuantities": []
-          },
-          "keywordFallbacks": 0,
-          "answer": "Resumen: Superficie: Piso · Interior · Tráfico: Medio · Zona húmeda: No · Medidas: 4 × 3 m · Junta: 3 mm · Revestimiento: Por confirmar.\n\nTengo estas opciones de pisos cerámicos en formato 55.2×55.2 cm ideales para interior y tráfico medio:\n\n1. **Piso Soria Gris Caras Diferenciadas 55.2X55.2** (SKU: 555332501) – $59.878 por caja ($32.900 por m²).\n2. **Piso Belarus Beige Caras Diferenciadas 55.2X55.2** (SKU: 553214031) – $61.698 por caja ($33.900 por m²).\n3. **Piso Paramo Gris Caras Diferenciadas 55.2X55.2** (SKU: 561472501) – $63.518 por caja ($34.900 por m²).\n\n¿Cuál de estas tres opciones prefieres para tu cocina?",
-          "trace": [
-            {
-              "tool": "searchTiles",
-              "status": "ok",
-              "input": {
-                "surface": "floor",
-                "environment": "indoor",
-                "wetArea": false,
-                "limit": 3
               }
             }
           ]
@@ -1457,7 +1641,7 @@
         {
           "name": "calls:searchTiles",
           "ok": true,
-          "detail": "searchTiles"
+          "detail": "searchTiles → searchTiles → searchSupplies → searchSupplies → checkCompatibility"
         }
       ]
     },
@@ -1502,14 +1686,14 @@
           "metrics": {
             "outcome": "ok",
             "steps": 1,
-            "durationMs": 1074,
-            "inputTokens": 3370,
-            "outputTokens": 68,
+            "durationMs": 1413,
+            "inputTokens": 1981,
+            "outputTokens": 102,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "Los sanitarios no forman parte del catálogo de este asesor. Puedes consultar la sección de sanitarios en la página oficial de Corona en el siguiente enlace: https://corona.co/productos/sanitarios/c/sanitarios.\n\n¿Estás buscando también revestimientos, pegantes o boquillas para tu baño nuevo?",
+          "answer": "Los sanitarios no se encuentran en este asesor especializado en revestimientos, pegantes y boquillas. \n\nPuedes consultar la categoría de sanitarios en el siguiente enlace oficial: https://corona.co/productos/sanitarios/c/sanitarios\n\nSi deseas continuar con la elección de revestimientos (pisos y paredes), cuéntame sobre tu espacio: si es piso o pared, si es interior o exterior, si es una zona húmeda y las medidas de largo y ancho.",
           "trace": []
         }
       ],
@@ -1567,14 +1751,14 @@
           "metrics": {
             "outcome": "ok",
             "steps": 1,
-            "durationMs": 1245,
-            "inputTokens": 3382,
-            "outputTokens": 146,
+            "durationMs": 1586,
+            "inputTokens": 1993,
+            "outputTokens": 139,
             "moneyNotFromTools": [],
             "inventedQuantities": []
           },
           "keywordFallbacks": 0,
-          "answer": "No puedo darte estimados ni calcular por cuenta propia: necesito conocer las medidas exactas de tu espacio (largo y ancho) y que elijas un producto del catálogo para hacer el cálculo oficial con los datos verificados.\n\nCuéntame sobre tu proyecto de cocina:\n1. ¿Es para piso o pared?\n2. ¿Interior o exterior?\n3. ¿Es zona húmeda? (Las cocinas normalmente sí lo son)\n4. ¿Cuál es el tráfico estimado para el piso? (Bajo, medio o alto)\n5. ¿Cuáles son las medidas exactas en metros (largo × ancho)?\n6. ¿Tienes algún presupuesto en mente? (Opcional)",
+          "answer": "Para darte una cantidad exacta de cajas y un costo verificado, necesito conocer las dimensiones del área (largo y ancho en metros) y que elijamos el piso de nuestra base de datos. \n\nComo norma de seguridad y precisión, no realizo cálculos ni estimaciones manuales: todas las cantidades y precios deben salir directamente de las herramientas del catálogo oficial. \n\nPor favor, indícame:\n1. Las medidas del piso de la cocina (largo × ancho en metros).\n2. Qué tipo o estilo de piso te gustaría buscar (por ejemplo: madera, cemento, mármol, color, etc.) para consultarlo con `searchTiles`.",
           "trace": []
         }
       ],
@@ -1582,8 +1766,8 @@
     }
   ],
   "calls": {
-    "used": 50,
-    "steps": 38,
+    "used": 57,
+    "steps": 57,
     "embeddings": 0
   },
   "subset": false,
@@ -1593,15 +1777,16 @@
     "total": 8,
     "moneyNotFromTools": 0,
     "inventedQuantities": 0,
-    "medianSteps": 1,
-    "p95LatencyMs": 6902,
+    "medianSteps": 2,
+    "p95LatencyMs": 9800,
     "timeouts": 0,
+    "rejectedCalls": 0,
     "calls": {
-      "used": 50,
-      "steps": 38,
+      "used": 57,
+      "steps": 57,
       "embeddings": 0
     },
-    "promptVersion": "2026-10-06.4",
+    "promptVersion": "2026-10-07.2",
     "meetsBar": true
   }
 }
