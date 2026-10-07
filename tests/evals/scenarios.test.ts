@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SCENARIOS } from "@/evals/scenarios";
-import { SYSTEM_PROMPT } from "@/lib/agent/prompt";
+import { buildSystemPrompt } from "@/lib/agent/prompt";
 import { getCatalog } from "@/lib/data/catalog";
 
 const scenario = (id: string) => SCENARIOS.find((s) => s.id === id)!;
@@ -24,7 +24,7 @@ describe("eval scenarios", () => {
   it("share the out-of-catalog link the prompt gives, from the company data", () => {
     const { link } = scenario("out-of-catalog").expect;
     expect(link).toBe("https://corona.co/productos/sanitarios/c/sanitarios");
-    expect(SYSTEM_PROMPT).toContain(link);
+    expect(buildSystemPrompt("explore")).toContain(link);
   });
 
   it("use a dotted wall-tile SKU the catalog offers", () => {

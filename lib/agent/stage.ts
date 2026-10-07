@@ -3,7 +3,8 @@ import type { CoronaTools } from "./tools";
 /**
  * Where the purchase is, derived from what earlier assistant turns already proposed, never from the current turn.
  * The handler hands the agent only that stage's tools, so the model cannot skip ahead within one turn (quoting on
- * the first message, or picking the supplies itself) however the customer phrases the request.
+ * the first message, or picking the supplies itself) however the customer phrases the request. The prompt describes
+ * only that stage's step (see ./prompt), so the model knows which step it is in.
  *
  * Known limitation: the client trims the history (last 20 messages, 64 KB). If the turn that proposed the tiles is
  * trimmed out, the stage falls back to explore. That costs the agent a re-search, never a wrong quote.

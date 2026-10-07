@@ -1,6 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { type InferAgentUIMessage, isStepCount, type LanguageModel, ToolLoopAgent } from "ai";
-import { SYSTEM_PROMPT } from "./prompt";
+import { buildSystemPrompt } from "./prompt";
 import { type Stage, STAGE_TOOLS } from "./stage";
 import type { CoronaTools } from "./tools";
 
@@ -54,7 +54,7 @@ export function createCoronaAgent({
   hooks = {},
 }: {
   tools: CoronaTools;
-  /** The purchase stage the earlier turns reached (see ./stage): only its tools are active in this turn. */
+  /** The purchase stage the earlier turns reached (see ./stage): the prompt describes only its step, and only its tools are active. */
   stage: Stage;
   model?: LanguageModel;
   hooks?: AgentHooks;
@@ -70,7 +70,7 @@ export function createCoronaAgent({
   return new ToolLoopAgent({
     ...silenceSdkErrorDump,
     model,
-    instructions: SYSTEM_PROMPT,
+    instructions: buildSystemPrompt(stage),
     tools,
     stopWhen: isStepCount(MAX_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,

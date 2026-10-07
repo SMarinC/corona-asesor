@@ -2,6 +2,7 @@ import { APICallError, type UIMessageChunk } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assistantMessage, bathroomConversation, toolPart } from "@/tests/fixtures/ui-messages";
+import { buildSystemPrompt } from "@/lib/agent/prompt";
 import { STAGE_TOOLS } from "@/lib/agent/stage";
 import { createTools } from "@/lib/agent/tools";
 import { executeSearchTiles } from "@/lib/agent/tools/search-tiles";
@@ -489,7 +490,7 @@ describe("handleChat", () => {
     const sentTools = (model: MockLanguageModelV4, call = 0) => (model.doStreamCalls[call].tools ?? []).map((t) => t.name).sort();
     const tilesProposed = () => assistantMessage([toolPart("searchTiles", { surface: "floor" }, executeSearchTiles(makeToolDeps(), { surface: "floor" }))]);
 
-    it("hands the model only the tools of the stage the earlier turns reached", async () => {
+    it("hands the model the prompt and only the tools of the stage the earlier turns reached", async () => {
       const cases = [
         { stage: "explore", messages: [user("Piso para baño")] },
         { stage: "supplies", messages: [user("Piso para baño"), tilesProposed(), user("El primero")] },
@@ -499,6 +500,7 @@ describe("handleChat", () => {
         const { deps, model } = makeDeps();
         await (await handleChat(chatRequest([...messages]), deps)).text();
         expect(sentTools(model), stage).toEqual([...STAGE_TOOLS[stage]].sort());
+        expect(model.doStreamCalls[0].prompt[0], stage).toEqual({ role: "system", content: buildSystemPrompt(stage) });
       }
     });
 

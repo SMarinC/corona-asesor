@@ -1,7 +1,7 @@
 import type { LanguageModel } from "ai";
 import { describe, expect, it, vi } from "vitest";
 import { type AgentHooks, createCoronaAgent, MAX_STEPS, toolStatus } from "@/lib/agent/agent";
-import { SYSTEM_PROMPT } from "@/lib/agent/prompt";
+import { buildSystemPrompt } from "@/lib/agent/prompt";
 import { type Stage, STAGE_TOOLS } from "@/lib/agent/stage";
 import { createTools } from "@/lib/agent/tools";
 import { makeToolDeps } from "@/tests/fixtures/tool-deps";
@@ -18,10 +18,10 @@ async function run(model: LanguageModel, hooks: AgentHooks = {}, stage: Stage = 
 const promptAfterSystem = (model: ReturnType<typeof scriptedModel>, call: number) => JSON.stringify(model.doStreamCalls[call].prompt.slice(1));
 
 describe("Corona agent harness", () => {
-  it("sends the versioned system prompt as instructions", async () => {
+  it("sends the prompt of its stage as instructions", async () => {
     const model = scriptedModel([textTurn("Hola")]);
     await run(model);
-    expect(model.doStreamCalls[0].prompt[0]).toMatchObject({ role: "system", content: SYSTEM_PROMPT });
+    expect(model.doStreamCalls[0].prompt[0]).toMatchObject({ role: "system", content: buildSystemPrompt("quote") });
   });
 
   it("runs a tool, feeds its result back and answers (multi-step loop)", async () => {
