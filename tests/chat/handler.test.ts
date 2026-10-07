@@ -3,7 +3,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assistantMessage, bathroomConversation, toolPart } from "@/tests/fixtures/ui-messages";
 import { buildSystemPrompt } from "@/lib/agent/prompt";
-import { STAGE_TOOLS } from "@/lib/agent/stage";
+import { STAGE_TOOLS, TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 import { createTools } from "@/lib/agent/tools";
 import { executeSearchTiles } from "@/lib/agent/tools/search-tiles";
 import { type ChatDeps, endOnTimeout, handleChat } from "@/lib/chat/handler";
@@ -504,16 +504,25 @@ describe("handleChat", () => {
       }
     });
 
-    it("cannot quote on the first turn: buildQuote is not active, so the call is rejected and never runs", async () => {
-      const model = scriptedModel([toolTurn([{ toolName: "buildQuote", input: { lines: [{ sku: "T1", quantity: 4 }] } }]), textTurn("Primero elijamos el piso.")]);
+    it("cannot quote on the first turn: buildQuote is not active, so the call is rejected, never runs and is not reported as a failure", async () => {
+      const model = scriptedModel([
+        // buildQuote is outside the explore stage; getProduct is active but its input fails the schema (a real failure).
+        toolTurn([
+          { toolName: "buildQuote", input: { lines: [{ sku: "T1", quantity: 4 }] } },
+          { toolName: "getProduct", input: {} },
+        ]),
+        textTurn("Primero elijamos el piso."),
+      ]);
       const { deps } = makeDeps({ model });
       const body = await (await handleChat(chatRequest([user("Cotízame ya 4 cajas del T1")]), deps)).text();
-      expect(body).toContain("tool-output-error");
       expect(body).not.toContain("tool-output-available");
       expect(body).toContain("Primero elijamos el piso.");
+      const chunks = body.split("\n").flatMap((line) => (line.startsWith("data: {") ? [JSON.parse(line.slice("data: ".length))] : []));
+      expect(chunks.filter((c) => c.type === "tool-output-error").map((c) => c.errorText)).toEqual([TOOL_UNAVAILABLE, "model_error"]);
+      expect(chunks.some((c) => c.type === "error")).toBe(false);
       const turnLines = () => jsonLines(logSpy).filter((l) => l.event === "chat_turn");
       await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
-      expect(turnLines()[0]).toMatchObject({ outcome: "ok", tools: [{ tool: "buildQuote", status: "tool_error" }] });
+      expect(turnLines()[0]).toMatchObject({ outcome: "ok", tools: [{ tool: "buildQuote", status: "tool_error" }, { tool: "getProduct", status: "tool_error" }] });
     });
   });
 });

@@ -23,6 +23,12 @@ export const STAGE_TOOLS: Record<Stage, readonly ToolName[]> = {
   quote: [...SUPPLIES, "computeMaterials", "buildQuote"],
 };
 
+/**
+ * The errorText of a call to a tool outside the stage: the gate rejected it before it ran. It is the gate working,
+ * not a failure, so the UI hides it and the evals count it on its own.
+ */
+export const TOOL_UNAVAILABLE = "tool_unavailable";
+
 interface PartLike {
   type: string;
   state?: string;

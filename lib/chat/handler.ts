@@ -1,6 +1,6 @@
 import { createAgentUIStream, createUIMessageStreamResponse, InvalidToolInputError, type LanguageModel, NoSuchToolError, type UIMessageChunk, safeValidateUIMessages } from "ai";
 import { createCoronaAgent, type CoronaUIMessage } from "@/lib/agent/agent";
-import { stageFromHistory } from "@/lib/agent/stage";
+import { stageFromHistory, TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 import type { CoronaTools } from "@/lib/agent/tools";
 import type { ToolDeps } from "@/lib/agent/tools/deps";
 import { seedQuantityLedger } from "@/lib/agent/tools/quantity-history";
@@ -116,19 +116,26 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
     });
   }
 
+  // The NoSuchToolErrors of this turn, as strings: calls the stage gate rejected (see TOOL_UNAVAILABLE).
+  const rejections = new Set<string>();
   try {
     const stream = await createAgentUIStream({
       agent,
       uiMessages: validated.data,
       abortSignal: signal,
       onError: (error) => {
-        const code = streamErrorCode(error);
         // The SDK routes tool-error parts through this same callback: first with the NoSuchToolError /
-        // InvalidToolInputError, then again with its stringified form for the tool-output-error part. Those are
-        // recoverable and already counted as tool_error by the agent's onTool hook; only stream-level errors
-        // (Error objects from the provider) end the turn.
-        const toolLevel = typeof error === "string" || NoSuchToolError.isInstance(error) || InvalidToolInputError.isInstance(error);
-        if (!toolLevel) turn.failed(code, error);
+        // InvalidToolInputError, then again with its string form ("AI_NoSuchToolError: …") for the tool-output-error
+        // part. Those are recoverable and already counted as tool_error by the agent's onTool hook; only
+        // stream-level errors (Error objects from the provider) end the turn. A NoSuchToolError is a call to a tool
+        // outside the stage: both its parts get TOOL_UNAVAILABLE, so the client can tell the gate from a failure.
+        if (NoSuchToolError.isInstance(error)) {
+          rejections.add(String(error));
+          return TOOL_UNAVAILABLE;
+        }
+        if (typeof error === "string" && rejections.has(error)) return TOOL_UNAVAILABLE;
+        const code = streamErrorCode(error);
+        if (typeof error !== "string" && !InvalidToolInputError.isInstance(error)) turn.failed(code, error);
         return code;
       },
     });

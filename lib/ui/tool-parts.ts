@@ -1,4 +1,5 @@
 import type { CoronaUIMessage } from "@/lib/agent/agent";
+import { TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 
 export type CoronaPart = CoronaUIMessage["parts"][number];
 export type CoronaToolPart = Extract<CoronaPart, { type: `tool-${string}` }>;
@@ -45,6 +46,11 @@ export function toolPhase(part: CoronaToolPart): ToolPhase {
   const status = (part.output as { status?: string }).status;
   if (status === "needs_review") return "review";
   return status === "error" ? "error" : "done";
+}
+
+/** A call the stage gate rejected: it never ran and nothing failed, so the work log and the trace leave it out. */
+export function toolRejected(part: CoronaToolPart): boolean {
+  return part.state === "output-error" && part.errorText === TOOL_UNAVAILABLE;
 }
 
 /** True when the call itself failed (SDK error or a tool error), as opposed to finishing with an incompatible verdict. */

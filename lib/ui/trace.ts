@@ -1,5 +1,5 @@
 import type { CoronaUIMessage } from "@/lib/agent/agent";
-import { type CoronaToolPart, isToolPart, type ToolPhase, toolLabel, toolNameOf, type ToolName, toolPhase } from "./tool-parts";
+import { type CoronaToolPart, isToolPart, type ToolPhase, toolLabel, toolNameOf, type ToolName, toolPhase, toolRejected } from "./tool-parts";
 
 /** When each agent step of one assistant message became visible in this browser, and when the turn ended. */
 export interface TurnTiming {
@@ -84,7 +84,8 @@ export function buildTrace(message: CoronaUIMessage, timing: TurnTiming | undefi
     if (!step) continue;
     if (isToolPart(part)) {
       const tool = part as CoronaToolPart;
-      step.tools.push({ toolCallId: tool.toolCallId, name: toolNameOf(tool), label: toolLabel(tool), phase: toolPhase(tool) });
+      // A call the stage gate rejected never ran: it is not one of the step's tools.
+      if (!toolRejected(tool)) step.tools.push({ toolCallId: tool.toolCallId, name: toolNameOf(tool), label: toolLabel(tool), phase: toolPhase(tool) });
     } else if (part.type === "text" && part.text.trim().length > 0) {
       step.wroteText = true;
     }

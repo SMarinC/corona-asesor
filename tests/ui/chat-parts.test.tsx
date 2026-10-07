@@ -2,10 +2,12 @@
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EmptyState } from "@/components/chat/empty-state";
-import { toBlocks } from "@/components/chat/message";
+import { Message, toBlocks } from "@/components/chat/message";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
+import { TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 import { useCountdown } from "@/hooks/use-countdown";
 import { SUGGESTIONS } from "@/lib/ui/suggestions";
+import { assistantMessage, errorPart } from "../fixtures/ui-messages";
 
 afterEach(() => {
   cleanup();
@@ -22,6 +24,13 @@ describe("toBlocks", () => {
       parts: [{ type: "step-start" }, tool("a"), tool("b"), { type: "text", text: "  " }, { type: "text", text: "Listo" }, tool("c")],
     } as unknown as CoronaUIMessage;
     expect(toBlocks(message).map((b) => (b.kind === "tools" ? b.parts.length : b.text))).toEqual([2, "Listo", 1]);
+  });
+
+  it("shows no card for a call the stage gate rejected, while a real failure keeps its card", () => {
+    render(<Message message={assistantMessage([errorPart("computeMaterials", {}, TOOL_UNAVAILABLE), errorPart("searchTiles", {}, "model_error")])} streaming={false} />);
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("Buscando revestimientos: no se pudo completar")).toBeTruthy();
+    expect(screen.queryByText(/Calculando materiales/)).toBeNull();
   });
 });
 

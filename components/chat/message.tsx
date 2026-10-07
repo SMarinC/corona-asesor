@@ -1,17 +1,18 @@
 "use client";
 
 import type { CoronaUIMessage } from "@/lib/agent/agent";
-import { type CoronaToolPart, isToolPart } from "@/lib/ui/tool-parts";
+import { type CoronaToolPart, isToolPart, toolRejected } from "@/lib/ui/tool-parts";
 import { ToolCard } from "@/components/tools/tool-card";
 import { AssistantText } from "./assistant-text";
 
 type Block = { kind: "tools"; parts: CoronaToolPart[] } | { kind: "text"; text: string };
 
-/** Consecutive tool calls form one work log; text parts stay where the model wrote them. */
+/** Consecutive tool calls form one work log; text parts stay where the model wrote them. Gate rejections never ran, so they get no card. */
 export function toBlocks(message: CoronaUIMessage): Block[] {
   const blocks: Block[] = [];
   for (const part of message.parts) {
     if (isToolPart(part)) {
+      if (toolRejected(part)) continue;
       const last = blocks.at(-1);
       if (last?.kind === "tools") last.parts.push(part);
       else blocks.push({ kind: "tools", parts: [part] });
