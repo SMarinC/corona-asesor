@@ -48,6 +48,8 @@ export interface EvalSummary {
   medianSteps: number;
   p95LatencyMs: number;
   timeouts: number;
+  /** Calls the stage gate rejected ("herramientas fuera de paso"): never ran, so not failures, but each costs a step. */
+  rejectedCalls: number;
   calls: EvalRun["calls"];
   promptVersion: string;
   /** Every scenario ran, passed ≥ total − 1, no money outside the tools and no invented quantity; null on an --only subset. */
@@ -80,6 +82,7 @@ export function summarize(run: EvalRun): EvalSummary {
     medianSteps: percentile(completed.map((m) => m.steps), 50),
     p95LatencyMs: percentile(completed.map((m) => m.durationMs), 95),
     timeouts: metrics.filter((m) => m.outcome === "timeout").length,
+    rejectedCalls: run.results.flatMap((r) => r.turns ?? []).flatMap((t) => t.trace ?? []).filter((s) => s.status === "rejected").length,
     calls: run.calls,
     promptVersion: run.promptVersion,
     meetsBar: run.subset ? null : ran === total && passed >= total - 1 && moneyNotFromTools === 0 && inventedQuantities === 0,
@@ -136,6 +139,7 @@ export function renderReport(run: EvalRun): string {
     `| Median steps per turn (completed turns) | ${s.medianSteps} |`,
     `| Turn latency p95 (completed turns) | ${seconds(s.p95LatencyMs)} |`,
     `| Timeouts | ${s.timeouts} |`,
+    `| Herramientas fuera de paso (calls the stage gate rejected; not failures) | ${s.rejectedCalls} |`,
     `| Model calls spent | ${s.calls.used} (${s.calls.steps} steps summed) · ${s.calls.embeddings} embedding queries |`,
     `| Prompt version | \`${s.promptVersion}\` |`,
     `| Success bar (all scenarios ran, passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | ${s.meetsBar === null ? barLabel(null) : `**${barLabel(s.meetsBar)}**`} |`,

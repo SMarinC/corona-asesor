@@ -1,12 +1,16 @@
 import { APICallError, simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { toBlocks } from "@/components/chat/message";
 import { runTurn } from "@/evals/harness";
 import { scenarioPassed } from "@/evals/report";
 import { runScenarios } from "@/evals/runner";
 import { SCENARIOS } from "@/evals/scenarios";
+import { traceOf } from "@/evals/trace";
+import { TOOL_UNAVAILABLE } from "@/lib/agent/stage";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
 import { getCatalog } from "@/lib/data/catalog";
+import { buildTrace } from "@/lib/ui/trace";
 import { bathroomConversation } from "@/tests/fixtures/ui-messages";
 import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
 
@@ -105,6 +109,24 @@ describe("eval harness errors", () => {
   it("has no error message when the turn completed", async () => {
     const record = await runTurn([], "Hola", "keyword", scriptedModel([textTurn("Hola, ¿qué espacio quieres renovar?")]), { offline: true });
     expect(record.errorMessage).toBeNull();
+  });
+});
+
+describe("eval harness gate rejections", () => {
+  it("traces a call to a tool outside the step as rejected, and the chat shows no card and no trace step for it", async () => {
+    const model = scriptedModel([
+      toolTurn([{ toolName: "computeMaterials", input: { lengthM: 3, widthM: 2, tileSku: DEMO_SKUS.tile } }]),
+      textTurn("Primero elijamos el piso: ¿cuál prefieres?"),
+    ]);
+    // First turn, so the explore stage: computeMaterials is not active.
+    const record = await runTurn([], "Piso para un baño de 3 x 2 m", "keyword", model, { offline: true });
+    expect(record.error).toBeNull();
+    expect(record.turnLog?.outcome).toBe("ok");
+    const assistant = record.messages.at(-1)!;
+    expect(assistant.parts.find((p) => p.type === "tool-computeMaterials")).toMatchObject({ state: "output-error", errorText: TOOL_UNAVAILABLE });
+    expect(traceOf(assistant)).toEqual([{ tool: "computeMaterials", status: "rejected", input: { lengthM: 3, widthM: 2, tileSku: DEMO_SKUS.tile } }]);
+    expect(toBlocks(assistant)).toEqual([{ kind: "text", text: "Primero elijamos el piso: ¿cuál prefieres?" }]);
+    expect(buildTrace(assistant, undefined).flatMap((step) => step.tools)).toEqual([]);
   });
 });
 

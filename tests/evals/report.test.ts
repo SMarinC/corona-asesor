@@ -42,10 +42,13 @@ describe("scenarioPassed", () => {
 });
 
 describe("summarize", () => {
-  it("counts money and quantities, and takes steps and p95 latency over completed turns only", () => {
+  it("counts money, quantities and gate rejections, and takes steps and p95 latency over completed turns only", () => {
     const run = runOf([
       scenario("a", [turn({ steps: 2, durationMs: 1_000 }), turn({ steps: 4, durationMs: 3_000, moneyNotFromTools: [6000] })]),
-      scenario("b", [turn({ steps: 3, durationMs: 2_000, inventedQuantities: ["G2:not_computed"] }), turn({ outcome: "timeout", steps: 9, durationMs: 60_000 })]),
+      scenario("b", [
+        turn({ steps: 3, durationMs: 2_000, inventedQuantities: ["G2:not_computed"] }, { trace: [{ tool: "computeMaterials", status: "rejected", input: {} }] }),
+        turn({ outcome: "timeout", steps: 9, durationMs: 60_000 }),
+      ]),
       scenario("c", [turn({ outcome: "error", steps: 0, durationMs: 50_000 })]),
       scenario("d", null, [], "call budget reached"),
     ]);
@@ -59,6 +62,7 @@ describe("summarize", () => {
       medianSteps: 3,
       p95LatencyMs: 3_000,
       timeouts: 1,
+      rejectedCalls: 1,
       calls: { used: 14, steps: 12, embeddings: 1 },
       promptVersion: "2026-10-06.4",
       meetsBar: false,
@@ -95,6 +99,7 @@ describe("renderReport", () => {
             checks: [bad("money-from-tools", "montos que no salieron de una tool ni del cliente: 6000")],
             trace: [
               { tool: "getProduct", status: "error", error: "unknown_sku", input: {} },
+              { tool: "searchSupplies", status: "rejected", input: {} },
               { tool: "computeMaterials", status: "needs_review", input: {} },
             ],
             answer: "x".repeat(300),
@@ -114,6 +119,7 @@ describe("renderReport", () => {
     expect(markdown).toContain("| Median steps per turn (completed turns) | 2 |");
     expect(markdown).toContain("| Turn latency p95 (completed turns) | 2.5 s |");
     expect(markdown).toContain("| Timeouts | 0 |");
+    expect(markdown).toContain("| Herramientas fuera de paso (calls the stage gate rejected; not failures) | 1 |");
     expect(markdown).toContain("| Model calls spent | 14 (12 steps summed) · 1 embedding queries |");
     expect(markdown).toContain("| Prompt version | `2026-10-06.4` |");
     expect(markdown).toContain("| Success bar (all scenarios ran, passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | **not met** |");
@@ -122,7 +128,7 @@ describe("renderReport", () => {
   it("shows each scenario's result, its failing checks and, per turn, steps, outcome, latency, tokens, tools and an answer excerpt", () => {
     expect(markdown).toContain("### Escenario bathroom (`bathroom`): **fail**");
     expect(markdown).toContain("| 1 | ok | 2 | 1.0 s | 3000 / 200 | searchTiles | Te propongo tres pisos \\| grises. ¿Cuál prefieres? |");
-    expect(markdown).toContain(`| 2 | ok | 3 | 2.5 s | 9000 / 400 | getProduct (unknown_sku) → computeMaterials (needs_review) | ${"x".repeat(160)}… |`);
+    expect(markdown).toContain(`| 2 | ok | 3 | 2.5 s | 9000 / 400 | getProduct (unknown_sku) → searchSupplies (rejected) → computeMaterials (needs_review) | ${"x".repeat(160)}… |`);
     expect(markdown).toContain("- T2 money-from-tools: montos que no salieron de una tool ni del cliente: 6000");
     expect(markdown).toContain("- quote:within: sin cotización");
     expect(markdown).toContain("### Escenario terrace (`terrace`): not run, call budget reached (100/110; this scenario can need 40)");

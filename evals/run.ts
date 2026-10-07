@@ -61,7 +61,7 @@ writeFileSync(`${outDir}/results.json`, `${JSON.stringify({ ...run, summary }, n
 console.log(
   [
     `\n${summary.passed}/${summary.total} scenarios passed · success bar ${barLabel(summary.meetsBar)} · prompt ${summary.promptVersion}`,
-    `money not from tools: ${summary.moneyNotFromTools} · invented quantities: ${summary.inventedQuantities} · median ${summary.medianSteps} steps per completed turn · p95 ${(summary.p95LatencyMs / 1000).toFixed(1)} s · ${summary.timeouts} timeouts`,
+    `money not from tools: ${summary.moneyNotFromTools} · invented quantities: ${summary.inventedQuantities} · median ${summary.medianSteps} steps per completed turn · p95 ${(summary.p95LatencyMs / 1000).toFixed(1)} s · ${summary.timeouts} timeouts · ${summary.rejectedCalls} herramientas fuera de paso`,
     `${out.callsUsed} model calls (${out.stepsSummed} steps summed) · ${out.embeddingCalls} embedding queries · report in ${outDir}/report.md`,
   ].join("\n"),
 );

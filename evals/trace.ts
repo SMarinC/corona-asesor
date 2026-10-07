@@ -1,10 +1,11 @@
 import type { CoronaUIMessage } from "@/lib/agent/agent";
-import { isToolPart, toolNameOf } from "@/lib/ui/tool-parts";
+import { isToolPart, toolNameOf, toolRejected } from "@/lib/ui/tool-parts";
 
 /** One tool call of a turn, compact enough to read by hand in results.json. */
 export interface TraceStep {
   tool: string;
-  status: "ok" | "needs_review" | "error" | "running";
+  /** rejected: the stage gate turned the call down before it ran (a tool outside the step), not a failure. */
+  status: "ok" | "needs_review" | "error" | "rejected" | "running";
   /** The tool error code, when the tool itself returned an error. */
   error?: string;
   input: unknown;
@@ -39,6 +40,7 @@ export function traceOf(message: CoronaUIMessage): TraceStep[] {
     if (!isToolPart(part)) return [];
     const tool = toolNameOf(part);
     const input = compact(part.input);
+    if (toolRejected(part)) return [{ tool, status: "rejected", input }];
     if (part.state === "output-error" || part.state === "output-denied") return [{ tool, status: "error", input }];
     if (part.state !== "output-available") return [{ tool, status: "running", input }];
     const output = part.output as { status?: string; code?: string } | undefined;
