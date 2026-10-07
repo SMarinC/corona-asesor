@@ -8,7 +8,7 @@ const STAGES = ["1. Espacio:", "2. Revestimiento:", "3. Junta:", "4. Pegante y b
 
 describe("system prompt", () => {
   it("is versioned", () => {
-    expect(PROMPT_VERSION).toBe("2026-10-06.4");
+    expect(PROMPT_VERSION).toBe("2026-10-06.5");
   });
 
   it("mentions every tool, so the workflow and the registry cannot drift apart", () => {
@@ -21,6 +21,11 @@ describe("system prompt", () => {
     expect(at.every((i) => i >= 0), STAGES.join(" ")).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
     expect(lines[at[4]]).toContain('"¿Confirmas esta cotización o quieres cambiar algo?"');
+  });
+
+  it("explains the stage gate in one line and leaves the enforcing to the code", () => {
+    expect(SYSTEM_PROMPT).toContain("Cada turno solo tiene las herramientas del paso en curso");
+    expect(SYSTEM_PROMPT).not.toContain("aunque el cliente lo pida todo de una vez");
   });
 
   it("states the joint once, in its own stage, and maps it to the tools there", () => {
