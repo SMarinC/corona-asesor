@@ -15,6 +15,7 @@ const record = (over: Partial<TurnRecord> = {}): TurnRecord => ({
   messages: bathroomConversation(),
   turnLog: { outcome: "ok", steps: 6, durationMs: 1_000, inputTokens: 1_000, outputTokens: 100 },
   error: null,
+  errorMessage: null,
   keywordFallbacks: 0,
   embedCalls: 0,
   ...over,
@@ -41,6 +42,31 @@ describe("runScenarios", () => {
     expect(out.results[0].checks).toEqual([expect.objectContaining({ name: "incomplete", ok: false })]);
     expect(out.results[1]).toMatchObject({ turns: null });
     expect(out.stopReason).toContain("quota_exhausted");
+  });
+
+  it.each([
+    ["an error", "model_error"],
+    ["a timeout", "timeout"],
+  ])("stops a scenario after a turn that ends in %s: the rest are not sent nor charged, and the error is kept", async (_, outcome) => {
+    const threeTurn: Scenario = { ...twoTurn, id: "three", turns: [{ user: "uno" }, { user: "dos" }, { user: "tres" }] };
+    const failed = record({ error: "model_error", errorMessage: "Internal error encountered.", turnLog: { outcome, steps: 0, durationMs: 1, inputTokens: 0, outputTokens: 0 } });
+    const run = vi.fn(async () => failed);
+    const out = await runScenarios({ scenarios: [threeTurn, oneTurn], run, maxCalls: 110, catalog });
+    // Turn 1 of the first scenario, then the next scenario still runs.
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(out.stopReason).toBeNull();
+    expect(out.callsUsed).toBe(6);
+    const [stopped] = out.results;
+    expect(stopped.notSent).toEqual([2, 3]);
+    expect(stopped.turns).toEqual([expect.objectContaining({ error: "Internal error encountered." })]);
+    expect(stopped.checks).toEqual([{ name: "incomplete", ok: false, detail: "1 de 3 turnos corrieron; no enviados: T2, T3" }]);
+    expect(scenarioPassed(stopped)).toBe(false);
+  });
+
+  it("keeps no error on a turn that completed", async () => {
+    const out = await runScenarios({ scenarios: [oneTurn], run: async () => record(), maxCalls: 110, catalog });
+    expect(out.results[0].turns?.[0]).not.toHaveProperty("error");
+    expect(out.results[0]).not.toHaveProperty("notSent");
   });
 
   it("scores the whole conversation once, after its last turn, and passes each turn's asks expectation", async () => {

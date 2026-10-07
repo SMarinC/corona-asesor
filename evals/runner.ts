@@ -64,6 +64,7 @@ export async function runScenarios({ scenarios, run, maxCalls, catalog, pacer, o
       turns.push({
         checks,
         metrics,
+        ...(metrics.outcome !== "ok" && record.errorMessage !== null ? { error: record.errorMessage } : {}),
         keywordFallbacks: record.keywordFallbacks,
         ...(assistant?.role === "assistant" ? { answer: answerOf(assistant), trace: traceOf(assistant) } : {}),
       });
@@ -79,15 +80,17 @@ export async function runScenarios({ scenarios, run, maxCalls, catalog, pacer, o
         stopReason = `the model returned ${record.error}`;
         break;
       }
+      // After a failed turn the conversation is broken: the next turns would only repeat it and spend calls.
+      if (metrics.outcome !== "ok") break;
     }
+    const notSent = scenario.turns.slice(turns.length).map((_, i) => turns.length + i + 1);
     // Half a conversation is never scored as if it had finished.
-    const checks =
-      turns.length < scenario.turns.length
-        ? [{ name: "incomplete", ok: false, detail: `${turns.length} de ${scenario.turns.length} turnos corrieron` }]
-        : scoreScenario(history, scenario.expect);
+    const checks = notSent.length
+      ? [{ name: "incomplete", ok: false, detail: `${turns.length} de ${scenario.turns.length} turnos corrieron; no enviados: ${notSent.map((n) => `T${n}`).join(", ")}` }]
+      : scoreScenario(history, scenario.expect);
     const failed = failingNames(checks);
     onProgress?.(scenario.id, `scenario checks${failed.length ? `: failing ${failed.join(", ")}` : " ok"}`);
-    results.push({ id: scenario.id, title: scenario.title, mode: scenario.mode, turns, checks });
+    results.push({ id: scenario.id, title: scenario.title, mode: scenario.mode, turns, checks, ...(notSent.length ? { notSent } : {}) });
   }
   return { results, callsUsed, stepsSummed, embeddingCalls, stopReason };
 }

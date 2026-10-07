@@ -50,6 +50,8 @@ export interface TurnInput {
 
 /** The spec's step budget for one turn; the agent's hard cap (MAX_STEPS) is higher. */
 const MAX_TURN_STEPS = 7;
+/** Tiles in turn 1, supplies in turn 2, so the earliest staged quote is in turn 3. */
+const FIRST_QUOTE_TURN = 3;
 
 const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -211,6 +213,15 @@ export function scoreScenario(messages: CoronaUIMessage[], expect: ScenarioExpec
     const linked = messages.some((m) => m.role === "assistant" && answerOf(m).includes(link));
     const problem = catalogCalls.length ? `llamó ${catalogCalls.join(", ")}` : linked ? null : `sin el enlace ${link}`;
     checks.push({ name: "link", ok: problem === null, detail: problem ?? "ok" });
+  }
+  if (expect.staged) {
+    // Turn n is the n-th assistant message. Only a call that ran counts: one the stage gate rejected built no quote.
+    const turn = messages.filter((m) => m.role === "assistant").findIndex((m) => m.parts.some((p) => isToolPartOf(p, "buildQuote") && p.state === "output-available")) + 1;
+    checks.push({
+      name: "staged",
+      ok: turn >= FIRST_QUOTE_TURN,
+      detail: turn === 0 ? "sin cotización" : turn >= FIRST_QUOTE_TURN ? "ok" : `primera cotización en el T${turn} (mín. T${FIRST_QUOTE_TURN})`,
+    });
   }
   return checks;
 }

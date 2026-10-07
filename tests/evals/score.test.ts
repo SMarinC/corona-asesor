@@ -228,4 +228,17 @@ describe("scoreScenario", () => {
     const search = toolPart("searchTiles", {}, { status: "ok", data: { results: [], note: "" } });
     expect(failingIn(answer([search], `Mira ${url}`), { link: url })).toEqual(["link"]);
   });
+
+  it("staged: the first buildQuote that ran is in turn 3 or later, read from the tool parts only", () => {
+    const turn = (parts: CoronaPart[]) => [userMessage("…"), assistantMessage(parts)];
+    const talk = turn([{ type: "text", text: "Te propongo opciones.", state: "done" }]);
+    const quote = turn(bathroomConversation()[1].parts.filter((p) => p.type === "tool-buildQuote"));
+    // A call the stage gate rejected never ran: it is not a quote.
+    const rejected = turn([errorPart("buildQuote", { lines: [] }, "model_error")]);
+    expect(failingIn([...talk, ...talk, ...quote], { staged: true })).toEqual([]);
+    expect(failingIn([...rejected, ...talk, ...quote], { staged: true })).toEqual([]);
+    expect(failingIn([...talk, ...quote, ...quote], { staged: true })).toEqual(["staged"]);
+    expect(scoreScenario(conversation(), { staged: true })).toEqual([{ name: "staged", ok: false, detail: "primera cotización en el T1 (mín. T3)" }]);
+    expect(scoreScenario([...talk, ...talk], { staged: true })).toEqual([{ name: "staged", ok: false, detail: "sin cotización" }]);
+  });
 });

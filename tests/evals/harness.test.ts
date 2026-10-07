@@ -1,6 +1,6 @@
-import { simulateReadableStream } from "ai";
+import { APICallError, simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runTurn } from "@/evals/harness";
 import { scenarioPassed } from "@/evals/report";
 import { runScenarios } from "@/evals/runner";
@@ -76,6 +76,35 @@ describe("eval harness", () => {
     const record = await runTurn([], "Dime el rendimiento de la boquilla", "semantic", sheetSearchModel(), { offline: true });
     expect(record.keywordFallbacks).toBe(1);
     expect(record.embedCalls).toBe(0);
+  });
+});
+
+describe("eval harness errors", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("keeps a failed turn's message from its chat_turn line, with secrets redacted", async () => {
+    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "fake-eval-key-for-test");
+    // Built at runtime, so no key-shaped literal sits in the repository for secret scanners.
+    const keyShaped = `AIza${"x".repeat(35)}`;
+    const model = new MockLanguageModelV4({
+      doStream: async () => {
+        throw new APICallError({
+          message: `Internal error for fake-eval-key-for-test, ${keyShaped}, key=abc123 from 203.0.113.7`,
+          url: "https://x",
+          requestBodyValues: {},
+          statusCode: 500,
+          isRetryable: false,
+        });
+      },
+    });
+    const record = await runTurn([], "Hola", "keyword", model, { offline: true });
+    expect(record.error).toBe("model_error");
+    expect(record.errorMessage).toBe("Internal error for [redacted], [redacted], [redacted] from [redacted]");
+  });
+
+  it("has no error message when the turn completed", async () => {
+    const record = await runTurn([], "Hola", "keyword", scriptedModel([textTurn("Hola, ¿qué espacio quieres renovar?")]), { offline: true });
+    expect(record.errorMessage).toBeNull();
   });
 });
 

@@ -58,7 +58,7 @@ describe("runScenarios keeps the answer and the trace", () => {
     const scenario: Scenario = { id: "one", title: "Un turno", mode: "semantic", turns: [{ user: "uno" }], expect: {} };
     const out = await runScenarios({
       scenarios: [scenario],
-      run: async () => ({ messages: bathroomConversation(), turnLog: { outcome: "ok", steps: 6, durationMs: 1, inputTokens: 1, outputTokens: 1 }, error: null, keywordFallbacks: 0, embedCalls: 0 }),
+      run: async () => ({ messages: bathroomConversation(), turnLog: { outcome: "ok", steps: 6, durationMs: 1, inputTokens: 1, outputTokens: 1 }, error: null, errorMessage: null, keywordFallbacks: 0, embedCalls: 0 }),
       maxCalls: 110,
       catalog: makeToolDeps().catalog,
     });

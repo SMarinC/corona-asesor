@@ -4,6 +4,8 @@ import type { TraceStep } from "./trace";
 export interface TurnResult {
   checks: Check[];
   metrics: TurnMetrics;
+  /** Why the turn failed (outcome error or timeout): the provider's message or the stream error, secrets redacted. */
+  error?: string;
   keywordFallbacks: number;
   /** The assistant's final text and its tool calls, so a run can be audited by hand. */
   answer?: string;
@@ -18,6 +20,8 @@ export interface ScenarioResult {
   turns: TurnResult[] | null;
   /** Checks over the whole conversation (tools and their inputs, the quote, the link); empty when it did not run. */
   checks: Check[];
+  /** Turns (numbered from 1) never sent, because an earlier turn failed or the run stopped; they spent no calls. */
+  notSent?: number[];
   skippedReason?: string;
 }
 
@@ -136,7 +140,7 @@ export function renderReport(run: EvalRun): string {
     `| Prompt version | \`${s.promptVersion}\` |`,
     `| Success bar (all scenarios ran, passed ≥ total − 1, 0 money not from tools, 0 invented quantities) | ${s.meetsBar === null ? barLabel(null) : `**${barLabel(s.meetsBar)}**`} |`,
     "",
-    "Every turn: it completed, at most 7 steps, every peso amount comes from a tool or the customer, quote quantities come from `computeMaterials`, quote prices match the catalog, and a tool's `needs_review` is shown as \"Requiere revisión\". Each scenario adds its own checks over the whole conversation: the tools and the customer's conditions they received, the budget verdict, the dotted SKU or the out-of-catalog link.",
+    "Every turn: it completed, at most 7 steps, every peso amount comes from a tool or the customer, quote quantities come from `computeMaterials`, quote prices match the catalog, and a tool's `needs_review` is shown as \"Requiere revisión\". Each scenario adds its own checks over the whole conversation: the tools and the customer's conditions they received, the budget verdict, the dotted SKU or the out-of-catalog link, and on the full flows no quote before turn 3 (`staged`). A turn that errors or times out ends its scenario; the remaining turns are not sent.",
     "",
     "## Scenarios",
     "",

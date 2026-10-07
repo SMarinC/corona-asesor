@@ -14,6 +14,8 @@ export interface TurnRecord {
   messages: CoronaUIMessage[];
   turnLog: TurnLog | null;
   error: string | null;
+  /** Why the turn failed: the chat_turn line's message, else the stream error code. Secrets redacted; null when none. */
+  errorMessage: string | null;
   /** How many sheet searches fell back to keyword search in this turn. */
   keywordFallbacks: number;
   /** Query-embedding calls attempted in this turn (0 in keyword or offline mode). */
@@ -78,6 +80,15 @@ async function withCapturedLogs<T>(run: () => Promise<T>): Promise<{ result: T; 
   }
 }
 
+/** What a provider error could echo: Google API keys and OAuth tokens, `key=` values, IPv4 addresses. */
+const SECRETS = /AIza[\w-]{20,}|AQ\.[\w-]{10,}|ya29\.[\w-]+|\bkey=[^\s&"',]+|\b\d{1,3}(?:\.\d{1,3}){3}\b/g;
+
+/** results.json is committed: the message keeps the provider's explanation, never the key or anything shaped like one. */
+function redactSecrets(text: string): string {
+  const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  return (key ? text.replaceAll(key, "[redacted]") : text).replace(SECRETS, "[redacted]");
+}
+
 let ids = 0;
 const userMessage = (text: string): CoronaUIMessage => ({ id: `eval-u-${++ids}`, role: "user", parts: [{ type: "text", text }] });
 
@@ -114,11 +125,14 @@ export async function runTurn(history: CoronaUIMessage[], text: string, mode: Sc
     : null;
   const assistant: CoronaUIMessage = result ?? { id: `eval-a-${++ids}`, role: "assistant", parts: [] };
   const sheetSearches = assistant.parts.filter((part) => part.type === "tool-searchTechnicalSheets").length;
+  // The handler logs a failed turn's raw error message on its chat_turn line; the stream itself carries only a code.
+  const errorMessage = typeof turnLine?.message === "string" ? turnLine.message : streamError;
   return {
     embedCalls: mode === "semantic" && !offline ? sheetSearches : 0,
     messages: [...messages, assistant],
     turnLog,
     error: streamError,
+    errorMessage: errorMessage === null ? null : redactSecrets(errorMessage),
     keywordFallbacks: lines.filter((line) => line.event === "sheet_search_fallback").length,
   };
 }

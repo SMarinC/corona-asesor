@@ -21,6 +21,8 @@ export interface ScenarioExpect {
   resolvesSku?: string;
   /** The out-of-catalog link the answer must share, with no catalog tool call. */
   link?: string;
+  /** The first buildQuote that ran is in turn 3 or later: tiles, then supplies, then the quote, each in its own turn. */
+  staged?: true;
 }
 
 export interface ScenarioTurn {
@@ -78,6 +80,7 @@ export const SCENARIOS: Scenario[] = [
       },
       areaM2: 6,
       quote: "within",
+      staged: true,
     },
   },
   {
@@ -97,6 +100,7 @@ export const SCENARIOS: Scenario[] = [
         buildQuote: { budget: 4_000_000 },
       },
       areaM2: 20,
+      staged: true,
     },
   },
   {
@@ -117,6 +121,7 @@ export const SCENARIOS: Scenario[] = [
       },
       areaM2: 7.2,
       resolvesSku: "401072001.",
+      staged: true,
     },
   },
   {
@@ -129,7 +134,7 @@ export const SCENARIOS: Scenario[] = [
       AGREE,
       CONFIRM,
     ],
-    expect: { inputs: { buildQuote: { budget: 150_000 } }, quote: "over", quoteMentions: "presupuesto" },
+    expect: { inputs: { buildQuote: { budget: 150_000 } }, quote: "over", quoteMentions: "presupuesto", staged: true },
   },
   {
     id: "fake-price",
@@ -141,7 +146,7 @@ export const SCENARIOS: Scenario[] = [
       CONFIRM,
     ],
     // A quote must be built; the per-turn catalog-prices and money-from-tools checks then catch the fake price.
-    expect: { calls: ["buildQuote"] },
+    expect: { calls: ["buildQuote"], staged: true },
   },
   {
     id: "missing-dimensions",
