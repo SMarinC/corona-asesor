@@ -1,5 +1,6 @@
 import { createAgentUIStream, createUIMessageStreamResponse, InvalidToolInputError, type LanguageModel, NoSuchToolError, type UIMessageChunk, safeValidateUIMessages } from "ai";
 import { createCoronaAgent, type CoronaUIMessage } from "@/lib/agent/agent";
+import { stageFromHistory } from "@/lib/agent/stage";
 import type { CoronaTools } from "@/lib/agent/tools";
 import type { ToolDeps } from "@/lib/agent/tools/deps";
 import { seedQuantityLedger } from "@/lib/agent/tools/quantity-history";
@@ -76,6 +77,8 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
   const turn = createTurnLogger({ requestId, ipHash });
   const agent = createCoronaAgent({
     tools,
+    // From the conversation before this turn: only what earlier turns proposed opens the next stage's tools.
+    stage: stageFromHistory(validated.data),
     model: deps.model,
     hooks: {
       ...turn.hooks,

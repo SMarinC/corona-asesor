@@ -7,6 +7,7 @@ import { runScenarios } from "@/evals/runner";
 import { SCENARIOS } from "@/evals/scenarios";
 import { createScriptedDemoModel, DEMO_SKUS } from "@/lib/chat/scripted-model";
 import { getCatalog } from "@/lib/data/catalog";
+import { bathroomConversation } from "@/tests/fixtures/ui-messages";
 import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
 
 const usage = {
@@ -81,7 +82,8 @@ describe("eval harness", () => {
 describe("eval harness quantity guard", () => {
   it("hands the tools the conversation's ledger, so an invented quantity comes back needs_review", async () => {
     const model = scriptedModel([toolTurn([{ toolName: "buildQuote", input: { lines: [{ sku: DEMO_SKUS.tile, quantity: 99 }] } }]), textTurn("Listo.")]);
-    const record = await runTurn([], "Cotiza 99 cajas", "keyword", model);
+    // A conversation already at the quote stage: the stage gate lets buildQuote run only there.
+    const record = await runTurn(bathroomConversation(), "Cotiza 99 cajas", "keyword", model);
     expect(record.error).toBeNull();
     const quote = record.messages.at(-1)!.parts.find((p) => p.type === "tool-buildQuote") as { output?: { status: string; missing?: { field: string }[] } };
     expect(quote.output?.status).toBe("needs_review");

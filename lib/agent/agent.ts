@@ -1,6 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { type InferAgentUIMessage, isStepCount, type LanguageModel, ToolLoopAgent } from "ai";
 import { SYSTEM_PROMPT } from "./prompt";
+import { type Stage, STAGE_TOOLS } from "./stage";
 import type { CoronaTools } from "./tools";
 
 export const MODEL_ID = "gemini-3.5-flash-lite";
@@ -45,13 +46,16 @@ export function toolStatus(toolOutput: unknown): string {
   return typeof status === "string" ? status : "unknown";
 }
 
-/** Build one agent per request: hooks and step timing belong to a single turn. */
+/** Build one agent per request: hooks, step timing and the stage belong to a single turn. */
 export function createCoronaAgent({
   tools,
+  stage,
   model = google(MODEL_ID),
   hooks = {},
 }: {
   tools: CoronaTools;
+  /** The purchase stage the earlier turns reached (see ./stage): only its tools are active in this turn. */
+  stage: Stage;
   model?: LanguageModel;
   hooks?: AgentHooks;
 }) {
@@ -72,8 +76,12 @@ export function createCoronaAgent({
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     // One retry for transient failures; hammering a 429 only burns free-tier quota.
     maxRetries: 1,
-    // On the last allowed step tools are disabled, so the turn always ends with an answer.
-    prepareStep: ({ stepNumber }) => (stepNumber >= MAX_STEPS - 1 ? { toolChoice: "none" } : {}),
+    // Every step gets only the stage's tools: a call to any other is rejected (NoSuchToolError) and never runs.
+    // On the last allowed step tools are disabled too, so the turn always ends with an answer.
+    prepareStep: ({ stepNumber }) => ({
+      activeTools: STAGE_TOOLS[stage],
+      ...(stepNumber >= MAX_STEPS - 1 ? { toolChoice: "none" as const } : {}),
+    }),
     // The SDK awaits this right before the step's model call; it fires once per step, not again on a retry.
     onStepStart: async ({ stepNumber }) => {
       await hooks.onModelCall?.(stepNumber);

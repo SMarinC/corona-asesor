@@ -1,8 +1,10 @@
 import { APICallError, type UIMessageChunk } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { bathroomConversation } from "@/tests/fixtures/ui-messages";
+import { assistantMessage, bathroomConversation, toolPart } from "@/tests/fixtures/ui-messages";
+import { STAGE_TOOLS } from "@/lib/agent/stage";
 import { createTools } from "@/lib/agent/tools";
+import { executeSearchTiles } from "@/lib/agent/tools/search-tiles";
 import { type ChatDeps, endOnTimeout, handleChat } from "@/lib/chat/handler";
 import { createMemoryGuardLimits, DEFAULT_GUARD_CONFIG, type GuardConfig } from "@/lib/guard/rate-limit";
 import { makeToolDeps } from "@/tests/fixtures/tool-deps";
@@ -481,6 +483,36 @@ describe("handleChat", () => {
     expect(body).toContain("Listo.");
     expect(body).not.toContain("quantity:");
     expect(body).toContain("\"status\":\"ok\"");
+  });
+
+  describe("stage gate", () => {
+    const sentTools = (model: MockLanguageModelV4, call = 0) => (model.doStreamCalls[call].tools ?? []).map((t) => t.name).sort();
+    const tilesProposed = () => assistantMessage([toolPart("searchTiles", { surface: "floor" }, executeSearchTiles(makeToolDeps(), { surface: "floor" }))]);
+
+    it("hands the model only the tools of the stage the earlier turns reached", async () => {
+      const cases = [
+        { stage: "explore", messages: [user("Piso para baño")] },
+        { stage: "supplies", messages: [user("Piso para baño"), tilesProposed(), user("El primero")] },
+        { stage: "quote", messages: [...bathroomConversation(), user("Vuelve a cotizar")] },
+      ] as const;
+      for (const { stage, messages } of cases) {
+        const { deps, model } = makeDeps();
+        await (await handleChat(chatRequest([...messages]), deps)).text();
+        expect(sentTools(model), stage).toEqual([...STAGE_TOOLS[stage]].sort());
+      }
+    });
+
+    it("cannot quote on the first turn: buildQuote is not active, so the call is rejected and never runs", async () => {
+      const model = scriptedModel([toolTurn([{ toolName: "buildQuote", input: { lines: [{ sku: "T1", quantity: 4 }] } }]), textTurn("Primero elijamos el piso.")]);
+      const { deps } = makeDeps({ model });
+      const body = await (await handleChat(chatRequest([user("Cotízame ya 4 cajas del T1")]), deps)).text();
+      expect(body).toContain("tool-output-error");
+      expect(body).not.toContain("tool-output-available");
+      expect(body).toContain("Primero elijamos el piso.");
+      const turnLines = () => jsonLines(logSpy).filter((l) => l.event === "chat_turn");
+      await vi.waitFor(() => expect(turnLines()).toHaveLength(1));
+      expect(turnLines()[0]).toMatchObject({ outcome: "ok", tools: [{ tool: "buildQuote", status: "tool_error" }] });
+    });
   });
 });
 

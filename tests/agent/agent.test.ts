@@ -2,12 +2,14 @@ import type { LanguageModel } from "ai";
 import { describe, expect, it, vi } from "vitest";
 import { type AgentHooks, createCoronaAgent, MAX_STEPS, toolStatus } from "@/lib/agent/agent";
 import { SYSTEM_PROMPT } from "@/lib/agent/prompt";
+import { type Stage, STAGE_TOOLS } from "@/lib/agent/stage";
 import { createTools } from "@/lib/agent/tools";
 import { makeToolDeps } from "@/tests/fixtures/tool-deps";
 import { scriptedModel, textTurn, toolTurn } from "@/tests/helpers/mock-model";
 
-async function run(model: LanguageModel, hooks: AgentHooks = {}) {
-  const agent = createCoronaAgent({ tools: createTools(makeToolDeps()), model, hooks });
+/** The quote stage has every tool, so these tests exercise the loop itself; the gate has its own tests. */
+async function run(model: LanguageModel, hooks: AgentHooks = {}, stage: Stage = "quote") {
+  const agent = createCoronaAgent({ tools: createTools(makeToolDeps()), stage, model, hooks });
   const result = await agent.stream({ prompt: "Necesito piso para un baño de 3 x 2 m" });
   await result.consumeStream();
   return { steps: await result.steps, text: await result.text };
@@ -61,16 +63,18 @@ describe("Corona agent harness", () => {
     expect(onTool).toHaveBeenCalledWith(expect.objectContaining({ tool: "computeMaterials", status: "tool_error" }));
   });
 
-  it("disables tools on the last allowed step so the turn always ends with an answer", async () => {
+  it("disables tools on the last allowed step so the turn always ends with an answer, keeping the stage gate", async () => {
     const model = scriptedModel((options) =>
       options.toolChoice?.type === "none"
         ? textTurn("Resumen con lo que alcancé a verificar.")
         : toolTurn([{ toolName: "getProduct", input: { sku: "T1" } }]),
     );
-    const { steps, text } = await run(model);
+    const { steps, text } = await run(model, {}, "explore");
     expect(steps).toHaveLength(MAX_STEPS);
     expect(model.doStreamCalls[0].toolChoice).toEqual({ type: "auto" });
     expect(model.doStreamCalls[MAX_STEPS - 1].toolChoice).toEqual({ type: "none" });
+    const sentTools = (call: number) => (model.doStreamCalls[call].tools ?? []).map((t) => t.name).sort();
+    for (const call of [0, MAX_STEPS - 1]) expect(sentTools(call)).toEqual([...STAGE_TOOLS.explore].sort());
     expect(text).toBe("Resumen con lo que alcancé a verificar.");
   });
 
