@@ -18,7 +18,7 @@ export function EmptyState({ onPick, disabled }: { onPick: (prompt: string) => v
               type="button"
               disabled={disabled}
               onClick={() => onPick(s.prompt)}
-              className="w-full rounded-xl border bg-card px-4 py-3 text-left transition-colors duration-150 hover:border-primary/50 hover:bg-accent/40 disabled:pointer-events-none disabled:opacity-60"
+              className="w-full rounded-xl border bg-card px-4 py-3 text-left transition-[color,background-color,border-color,opacity] duration-150 hover:border-primary/50 hover:bg-accent/40 disabled:pointer-events-none disabled:opacity-60"
             >
               <span className="block text-sm font-medium">{s.title}</span>
               <span className="mt-0.5 block text-sm text-muted-foreground">{s.prompt}</span>

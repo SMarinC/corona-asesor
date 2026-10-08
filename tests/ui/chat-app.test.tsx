@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { ComposerDock } from "@/components/chat/composer-dock";
 import type { ChatFailure } from "@/components/chat/error-notice";
 
@@ -177,6 +177,29 @@ describe("ChatApp", () => {
       vi.advanceTimersByTime(6_000);
     });
     expect(chip().disabled).toBe(false);
+  });
+
+  it("serves the suggestions disabled and enables them once the page hydrates, so an early click is never lost silently", async () => {
+    // Before hydration the server HTML has no click handlers: a click there did nothing, with no request and no sign.
+    const { renderToString } = await import("react-dom/server");
+    const { hydrateRoot } = await import("react-dom/client");
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<ChatApp />);
+    document.body.appendChild(container);
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    onTestFinished(() => {
+      act(() => root?.unmount());
+      container.remove();
+    });
+    const chip = () => [...container.querySelectorAll("button")].find((b) => b.textContent?.includes("Piso de baño")) as HTMLButtonElement;
+    expect(chip().disabled).toBe(true);
+
+    await act(async () => {
+      root = hydrateRoot(container, <ChatApp />);
+    });
+    expect(chip().disabled).toBe(false);
+    fireEvent.click(chip());
+    expect(chat.sendMessage).toHaveBeenCalledWith({ text: expect.stringContaining("piso de un baño") });
   });
 
   it("positions both scroll areas, so sr-only text inside them cannot stretch the page", () => {

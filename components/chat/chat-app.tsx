@@ -8,6 +8,7 @@ import { MobileProjectBar } from "@/components/project/mobile-project-bar";
 import { ProjectPanel } from "@/components/project/project-panel";
 import { ToolStep } from "@/components/tools/tool-step";
 import { useDeadlinePassed } from "@/hooks/use-deadline-passed";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useTurnTimings } from "@/hooks/use-turn-timings";
 import type { CoronaUIMessage } from "@/lib/agent/agent";
 import { fitHistoryBudget, truncateHistory } from "@/lib/guard/limits";
@@ -85,6 +86,8 @@ export function ChatApp() {
   // One timer flips this at the deadline; the per-second countdown lives in ComposerDock, away from the messages.
   const waitOver = useDeadlinePassed(failure?.retryAt ?? null);
   const suggestionsLocked = isLocked(failure, waitOver);
+  // The server HTML shows the suggestions before React can handle a click on them; they stay disabled until it can.
+  const hydrated = useHydrated();
   const { scrollRef, contentRef, stick } = useStickToBottom(messages.length > 0);
   const waitingForFirstPart = status === "submitted" || (busy && messages.at(-1)?.role === "user");
 
@@ -129,7 +132,7 @@ export function ChatApp() {
               {/* role="log" is implicitly live; "off" keeps it silent per token. The status line below is the one announcement. */}
               <div ref={contentRef} role="log" aria-live="off" aria-busy={busy} aria-label="Conversación" className="mx-auto max-w-2xl min-w-0 space-y-6 px-4 py-6">
                 {messages.length === 0 ? (
-                  <EmptyState onPick={send} disabled={suggestionsLocked} />
+                  <EmptyState onPick={send} disabled={suggestionsLocked || !hydrated} />
                 ) : (
                   messages.map((message, i) => <Message key={message.id} message={message} streaming={busy && i === messages.length - 1} />)
                 )}
