@@ -2,7 +2,7 @@ import { getCompanyContext } from "@/lib/data/company";
 import { type Stage, STAGE_TOOLS } from "./stage";
 
 /** Bump when the prompt changes; evals (Plan 4) report against this version. */
-export const PROMPT_VERSION = "2026-10-07.2";
+export const PROMPT_VERSION = "2026-10-07.3";
 
 interface OutOfCatalog {
   cubierto_en_catalogo: string[];
@@ -50,7 +50,7 @@ Pregunta o confirma el ancho de junta en mm: el catálogo no trae una junta reco
   },
   supplies: {
     title: "pegante y boquilla",
-    todo: `Con el revestimiento elegido y la junta confirmada (si falta, pregúntala), propón un pegante y una boquilla compatibles con searchSupplies y checkCompatibility, y pide al cliente que los confirme.`,
+    todo: `Si el cliente aún no ha elegido revestimiento, pídele que elija antes de seguir. Con el revestimiento elegido y la junta confirmada (si falta, pregúntala), propón un pegante y una boquilla compatibles con searchSupplies y checkCompatibility, y pide al cliente que los confirme.`,
   },
   quote: {
     title: "cotización",

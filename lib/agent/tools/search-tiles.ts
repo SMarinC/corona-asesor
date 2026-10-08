@@ -13,7 +13,7 @@ export const searchTilesInput = z.object({
   finish: z.enum(FINISH_LABELS).optional(),
   design: z.enum(DESIGN_LABEL_KEYS).optional().describe("Estilo de diseño canónico."),
   color: z.string().min(2).max(40).optional().describe("Color que aparece en el nombre, p. ej. 'blanco', 'gris'."),
-  maxPricePerBox: z.number().positive().optional().describe("Precio máximo por caja en COP (no por m²)."),
+  maxPricePerBox: z.number().positive().optional().describe("Precio máximo por caja en COP, solo si el cliente da un precio por caja. Nunca uses aquí el presupuesto total del proyecto."),
   limit: z.number().int().min(1).max(10).optional().describe("Máximo de resultados (por defecto 6)."),
 });
 export type SearchTilesInput = z.infer<typeof searchTilesInput>;

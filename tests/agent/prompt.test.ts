@@ -10,7 +10,7 @@ const STAY_IN_STEP =
 
 describe("system prompt", () => {
   it("is versioned", () => {
-    expect(PROMPT_VERSION).toBe("2026-10-07.2");
+    expect(PROMPT_VERSION).toBe("2026-10-07.3");
   });
 
   it("names only the tools of its stage, so the model is never told about a tool the gate hides", () => {
