@@ -16,7 +16,7 @@ or computed it deterministically.**
 2. Grounding evals: ≥ 11/12 scenarios pass; 0 ungrounded numbers in final answers.
 3. CI green on every push (typecheck, lint, unit tests, build).
 4. A typical quote completes in ≤ 7 agent steps (prototype: 10–17).
-5. Repository history contains no Claude co-author trailers and no committed
+5. Repository history contains no AI-assistant co-author trailers and no committed
    binary databases.
 
 ### Non-goals
@@ -263,7 +263,7 @@ server-side only. The free-tier data-usage note appears in the disclaimer modal.
 ## 10. Repository migration (phase 0)
 
 1. Fresh clone → `git filter-repo`:
-   - strip `Co-Authored-By: Claude …` trailers from all commit messages;
+   - strip AI-assistant `Co-Authored-By` trailers from all commit messages;
    - remove `data/processed/` (58 MB of binaries) from all history.
 2. Keep authorship of all human contributors intact.
 3. Create the repo under the author's GitHub account (explicit confirmation

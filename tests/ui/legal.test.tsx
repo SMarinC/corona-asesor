@@ -20,10 +20,8 @@ describe("disclaimer", () => {
     expect(text).toContain("(se abre en una pestaña nueva)");
   });
 
-  it("credits only what exists today", () => {
-    expect(CREDITS).not.toMatch(/evaluaciones|despliegue/i);
-    expect(CREDITS).toContain("agente");
-    expect(CREDITS).toContain("interfaz web");
+  it("credits the rewrite's parts, now that the evals and the deployment exist", () => {
+    for (const part of ["agente", "interfaz web", "evaluaciones de grounding", "despliegue en Vercel"]) expect(CREDITS).toContain(part);
   });
 
   it("names the team and the rewrite author only, with no AI-assistant attribution", () => {
