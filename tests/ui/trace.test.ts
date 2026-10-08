@@ -75,6 +75,40 @@ describe("createTimingStore", () => {
     expect(store.getSnapshot()).toEqual({});
   });
 
+  it("starts the turn and its first step when the request starts, not when the first part arrives", () => {
+    // In production the server took 48.7 s before the first part; the trace showed only the 4 s after it.
+    let clock = 10_000;
+    const store = createTimingStore(() => clock);
+    const user = userMessage("hola");
+    store.observe([], false);
+    store.observe([user], true);
+
+    clock = 54_000;
+    const first = assistantMessage([{ type: "step-start" }, toolPart("searchTiles", {})]);
+    store.observe([user, first], true);
+    clock = 56_000;
+    const grown = { ...first, parts: [...first.parts, { type: "step-start" as const }] };
+    store.observe([user, grown], true);
+    clock = 58_700;
+    store.observe([user, grown], false);
+
+    const timing = store.getSnapshot()[first.id];
+    expect(timing).toEqual({ stepStarts: [10_000, 56_000], endedAt: 58_700 });
+    expect(turnDuration(timing)).toBe(48_700);
+    expect(buildTrace(grown, timing).map((s) => s.durationMs)).toEqual([46_000, 2_700]);
+
+    // A second turn (or a retry) is measured from its own request, not from the first one.
+    clock = 70_000;
+    const next = userMessage("el primero");
+    store.observe([user, grown, next], true);
+    clock = 75_000;
+    const second = assistantMessage([{ type: "step-start" }]);
+    store.observe([user, grown, next, second], true);
+    clock = 76_000;
+    store.observe([user, grown, next, second], false);
+    expect(store.getSnapshot()[second.id]).toEqual({ stepStarts: [70_000], endedAt: 76_000 });
+  });
+
   it("gives no timing to messages never observed while streaming", () => {
     const store = createTimingStore(() => 5_000);
     let notified = 0;

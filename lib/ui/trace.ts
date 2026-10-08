@@ -11,15 +11,22 @@ export type Timings = Record<string, TurnTiming>;
 
 /**
  * Tools run in about a millisecond on the server; what the visitor waits for is each model step. The store
- * timestamps every step-start part the first time it appears and the moment the turn stops streaming.
+ * timestamps every step-start part the first time it appears and the moment the turn stops streaming. A turn and
+ * its first step start when the request does: the wait before the first part (the guards and the model's first
+ * response) is part of what the visitor waited for, and in production it can be most of the turn.
  */
 export function createTimingStore(now: () => number = Date.now) {
   let timings: Timings = {};
+  let wasStreaming = false;
+  /** When the current request started: the moment streaming went from false to true. */
+  let requestStart: number | null = null;
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((listener) => listener());
 
   return {
     observe(messages: CoronaUIMessage[], streaming: boolean) {
+      if (streaming && !wasStreaming) requestStart = now();
+      wasStreaming = streaming;
       let next: Timings | null = null;
       messages.forEach((message, index) => {
         if (message.role !== "assistant") return;
@@ -32,7 +39,8 @@ export function createTimingStore(now: () => number = Date.now) {
         if (current.stepStarts.length >= steps && (live || current.endedAt !== null)) return;
         const at = now();
         const stepStarts = [...current.stepStarts];
-        while (stepStarts.length < steps) stepStarts.push(at);
+        // The live turn's first step began with the request, not when its first part arrived.
+        while (stepStarts.length < steps) stepStarts.push(stepStarts.length === 0 && live && requestStart !== null ? requestStart : at);
         next = { ...(next ?? timings), [message.id]: { stepStarts, endedAt: live ? null : (current.endedAt ?? at) } };
       });
       if (next) {
@@ -42,6 +50,7 @@ export function createTimingStore(now: () => number = Date.now) {
     },
     reset() {
       timings = {};
+      requestStart = null;
       emit();
     },
     subscribe(listener: () => void) {
@@ -100,7 +109,7 @@ export function buildTrace(message: CoronaUIMessage, timing: TurnTiming | undefi
   return steps;
 }
 
-/** Wall time of a finished turn: from its first step to the end of the stream. */
+/** Wall time of a finished turn: from its request (the first step's start) to the end of the stream. */
 export function turnDuration(timing: TurnTiming | undefined): number | null {
   if (!timing || timing.endedAt === null || timing.stepStarts.length === 0) return null;
   return timing.endedAt - timing.stepStarts[0];

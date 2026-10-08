@@ -52,7 +52,7 @@ export function TraceTimeline({ messages, timings }: { messages: CoronaUIMessage
           ))}
         </ol>
         <p className="border-t px-4 py-2.5 text-xs text-muted-foreground">
-          Tiempo medido en tu navegador. Cada paso es una llamada al modelo; las herramientas corren en el servidor en milisegundos.
+          Tiempo medido en tu navegador desde que enviaste el mensaje. Cada paso es una llamada al modelo; las herramientas corren en el servidor en milisegundos.
         </p>
       </CollapsibleContent>
     </Collapsible>
